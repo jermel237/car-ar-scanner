@@ -17,15 +17,15 @@ export default function Home() {
   const [model, setModel] = useState<any>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [detectedCar, setDetectedCar] = useState<Detection | null>(null);
-  const [show3DViewer, setShow3DViewer] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [arMode, setArMode] = useState(false);
+  const [carPosition, setCarPosition] = useState<{x: number, y: number, width: number, height: number} | null>(null);
 
-  // Start camera function
+  // Start camera
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
     try {
-      // Stop existing stream
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
@@ -33,16 +33,14 @@ export default function Home() {
       const newStream = await navigator.mediaDevices.getUserMedia({
         video: { 
           facingMode: facing,
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
         },
         audio: false
       });
 
       if (videoRef.current) {
         videoRef.current.srcObject = newStream;
-        
-        // Wait for video to be ready
         await new Promise<void>((resolve) => {
           if (videoRef.current) {
             videoRef.current.onloadedmetadata = () => {
@@ -65,7 +63,6 @@ export default function Home() {
   const switchCamera = async () => {
     const newFacing = cameraFacing === 'environment' ? 'user' : 'environment';
     setCameraFacing(newFacing);
-    
     try {
       await startCamera(newFacing);
     } catch (err) {
@@ -77,7 +74,6 @@ export default function Home() {
   const loadModel = async () => {
     try {
       setLoadingText('Loading AI...');
-      
       const tf = await import('@tensorflow/tfjs');
       await tf.ready();
       await tf.setBackend('webgl');
@@ -89,11 +85,11 @@ export default function Home() {
       return loadedModel;
     } catch (err) {
       console.error('Model error:', err);
-      throw new Error('Failed to load AI model. Please refresh.');
+      throw new Error('Failed to load AI model.');
     }
   };
 
-  // Initialize app
+  // Initialize
   useEffect(() => {
     const init = async () => {
       try {
@@ -105,15 +101,13 @@ export default function Home() {
         
         setIsLoading(false);
       } catch (err: any) {
-        console.error('Init error:', err);
-        setError(err.message || 'Failed to start. Please allow camera access.');
+        setError(err.message);
         setIsLoading(false);
       }
     };
 
     init();
 
-    // Cleanup on unmount
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
@@ -123,7 +117,8 @@ export default function Home() {
 
   // Detection loop
   useEffect(() => {
-    if (!isScanning || !model || !videoRef.current || !canvasRef.current) return;
+    if (!model || !videoRef.current || !canvasRef.current) return;
+    if (!isScanning && !arMode) return;
 
     let animationId: number;
     let running = true;
@@ -140,84 +135,59 @@ export default function Home() {
         return;
       }
 
-      // Set canvas size to match video
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
 
       try {
         const predictions = await model.detect(video);
         
-        // Filter for vehicles
         const vehicles = predictions.filter(
           (p: any) => ['car', 'truck', 'bus', 'motorcycle'].includes(p.class) && p.score > 0.5
         );
 
-        // Clear canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (vehicles.length > 0) {
           const car = vehicles[0];
+          const [x, y, width, height] = car.bbox;
+          
+          // Scale to screen size
+          const scaleX = canvas.clientWidth / canvas.width;
+          const scaleY = canvas.clientHeight / canvas.height;
+          
           setDetectedCar({
             bbox: car.bbox,
             class: car.class,
             score: car.score
           });
 
-          // Draw detection box
-          const [x, y, width, height] = car.bbox;
+          setCarPosition({
+            x: x * scaleX,
+            y: y * scaleY,
+            width: width * scaleX,
+            height: height * scaleY
+          });
 
-          // Green rectangle
-          ctx.strokeStyle = '#00ff00';
-          ctx.lineWidth = 4;
-          ctx.strokeRect(x, y, width, height);
+          if (!arMode) {
+            // Draw detection box when scanning
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(x, y, width, height);
 
-          // Corner accents
-          const cornerSize = 20;
-          ctx.lineWidth = 6;
-          ctx.strokeStyle = '#00ff00';
-
-          // Top-left corner
-          ctx.beginPath();
-          ctx.moveTo(x, y + cornerSize);
-          ctx.lineTo(x, y);
-          ctx.lineTo(x + cornerSize, y);
-          ctx.stroke();
-
-          // Top-right corner
-          ctx.beginPath();
-          ctx.moveTo(x + width - cornerSize, y);
-          ctx.lineTo(x + width, y);
-          ctx.lineTo(x + width, y + cornerSize);
-          ctx.stroke();
-
-          // Bottom-left corner
-          ctx.beginPath();
-          ctx.moveTo(x, y + height - cornerSize);
-          ctx.lineTo(x, y + height);
-          ctx.lineTo(x + cornerSize, y + height);
-          ctx.stroke();
-
-          // Bottom-right corner
-          ctx.beginPath();
-          ctx.moveTo(x + width - cornerSize, y + height);
-          ctx.lineTo(x + width, y + height);
-          ctx.lineTo(x + width, y + height - cornerSize);
-          ctx.stroke();
-
-          // Label background
-          const label = `${car.class.toUpperCase()} ${Math.round(car.score * 100)}%`;
-          ctx.font = 'bold 18px Arial';
-          const textWidth = ctx.measureText(label).width;
-          
-          ctx.fillStyle = '#00ff00';
-          ctx.fillRect(x, y - 30, textWidth + 16, 28);
-          
-          // Label text
-          ctx.fillStyle = '#000000';
-          ctx.fillText(label, x + 8, y - 10);
-
+            // Label
+            ctx.fillStyle = '#00ff00';
+            ctx.font = 'bold 20px Arial';
+            ctx.fillText(
+              `${car.class.toUpperCase()} ${Math.round(car.score * 100)}%`,
+              x + 5,
+              y - 10
+            );
+          }
         } else {
-          setDetectedCar(null);
+          if (!arMode) {
+            setDetectedCar(null);
+            setCarPosition(null);
+          }
         }
       } catch (e) {
         console.error('Detection error:', e);
@@ -232,33 +202,30 @@ export default function Home() {
 
     return () => {
       running = false;
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-      }
+      if (animationId) cancelAnimationFrame(animationId);
     };
-  }, [isScanning, model]);
+  }, [isScanning, arMode, model]);
 
-  // Handle button click
-  const handleClick = () => {
+  // Handle scan button
+  const handleScan = () => {
     if (!isScanning) {
       setIsScanning(true);
+      setArMode(false);
       setDetectedCar(null);
     } else if (detectedCar) {
+      // Capture and enable AR mode
       setIsScanning(false);
-      setShow3DViewer(true);
+      setArMode(true);
     } else {
       setIsScanning(false);
     }
   };
 
-  // Close 3D viewer
-  const close3DViewer = () => {
-    setShow3DViewer(false);
+  // Exit AR mode
+  const exitAR = () => {
+    setArMode(false);
     setDetectedCar(null);
-    if (canvasRef.current) {
-      const ctx = canvasRef.current.getContext('2d');
-      ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    }
+    setCarPosition(null);
   };
 
   // Error screen
@@ -267,7 +234,7 @@ export default function Home() {
       <div style={{
         width: '100vw',
         height: '100vh',
-        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+        background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -277,8 +244,8 @@ export default function Home() {
         textAlign: 'center'
       }}>
         <div style={{ fontSize: 60, marginBottom: 20 }}>📷</div>
-        <h2 style={{ marginBottom: 10 }}>Camera Access Needed</h2>
-        <p style={{ opacity: 0.7, maxWidth: 300 }}>{error}</p>
+        <h2>Camera Access Needed</h2>
+        <p style={{ opacity: 0.7, marginTop: 10 }}>{error}</p>
         <button 
           onClick={() => window.location.reload()}
           style={{
@@ -289,7 +256,6 @@ export default function Home() {
             borderRadius: 50,
             color: 'white',
             fontSize: 16,
-            fontWeight: 'bold',
             cursor: 'pointer'
           }}
         >
@@ -305,7 +271,7 @@ export default function Home() {
       <div style={{
         width: '100vw',
         height: '100vh',
-        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+        background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -320,18 +286,15 @@ export default function Home() {
           borderRadius: '50%',
           animation: 'spin 1s linear infinite'
         }} />
-        <h2 style={{ marginTop: 30 }}>🚗 Car Scanner</h2>
+        <h2 style={{ marginTop: 30 }}>🚗 AR Car Scanner</h2>
         <p style={{ marginTop: 10, opacity: 0.7 }}>{loadingText}</p>
         <style>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
+          @keyframes spin { to { transform: rotate(360deg); } }
         `}</style>
       </div>
     );
   }
 
-  // Main app
   return (
     <div style={{
       position: 'fixed',
@@ -342,7 +305,7 @@ export default function Home() {
       background: '#000',
       overflow: 'hidden'
     }}>
-      {/* Camera Video */}
+      {/* Camera Feed */}
       <video
         ref={videoRef}
         playsInline
@@ -358,7 +321,7 @@ export default function Home() {
         }}
       />
 
-      {/* Detection Canvas Overlay */}
+      {/* Detection Canvas */}
       <canvas
         ref={canvasRef}
         style={{
@@ -372,7 +335,31 @@ export default function Home() {
         }}
       />
 
-      {/* Scanning Animation */}
+      {/* AR 3D Car Overlay - Shows on detected car position */}
+      {arMode && carPosition && (
+        <div
+          style={{
+            position: 'absolute',
+            left: carPosition.x,
+            top: carPosition.y,
+            width: carPosition.width,
+            height: carPosition.height,
+            pointerEvents: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            perspective: '1000px'
+          }}
+        >
+          <Car3D 
+            width={carPosition.width} 
+            height={carPosition.height}
+            carType={detectedCar?.class || 'car'}
+          />
+        </div>
+      )}
+
+      {/* Scanning Line */}
       {isScanning && (
         <>
           <div style={{
@@ -380,8 +367,8 @@ export default function Home() {
             left: 0,
             width: '100%',
             height: 3,
-            background: 'linear-gradient(90deg, transparent, #00ff00, #00ff00, transparent)',
-            boxShadow: '0 0 20px #00ff00, 0 0 40px #00ff00',
+            background: 'linear-gradient(90deg, transparent, #00ff00, transparent)',
+            boxShadow: '0 0 20px #00ff00',
             animation: 'scanMove 2s ease-in-out infinite'
           }} />
           <style>{`
@@ -404,21 +391,18 @@ export default function Home() {
           height: 50,
           borderRadius: '50%',
           border: 'none',
-          background: 'rgba(255,255,255,0.2)',
+          background: 'rgba(0,0,0,0.5)',
           backdropFilter: 'blur(10px)',
           color: 'white',
-          fontSize: 24,
+          fontSize: 22,
           cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
           zIndex: 100
         }}
       >
         🔄
       </button>
 
-      {/* Camera Mode Indicator */}
+      {/* Camera Indicator */}
       <div style={{
         position: 'absolute',
         top: 25,
@@ -431,50 +415,60 @@ export default function Home() {
         backdropFilter: 'blur(10px)',
         zIndex: 100
       }}>
-        {cameraFacing === 'environment' ? '📷 Back Camera' : '🤳 Front Camera'}
+        {cameraFacing === 'environment' ? '📷 Back' : '🤳 Front'}
       </div>
 
-      {/* Status Bar */}
-      <div style={{
-        position: 'absolute',
-        top: 80,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        background: 'rgba(0,0,0,0.7)',
-        color: 'white',
-        padding: '12px 24px',
-        borderRadius: 25,
-        fontSize: 14,
-        textAlign: 'center',
-        maxWidth: '85%',
-        backdropFilter: 'blur(10px)',
-        zIndex: 100
-      }}>
-        {isScanning
-          ? detectedCar
-            ? `🎯 ${detectedCar.class.toUpperCase()} found! (${Math.round(detectedCar.score * 100)}%)`
-            : '🔍 Looking for vehicles...'
-          : '📱 Point at a car and tap Scan'
-        }
-      </div>
-
-      {/* Detection Hint */}
-      {isScanning && detectedCar && (
+      {/* AR Mode Indicator */}
+      {arMode && (
         <div style={{
           position: 'absolute',
-          bottom: 140,
+          top: 25,
           left: '50%',
           transform: 'translateX(-50%)',
-          background: 'rgba(0, 255, 0, 0.2)',
-          border: '2px solid #00ff00',
+          background: 'linear-gradient(135deg, #00b894, #00cec9)',
+          color: 'white',
           padding: '10px 20px',
-          borderRadius: 10,
-          color: '#00ff00',
-          fontWeight: 'bold',
+          borderRadius: 25,
           fontSize: 14,
+          fontWeight: 'bold',
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8
+        }}>
+          <span style={{ animation: 'pulse 1s infinite' }}>●</span> AR MODE
+          <style>{`
+            @keyframes pulse {
+              0%, 100% { opacity: 1; }
+              50% { opacity: 0.5; }
+            }
+          `}</style>
+        </div>
+      )}
+
+      {/* Status Bar */}
+      {!arMode && (
+        <div style={{
+          position: 'absolute',
+          top: 80,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(0,0,0,0.7)',
+          color: 'white',
+          padding: '12px 24px',
+          borderRadius: 25,
+          fontSize: 14,
+          textAlign: 'center',
+          maxWidth: '90%',
+          backdropFilter: 'blur(10px)',
           zIndex: 100
         }}>
-          ✨ Tap "Capture 3D" to create model
+          {isScanning
+            ? detectedCar
+              ? `🎯 ${detectedCar.class.toUpperCase()} detected! Tap to activate AR`
+              : '🔍 Looking for vehicles...'
+            : '📱 Point at a car and tap Scan'
+          }
         </div>
       )}
 
@@ -484,280 +478,301 @@ export default function Home() {
         bottom: 50,
         left: '50%',
         transform: 'translateX(-50%)',
-        zIndex: 100
+        zIndex: 100,
+        display: 'flex',
+        gap: 15
       }}>
-        <button
-          onClick={handleClick}
-          style={{
-            padding: '18px 50px',
-            fontSize: 18,
-            fontWeight: 'bold',
-            border: 'none',
-            borderRadius: 50,
-            background: isScanning && detectedCar 
-              ? 'linear-gradient(135deg, #00b894, #00cec9)' 
-              : 'linear-gradient(135deg, #667eea, #764ba2)',
-            color: 'white',
-            cursor: 'pointer',
-            boxShadow: '0 4px 25px rgba(0,0,0,0.3)',
-            transition: 'all 0.3s ease'
-          }}
-        >
-          {isScanning
-            ? detectedCar
-              ? '✨ Capture 3D'
-              : '⏹️ Stop Scan'
-            : '🔍 Start Scan'
-          }
-        </button>
+        {arMode ? (
+          <button
+            onClick={exitAR}
+            style={{
+              padding: '18px 40px',
+              fontSize: 16,
+              fontWeight: 'bold',
+              border: 'none',
+              borderRadius: 50,
+              background: 'linear-gradient(135deg, #e74c3c, #c0392b)',
+              color: 'white',
+              cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+            }}
+          >
+            ✕ Exit AR
+          </button>
+        ) : (
+          <button
+            onClick={handleScan}
+            style={{
+              padding: '18px 50px',
+              fontSize: 18,
+              fontWeight: 'bold',
+              border: 'none',
+              borderRadius: 50,
+              background: isScanning && detectedCar
+                ? 'linear-gradient(135deg, #00b894, #00cec9)'
+                : 'linear-gradient(135deg, #667eea, #764ba2)',
+              color: 'white',
+              cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+            }}
+          >
+            {isScanning
+              ? detectedCar
+                ? '✨ Activate AR'
+                : '⏹️ Stop'
+              : '🔍 Scan'
+            }
+          </button>
+        )}
       </div>
 
-      {/* 3D Viewer Modal */}
-      {show3DViewer && (
-        <Viewer3D
-          carType={detectedCar?.class || 'car'}
-          confidence={detectedCar?.score || 0}
-          onClose={close3DViewer}
-        />
+      {/* AR Instructions */}
+      {arMode && (
+        <div style={{
+          position: 'absolute',
+          bottom: 120,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(0,0,0,0.6)',
+          color: 'white',
+          padding: '10px 20px',
+          borderRadius: 15,
+          fontSize: 13,
+          textAlign: 'center',
+          backdropFilter: 'blur(10px)',
+          zIndex: 100
+        }}>
+          🚗 3D car overlaid on real car • Move phone to see AR effect
+        </div>
       )}
     </div>
   );
 }
 
-// 3D Viewer Component
-function Viewer3D({ 
-  carType, 
-  confidence,
-  onClose 
-}: { 
-  carType: string;
-  confidence: number;
-  onClose: () => void;
-}) {
+// 3D Car Component that overlays on real car
+function Car3D({ width, height, carType }: { width: number; height: number; carType: string }) {
   const [rotation, setRotation] = useState(0);
-
-  // Auto rotate
+  
   useEffect(() => {
     const interval = setInterval(() => {
-      setRotation(prev => (prev + 2) % 360);
+      setRotation(prev => (prev + 1) % 360);
     }, 50);
     return () => clearInterval(interval);
   }, []);
 
-  // Get color based on vehicle type
   const getColor = () => {
-    switch(carType.toLowerCase()) {
-      case 'truck': return '#3498db';
-      case 'bus': return '#f39c12';
-      case 'motorcycle': return '#9b59b6';
-      default: return '#e74c3c';
+    switch(carType) {
+      case 'truck': return { main: '#3498db', dark: '#2980b9' };
+      case 'bus': return { main: '#f39c12', dark: '#d68910' };
+      case 'motorcycle': return { main: '#9b59b6', dark: '#8e44ad' };
+      default: return { main: '#e74c3c', dark: '#c0392b' };
     }
   };
 
+  const colors = getColor();
+  const carWidth = Math.min(width * 0.9, 300);
+  const carHeight = carWidth * 0.5;
+
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: '100%',
-      background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-      zIndex: 200,
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
-      {/* Header */}
-      <div style={{
-        padding: 20,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        color: 'white'
-      }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: 24 }}>
-            🚗 {carType.toUpperCase()}
-          </h2>
-          <p style={{ margin: '5px 0 0', opacity: 0.6, fontSize: 14 }}>
-            Confidence: {Math.round(confidence * 100)}%
-          </p>
-        </div>
-        <button
-          onClick={onClose}
-          style={{
-            width: 50,
-            height: 50,
-            borderRadius: '50%',
-            border: 'none',
-            background: 'rgba(255,255,255,0.1)',
-            color: 'white',
-            fontSize: 24,
-            cursor: 'pointer'
-          }}
-        >
-          ✕
-        </button>
-      </div>
-
-      {/* 3D Car Display */}
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        perspective: '1000px'
-      }}>
-        <div style={{
-          width: 280,
-          height: 160,
-          position: 'relative',
-          transformStyle: 'preserve-3d',
-          transform: `rotateY(${rotation}deg) rotateX(-10deg)`
-        }}>
-          {/* Car Body */}
-          <div style={{
-            position: 'absolute',
-            width: '100%',
-            height: '55%',
-            bottom: '25%',
-            background: `linear-gradient(135deg, ${getColor()}, ${getColor()}dd)`,
-            borderRadius: 15,
-            boxShadow: `0 30px 60px rgba(0,0,0,0.4), 0 0 30px ${getColor()}44`
-          }} />
-          
-          {/* Car Top/Cabin */}
-          <div style={{
-            position: 'absolute',
-            width: '55%',
-            height: '38%',
-            bottom: '50%',
-            left: '18%',
-            background: `linear-gradient(135deg, ${getColor()}, ${getColor()}dd)`,
-            borderRadius: '12px 12px 5px 5px'
-          }} />
-          
-          {/* Front Window */}
-          <div style={{
-            position: 'absolute',
-            width: '45%',
-            height: '28%',
-            bottom: '55%',
-            left: '22%',
-            background: 'linear-gradient(135deg, #74b9ff, #0984e3)',
-            borderRadius: '8px 8px 3px 3px',
-            opacity: 0.85
-          }} />
-
-          {/* Headlights */}
-          <div style={{
-            position: 'absolute',
-            width: 15,
-            height: 10,
-            background: '#fff8dc',
-            borderRadius: 3,
-            bottom: '40%',
-            left: '5%',
-            boxShadow: '0 0 10px #fff8dc'
-          }} />
-          <div style={{
-            position: 'absolute',
-            width: 15,
-            height: 10,
-            background: '#fff8dc',
-            borderRadius: 3,
-            bottom: '40%',
-            right: '5%',
-            boxShadow: '0 0 10px #fff8dc'
-          }} />
-          
-          {/* Wheels */}
-          <div style={{
-            position: 'absolute',
-            width: 45,
-            height: 45,
-            background: 'linear-gradient(135deg, #2c3e50, #34495e)',
-            borderRadius: '50%',
-            bottom: '8%',
-            left: '12%',
-            border: '4px solid #1a1a2e',
-            boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)'
-          }} />
-          <div style={{
-            position: 'absolute',
-            width: 45,
-            height: 45,
-            background: 'linear-gradient(135deg, #2c3e50, #34495e)',
-            borderRadius: '50%',
-            bottom: '8%',
-            right: '12%',
-            border: '4px solid #1a1a2e',
-            boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)'
-          }} />
-
-          {/* Wheel centers */}
-          <div style={{
-            position: 'absolute',
-            width: 15,
-            height: 15,
-            background: '#95a5a6',
-            borderRadius: '50%',
-            bottom: '18%',
-            left: '22%'
-          }} />
-          <div style={{
-            position: 'absolute',
-            width: 15,
-            height: 15,
-            background: '#95a5a6',
-            borderRadius: '50%',
-            bottom: '18%',
-            right: '22%'
-          }} />
-        </div>
-      </div>
-
-      {/* Floor Shadow */}
+    <div
+      style={{
+        width: carWidth,
+        height: carHeight,
+        position: 'relative',
+        transformStyle: 'preserve-3d',
+        transform: `rotateY(${rotation}deg) rotateX(-5deg)`,
+        filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.5))'
+      }}
+    >
+      {/* Glowing outline effect */}
       <div style={{
         position: 'absolute',
-        bottom: '30%',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: 200,
-        height: 20,
-        background: 'radial-gradient(ellipse, rgba(0,0,0,0.4) 0%, transparent 70%)',
-        borderRadius: '50%'
+        top: -5,
+        left: -5,
+        right: -5,
+        bottom: -5,
+        border: `3px solid ${colors.main}`,
+        borderRadius: 20,
+        boxShadow: `0 0 20px ${colors.main}, 0 0 40px ${colors.main}55, inset 0 0 20px ${colors.main}33`,
+        animation: 'glow 2s ease-in-out infinite'
+      }} />
+      
+      <style>{`
+        @keyframes glow {
+          0%, 100% { opacity: 1; box-shadow: 0 0 20px ${colors.main}, 0 0 40px ${colors.main}55; }
+          50% { opacity: 0.8; box-shadow: 0 0 30px ${colors.main}, 0 0 60px ${colors.main}77; }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-5px); }
+        }
+      `}</style>
+
+      {/* Car Body */}
+      <div style={{
+        position: 'absolute',
+        width: '100%',
+        height: '50%',
+        bottom: '20%',
+        background: `linear-gradient(180deg, ${colors.main}ee, ${colors.dark}ee)`,
+        borderRadius: 12,
+        backdropFilter: 'blur(5px)',
+        border: `2px solid ${colors.main}`,
+        boxShadow: `inset 0 5px 15px rgba(255,255,255,0.3), inset 0 -5px 15px rgba(0,0,0,0.3)`
+      }} />
+      
+      {/* Car Roof */}
+      <div style={{
+        position: 'absolute',
+        width: '50%',
+        height: '35%',
+        bottom: '45%',
+        left: '20%',
+        background: `linear-gradient(180deg, ${colors.main}ee, ${colors.dark}ee)`,
+        borderRadius: '10px 10px 5px 5px',
+        border: `2px solid ${colors.main}`,
+        boxShadow: `inset 0 5px 10px rgba(255,255,255,0.2)`
+      }} />
+      
+      {/* Windshield */}
+      <div style={{
+        position: 'absolute',
+        width: '40%',
+        height: '25%',
+        bottom: '50%',
+        left: '25%',
+        background: 'linear-gradient(135deg, rgba(116,185,255,0.7), rgba(9,132,227,0.7))',
+        borderRadius: '8px 8px 3px 3px',
+        border: '1px solid rgba(255,255,255,0.3)',
+        boxShadow: 'inset 0 0 20px rgba(255,255,255,0.2)'
       }} />
 
-      {/* Footer */}
+      {/* Headlights */}
       <div style={{
-        padding: 30,
-        textAlign: 'center'
+        position: 'absolute',
+        width: '8%',
+        height: '12%',
+        bottom: '35%',
+        left: '5%',
+        background: 'radial-gradient(circle, #fffacd, #ffd700)',
+        borderRadius: 4,
+        boxShadow: '0 0 15px #ffd700, 0 0 30px #ffd70066'
+      }} />
+      <div style={{
+        position: 'absolute',
+        width: '8%',
+        height: '12%',
+        bottom: '35%',
+        right: '5%',
+        background: 'radial-gradient(circle, #fffacd, #ffd700)',
+        borderRadius: 4,
+        boxShadow: '0 0 15px #ffd700, 0 0 30px #ffd70066'
+      }} />
+
+      {/* Tail lights */}
+      <div style={{
+        position: 'absolute',
+        width: '6%',
+        height: '10%',
+        bottom: '30%',
+        left: '2%',
+        background: 'radial-gradient(circle, #ff6b6b, #ee5a24)',
+        borderRadius: 3,
+        boxShadow: '0 0 10px #ff0000'
+      }} />
+      <div style={{
+        position: 'absolute',
+        width: '6%',
+        height: '10%',
+        bottom: '30%',
+        right: '2%',
+        background: 'radial-gradient(circle, #ff6b6b, #ee5a24)',
+        borderRadius: 3,
+        boxShadow: '0 0 10px #ff0000'
+      }} />
+
+      {/* Wheels */}
+      <div style={{
+        position: 'absolute',
+        width: '18%',
+        height: '36%',
+        bottom: '5%',
+        left: '12%',
+        background: 'radial-gradient(circle, #555, #222)',
+        borderRadius: '50%',
+        border: '3px solid #333',
+        boxShadow: 'inset 0 0 10px rgba(0,0,0,0.8), 0 5px 15px rgba(0,0,0,0.5)'
+      }}>
+        {/* Wheel rim */}
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '50%',
+          height: '50%',
+          background: 'radial-gradient(circle, #ccc, #888)',
+          borderRadius: '50%'
+        }} />
+      </div>
+      <div style={{
+        position: 'absolute',
+        width: '18%',
+        height: '36%',
+        bottom: '5%',
+        right: '12%',
+        background: 'radial-gradient(circle, #555, #222)',
+        borderRadius: '50%',
+        border: '3px solid #333',
+        boxShadow: 'inset 0 0 10px rgba(0,0,0,0.8), 0 5px 15px rgba(0,0,0,0.5)'
       }}>
         <div style={{
-          display: 'flex',
-          gap: 15,
-          justifyContent: 'center',
-          marginBottom: 20
-        }}>
-          <button
-            onClick={onClose}
-            style={{
-              padding: '14px 30px',
-              fontSize: 16,
-              fontWeight: 'bold',
-              border: 'none',
-              borderRadius: 50,
-              background: 'linear-gradient(135deg, #667eea, #764ba2)',
-              color: 'white',
-              cursor: 'pointer'
-            }}
-          >
-            🔍 Scan Another
-          </button>
-        </div>
-        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
-          ✨ Vehicle detected and converted to 3D model
-        </p>
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '50%',
+          height: '50%',
+          background: 'radial-gradient(circle, #ccc, #888)',
+          borderRadius: '50%'
+        }} />
+      </div>
+
+      {/* Holographic effect lines */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: `repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 3px,
+          ${colors.main}22 3px,
+          ${colors.main}22 6px
+        )`,
+        borderRadius: 15,
+        pointerEvents: 'none',
+        opacity: 0.5
+      }} />
+
+      {/* AR Label */}
+      <div style={{
+        position: 'absolute',
+        top: -35,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        background: 'linear-gradient(135deg, #667eea, #764ba2)',
+        color: 'white',
+        padding: '5px 15px',
+        borderRadius: 15,
+        fontSize: 12,
+        fontWeight: 'bold',
+        whiteSpace: 'nowrap',
+        boxShadow: '0 3px 10px rgba(0,0,0,0.3)'
+      }}>
+        🚗 {carType.toUpperCase()} • AR
       </div>
     </div>
   );
