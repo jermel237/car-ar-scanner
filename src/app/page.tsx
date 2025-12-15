@@ -31,7 +31,6 @@ export default function Home() {
   const [arMode, setArMode] = useState(false);
   const [carPosition, setCarPosition] = useState<CarPosition | null>(null);
 
-  // Start camera
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
     try {
       if (stream) {
@@ -67,7 +66,6 @@ export default function Home() {
     }
   }, [stream]);
 
-  // Switch camera
   const switchCamera = async () => {
     const newFacing = cameraFacing === 'environment' ? 'user' : 'environment';
     setCameraFacing(newFacing);
@@ -78,7 +76,6 @@ export default function Home() {
     }
   };
 
-  // Load AI model
   const loadModel = async () => {
     try {
       setLoadingText('Loading AI...');
@@ -97,7 +94,6 @@ export default function Home() {
     }
   };
 
-  // Initialize
   useEffect(() => {
     const init = async () => {
       try {
@@ -123,7 +119,7 @@ export default function Home() {
     };
   }, []);
 
-  // Detection loop - ALWAYS RUNS IN AR MODE FOR TRACKING
+  // CONTINUOUS DETECTION - Always tracks the car in AR mode
   useEffect(() => {
     if (!model || !videoRef.current || !canvasRef.current) return;
     if (!isScanning && !arMode) return;
@@ -150,7 +146,7 @@ export default function Home() {
         const predictions = await model.detect(video);
         
         const vehicles = predictions.filter(
-          (p: any) => ['car', 'truck', 'bus', 'motorcycle'].includes(p.class) && p.score > 0.4
+          (p: any) => ['car', 'truck', 'bus', 'motorcycle'].includes(p.class) && p.score > 0.35
         );
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -162,8 +158,8 @@ export default function Home() {
           const scaleX = window.innerWidth / canvas.width;
           const scaleY = window.innerHeight / canvas.height;
           
-          // ALWAYS UPDATE POSITION - this makes 3D track the car
-          const newPosition = {
+          // UPDATE POSITION EVERY FRAME - 3D follows real car
+          const newPosition: CarPosition = {
             x: x * scaleX,
             y: y * scaleY,
             width: width * scaleX,
@@ -176,10 +172,9 @@ export default function Home() {
             score: car.score
           });
 
-          // Update position in real-time
           setCarPosition(newPosition);
 
-          // Only draw detection box when SCANNING (not in AR mode)
+          // Draw box only when scanning
           if (isScanning && !arMode) {
             ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 4;
@@ -188,7 +183,6 @@ export default function Home() {
             const cornerLength = 30;
             ctx.lineWidth = 6;
 
-            // Corners
             ctx.beginPath();
             ctx.moveTo(x, y + cornerLength);
             ctx.lineTo(x, y);
@@ -222,12 +216,10 @@ export default function Home() {
             );
           }
         } else {
-          // Car lost - only clear if scanning, keep last position in AR
           if (isScanning && !arMode) {
             setDetectedCar(null);
             setCarPosition(null);
           }
-          // In AR mode, keep tracking even if briefly lost
         }
       } catch (e) {
         console.error('Detection error:', e);
@@ -343,7 +335,7 @@ export default function Home() {
       overflow: 'hidden',
       touchAction: 'none'
     }}>
-      {/* Camera Feed */}
+      {/* Camera */}
       <video
         ref={videoRef}
         playsInline
@@ -374,7 +366,7 @@ export default function Home() {
         }}
       />
 
-      {/* 3D Car - TRACKS REAL CAR + 5X BIGGER + TOUCH SPIN */}
+      {/* 3D CAR - EXACTLY ON REAL CAR POSITION */}
       {arMode && carPosition && (
         <ThreeDCar 
           position={carPosition}
@@ -445,7 +437,7 @@ export default function Home() {
         {cameraFacing === 'environment' ? '📷 Back' : '🤳 Front'}
       </div>
 
-      {/* AR Mode Indicator */}
+      {/* AR Mode */}
       {arMode && (
         <div style={{
           position: 'absolute',
@@ -471,17 +463,17 @@ export default function Home() {
             borderRadius: '50%',
             animation: 'pulse 1s infinite' 
           }} />
-          AR TRACKING
+          AR LIVE
           <style>{`
             @keyframes pulse {
-              0%, 100% { opacity: 1; transform: scale(1); }
-              50% { opacity: 0.5; transform: scale(0.8); }
+              0%, 100% { opacity: 1; }
+              50% { opacity: 0.4; }
             }
           `}</style>
         </div>
       )}
 
-      {/* Status Bar */}
+      {/* Status */}
       {!arMode && (
         <div style={{
           position: 'absolute',
@@ -507,7 +499,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* Touch instruction in AR mode */}
+      {/* AR Instructions */}
       {arMode && (
         <div style={{
           position: 'absolute',
@@ -520,13 +512,14 @@ export default function Home() {
           borderRadius: 20,
           fontSize: 14,
           zIndex: 100,
-          backdropFilter: 'blur(10px)'
+          backdropFilter: 'blur(10px)',
+          textAlign: 'center'
         }}>
-          👆 Hold & drag to spin • 3D tracks the car
+          👆 Drag to rotate • Move phone to track car
         </div>
       )}
 
-      {/* Main Buttons */}
+      {/* Buttons */}
       <div style={{
         position: 'absolute',
         bottom: 50,
@@ -589,7 +582,7 @@ export default function Home() {
   );
 }
 
-// 3D Car Component - TRACKS POSITION + 5X BIGGER + TOUCH SPIN
+// 3D CAR - COVERS THE REAL CAR EXACTLY + TOUCH SPIN
 function ThreeDCar({ 
   position, 
   carType 
@@ -616,55 +609,46 @@ function ThreeDCar({
     }
   }, [carType]);
 
-  // Calculate 5X bigger size CENTERED on the detected car
-  const centerX = position.x + position.width / 2;
-  const centerY = position.y + position.height / 2;
-  const bigWidth = position.width * 5;
-  const bigHeight = position.height * 5;
-
-  // Keep within screen bounds
-  const finalSize = {
-    width: Math.min(bigWidth, window.innerWidth - 20),
-    height: Math.min(bigHeight, window.innerHeight - 200),
-    x: Math.max(10, centerX - Math.min(bigWidth, window.innerWidth - 20) / 2),
-    y: Math.max(100, centerY - Math.min(bigHeight, window.innerHeight - 200) / 2)
+  // EXACT POSITION - 3D covers the real car
+  // Make it 2x bigger than detection box to really cover the car
+  const scale = 2.5;
+  const displaySize = {
+    width: position.width * scale,
+    height: position.height * scale,
+    x: position.x - (position.width * (scale - 1)) / 2,
+    y: position.y - (position.height * (scale - 1)) / 2
   };
-
-  // Ensure it stays on screen
-  if (finalSize.x + finalSize.width > window.innerWidth - 10) {
-    finalSize.x = window.innerWidth - finalSize.width - 10;
-  }
-  if (finalSize.y + finalSize.height > window.innerHeight - 150) {
-    finalSize.y = window.innerHeight - finalSize.height - 150;
-  }
 
   // Touch handlers
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     isDraggingRef.current = true;
     lastTouchXRef.current = e.touches[0].clientX;
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     if (!isDraggingRef.current || !carRef.current) return;
     
     const touchX = e.touches[0].clientX;
     const deltaX = touchX - lastTouchXRef.current;
     
-    rotationRef.current += deltaX * 0.015;
+    // Rotate car based on drag
+    rotationRef.current += deltaX * 0.02;
     carRef.current.rotation.y = rotationRef.current;
     
     lastTouchXRef.current = touchX;
   }, []);
 
-  const handleTouchEnd = useCallback(() => {
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
     isDraggingRef.current = false;
   }, []);
 
-  // Mouse handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
+    e.preventDefault();
     isDraggingRef.current = true;
     lastTouchXRef.current = e.clientX;
   }, []);
@@ -673,7 +657,7 @@ function ThreeDCar({
     if (!isDraggingRef.current || !carRef.current) return;
     
     const deltaX = e.clientX - lastTouchXRef.current;
-    rotationRef.current += deltaX * 0.015;
+    rotationRef.current += deltaX * 0.02;
     carRef.current.rotation.y = rotationRef.current;
     
     lastTouchXRef.current = e.clientX;
@@ -692,39 +676,43 @@ function ThreeDCar({
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
-    const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 1000);
-    camera.position.set(0, 3, 10);
-    camera.lookAt(0, 0.5, 0);
+    // Camera positioned to see the whole car
+    const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 1000);
+    camera.position.set(0, 4, 12);
+    camera.lookAt(0, 1, 0);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ 
       alpha: true, 
-      antialias: true 
+      antialias: true,
+      powerPreference: 'high-performance'
     });
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    // Strong lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambientLight);
 
-    const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    mainLight.position.set(5, 10, 7);
+    const mainLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    mainLight.position.set(5, 15, 10);
     mainLight.castShadow = true;
     scene.add(mainLight);
 
-    const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    fillLight.position.set(-5, 5, -5);
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    fillLight.position.set(-8, 8, -8);
     scene.add(fillLight);
 
-    const bottomLight = new THREE.DirectionalLight(0xffffff, 0.3);
-    bottomLight.position.set(0, -3, 0);
-    scene.add(bottomLight);
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    rimLight.position.set(0, 0, -10);
+    scene.add(rimLight);
 
-    const car = createCar(getColor());
+    // Create big detailed car
+    const car = createBigCar(getColor());
     scene.add(car);
     carRef.current = car;
 
@@ -749,14 +737,14 @@ function ThreeDCar({
     };
   }, [getColor]);
 
-  // Update size when position changes (TRACKING)
+  // Update renderer size when position changes
   useEffect(() => {
     if (!rendererRef.current || !cameraRef.current) return;
 
-    rendererRef.current.setSize(finalSize.width, finalSize.height);
-    cameraRef.current.aspect = finalSize.width / finalSize.height;
+    rendererRef.current.setSize(displaySize.width, displaySize.height);
+    cameraRef.current.aspect = displaySize.width / displaySize.height;
     cameraRef.current.updateProjectionMatrix();
-  }, [finalSize.width, finalSize.height]);
+  }, [displaySize.width, displaySize.height]);
 
   return (
     <div
@@ -770,320 +758,386 @@ function ThreeDCar({
       onMouseLeave={handleMouseUp}
       style={{
         position: 'absolute',
-        left: finalSize.x,
-        top: finalSize.y,
-        width: finalSize.width,
-        height: finalSize.height,
+        left: displaySize.x,
+        top: displaySize.y,
+        width: displaySize.width,
+        height: displaySize.height,
         zIndex: 50,
-        cursor: isDraggingRef.current ? 'grabbing' : 'grab',
-        touchAction: 'none',
-        // Smooth tracking transition
-        transition: 'left 0.1s ease-out, top 0.1s ease-out'
+        cursor: 'grab',
+        touchAction: 'none'
       }}
     />
   );
 }
 
-// Create detailed 3D Car
-function createCar(color: number): THREE.Group {
+// Create BIG detailed 3D Car
+function createBigCar(color: number): THREE.Group {
   const car = new THREE.Group();
 
+  // Materials
   const bodyMaterial = new THREE.MeshStandardMaterial({
     color: color,
-    metalness: 0.8,
-    roughness: 0.2,
+    metalness: 0.9,
+    roughness: 0.15,
   });
 
   const glassMaterial = new THREE.MeshStandardMaterial({
-    color: 0x88ccff,
-    metalness: 0.95,
-    roughness: 0.05,
+    color: 0x88ddff,
+    metalness: 0.98,
+    roughness: 0.02,
     transparent: true,
-    opacity: 0.7
+    opacity: 0.6
   });
 
   const wheelMaterial = new THREE.MeshStandardMaterial({
-    color: 0x1a1a1a,
-    metalness: 0.3,
-    roughness: 0.8
+    color: 0x111111,
+    metalness: 0.2,
+    roughness: 0.9
   });
 
   const rimMaterial = new THREE.MeshStandardMaterial({
-    color: 0xeeeeee,
-    metalness: 0.95,
-    roughness: 0.05
+    color: 0xdddddd,
+    metalness: 0.98,
+    roughness: 0.02
   });
 
   const chromeMaterial = new THREE.MeshStandardMaterial({
     color: 0xffffff,
     metalness: 1,
-    roughness: 0.05
+    roughness: 0.02
   });
 
   const headlightMaterial = new THREE.MeshStandardMaterial({
     color: 0xffffee,
     emissive: 0xffffee,
-    emissiveIntensity: 1
+    emissiveIntensity: 2
   });
 
   const taillightMaterial = new THREE.MeshStandardMaterial({
     color: 0xff0000,
     emissive: 0xff0000,
-    emissiveIntensity: 0.8
+    emissiveIntensity: 1.5
   });
 
   const darkMaterial = new THREE.MeshStandardMaterial({
-    color: 0x222222,
-    metalness: 0.5,
-    roughness: 0.5
+    color: 0x1a1a1a,
+    metalness: 0.6,
+    roughness: 0.4
   });
 
+  // === MAIN BODY ===
+  
   // Lower body
-  const bodyLowerGeometry = new THREE.BoxGeometry(4.8, 0.9, 2.1);
-  const bodyLower = new THREE.Mesh(bodyLowerGeometry, bodyMaterial);
-  bodyLower.position.y = 0.55;
+  const bodyLower = new THREE.Mesh(
+    new THREE.BoxGeometry(5.5, 1, 2.4),
+    bodyMaterial
+  );
+  bodyLower.position.y = 0.6;
   bodyLower.castShadow = true;
   car.add(bodyLower);
 
-  // Upper body
-  const bodyUpperGeometry = new THREE.BoxGeometry(4.5, 0.4, 2.05);
-  const bodyUpper = new THREE.Mesh(bodyUpperGeometry, bodyMaterial);
-  bodyUpper.position.y = 1.2;
-  car.add(bodyUpper);
+  // Body sides (curved look)
+  const bodySide = new THREE.Mesh(
+    new THREE.BoxGeometry(5.3, 0.5, 2.5),
+    bodyMaterial
+  );
+  bodySide.position.y = 1.2;
+  car.add(bodySide);
 
   // Hood
-  const hoodGeometry = new THREE.BoxGeometry(1.5, 0.4, 2);
-  const hood = new THREE.Mesh(hoodGeometry, bodyMaterial);
-  hood.position.set(1.9, 1, 0);
-  hood.rotation.z = -0.1;
+  const hood = new THREE.Mesh(
+    new THREE.BoxGeometry(1.8, 0.5, 2.3),
+    bodyMaterial
+  );
+  hood.position.set(2.1, 1.05, 0);
+  hood.rotation.z = -0.12;
   car.add(hood);
 
   // Trunk
-  const trunkGeometry = new THREE.BoxGeometry(1.1, 0.4, 2);
-  const trunk = new THREE.Mesh(trunkGeometry, bodyMaterial);
-  trunk.position.set(-2, 1, 0);
-  trunk.rotation.z = 0.08;
+  const trunk = new THREE.Mesh(
+    new THREE.BoxGeometry(1.3, 0.5, 2.3),
+    bodyMaterial
+  );
+  trunk.position.set(-2.3, 1.05, 0);
+  trunk.rotation.z = 0.1;
   car.add(trunk);
 
-  // Cabin
-  const cabinGeometry = new THREE.BoxGeometry(2.6, 1.1, 1.9);
-  const cabin = new THREE.Mesh(cabinGeometry, bodyMaterial);
-  cabin.position.set(-0.1, 1.95, 0);
+  // === CABIN ===
+  
+  const cabin = new THREE.Mesh(
+    new THREE.BoxGeometry(3, 1.3, 2.2),
+    bodyMaterial
+  );
+  cabin.position.set(-0.1, 2.05, 0);
   cabin.castShadow = true;
   car.add(cabin);
 
   // Roof
-  const roofGeometry = new THREE.BoxGeometry(2.4, 0.15, 1.85);
-  const roof = new THREE.Mesh(roofGeometry, bodyMaterial);
-  roof.position.set(-0.1, 2.55, 0);
+  const roof = new THREE.Mesh(
+    new THREE.BoxGeometry(2.8, 0.18, 2.1),
+    bodyMaterial
+  );
+  roof.position.set(-0.1, 2.75, 0);
   car.add(roof);
 
+  // === WINDOWS ===
+  
   // Windshield
-  const windshieldGeometry = new THREE.PlaneGeometry(1.8, 1);
-  const windshield = new THREE.Mesh(windshieldGeometry, glassMaterial);
-  windshield.position.set(1.05, 1.95, 0);
+  const windshield = new THREE.Mesh(
+    new THREE.PlaneGeometry(2, 1.1),
+    glassMaterial
+  );
+  windshield.position.set(1.2, 2.1, 0);
   windshield.rotation.y = Math.PI / 2;
-  windshield.rotation.x = 0.25;
+  windshield.rotation.x = 0.3;
   car.add(windshield);
 
   // Rear window
-  const rearWindow = new THREE.Mesh(windshieldGeometry, glassMaterial);
-  rearWindow.position.set(-1.3, 1.95, 0);
+  const rearWindow = new THREE.Mesh(
+    new THREE.PlaneGeometry(2, 1.1),
+    glassMaterial
+  );
+  rearWindow.position.set(-1.5, 2.1, 0);
   rearWindow.rotation.y = -Math.PI / 2;
-  rearWindow.rotation.x = -0.2;
+  rearWindow.rotation.x = -0.25;
   car.add(rearWindow);
 
   // Side windows
-  const sideWindowGeometry = new THREE.PlaneGeometry(2.3, 0.85);
+  const sideWindowGeo = new THREE.PlaneGeometry(2.7, 1);
   
-  const sideWindowLeft = new THREE.Mesh(sideWindowGeometry, glassMaterial);
-  sideWindowLeft.position.set(-0.1, 2, 0.96);
-  car.add(sideWindowLeft);
+  const sideWindowL = new THREE.Mesh(sideWindowGeo, glassMaterial);
+  sideWindowL.position.set(-0.1, 2.15, 1.11);
+  car.add(sideWindowL);
 
-  const sideWindowRight = new THREE.Mesh(sideWindowGeometry, glassMaterial);
-  sideWindowRight.position.set(-0.1, 2, -0.96);
-  sideWindowRight.rotation.y = Math.PI;
-  car.add(sideWindowRight);
+  const sideWindowR = new THREE.Mesh(sideWindowGeo, glassMaterial);
+  sideWindowR.position.set(-0.1, 2.15, -1.11);
+  sideWindowR.rotation.y = Math.PI;
+  car.add(sideWindowR);
 
-  // Wheels
-  const wheelGeometry = new THREE.CylinderGeometry(0.45, 0.45, 0.32, 32);
-  const rimGeometry = new THREE.CylinderGeometry(0.28, 0.28, 0.34, 24);
-  const hubGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.36, 16);
-
+  // === WHEELS ===
+  
   const wheelPositions = [
-    { x: 1.5, z: 1.15 },
-    { x: 1.5, z: -1.15 },
-    { x: -1.5, z: 1.15 },
-    { x: -1.5, z: -1.15 }
+    { x: 1.7, z: 1.3 },
+    { x: 1.7, z: -1.3 },
+    { x: -1.7, z: 1.3 },
+    { x: -1.7, z: -1.3 }
   ];
 
   wheelPositions.forEach(pos => {
-    const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-    wheel.position.set(pos.x, 0.45, pos.z);
-    wheel.rotation.x = Math.PI / 2;
-    wheel.castShadow = true;
-    car.add(wheel);
+    // Tire
+    const tire = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.5, 0.5, 0.38, 32),
+      wheelMaterial
+    );
+    tire.position.set(pos.x, 0.5, pos.z);
+    tire.rotation.x = Math.PI / 2;
+    tire.castShadow = true;
+    car.add(tire);
 
-    const rim = new THREE.Mesh(rimGeometry, rimMaterial);
-    rim.position.set(pos.x, 0.45, pos.z);
+    // Rim
+    const rim = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.32, 0.32, 0.4, 24),
+      rimMaterial
+    );
+    rim.position.set(pos.x, 0.5, pos.z);
     rim.rotation.x = Math.PI / 2;
     car.add(rim);
 
-    const hub = new THREE.Mesh(hubGeometry, chromeMaterial);
-    hub.position.set(pos.x, 0.45, pos.z);
+    // Hub
+    const hub = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12, 0.12, 0.42, 16),
+      chromeMaterial
+    );
+    hub.position.set(pos.x, 0.5, pos.z);
     hub.rotation.x = Math.PI / 2;
     car.add(hub);
 
     // Spokes
-    for (let i = 0; i < 5; i++) {
-      const spokeGeometry = new THREE.BoxGeometry(0.03, 0.2, 0.35);
-      const spoke = new THREE.Mesh(spokeGeometry, rimMaterial);
-      spoke.position.set(pos.x, 0.45, pos.z);
+    for (let i = 0; i < 6; i++) {
+      const spoke = new THREE.Mesh(
+        new THREE.BoxGeometry(0.04, 0.25, 0.4),
+        rimMaterial
+      );
+      spoke.position.set(pos.x, 0.5, pos.z);
       spoke.rotation.x = Math.PI / 2;
-      spoke.rotation.z = (i * Math.PI * 2) / 5;
+      spoke.rotation.z = (i * Math.PI) / 3;
       car.add(spoke);
     }
   });
 
-  // Headlights
-  const headlightGeometry = new THREE.BoxGeometry(0.1, 0.25, 0.6);
+  // === LIGHTS ===
   
-  const headlightLeft = new THREE.Mesh(headlightGeometry, headlightMaterial);
-  headlightLeft.position.set(2.41, 0.7, 0.6);
-  car.add(headlightLeft);
+  // Headlights
+  const headlightGeo = new THREE.BoxGeometry(0.12, 0.3, 0.7);
+  
+  const headlightL = new THREE.Mesh(headlightGeo, headlightMaterial);
+  headlightL.position.set(2.76, 0.75, 0.7);
+  car.add(headlightL);
 
-  const headlightRight = new THREE.Mesh(headlightGeometry, headlightMaterial);
-  headlightRight.position.set(2.41, 0.7, -0.6);
-  car.add(headlightRight);
+  const headlightR = new THREE.Mesh(headlightGeo, headlightMaterial);
+  headlightR.position.set(2.76, 0.75, -0.7);
+  car.add(headlightR);
 
   // Headlight glow
-  const glowGeometry = new THREE.SphereGeometry(0.15, 16, 16);
-  const glowMaterial = new THREE.MeshBasicMaterial({
-    color: 0xffffaa,
+  const glowGeo = new THREE.SphereGeometry(0.2, 16, 16);
+  const glowMat = new THREE.MeshBasicMaterial({
+    color: 0xffffcc,
     transparent: true,
-    opacity: 0.6
+    opacity: 0.7
   });
 
-  const glowLeft = new THREE.Mesh(glowGeometry, glowMaterial);
-  glowLeft.position.set(2.5, 0.7, 0.6);
-  car.add(glowLeft);
+  const glowL = new THREE.Mesh(glowGeo, glowMat);
+  glowL.position.set(2.9, 0.75, 0.7);
+  car.add(glowL);
 
-  const glowRight = new THREE.Mesh(glowGeometry, glowMaterial);
-  glowRight.position.set(2.5, 0.7, -0.6);
-  car.add(glowRight);
+  const glowR = new THREE.Mesh(glowGeo, glowMat);
+  glowR.position.set(2.9, 0.75, -0.7);
+  car.add(glowR);
 
   // Taillights
-  const taillightGeometry = new THREE.BoxGeometry(0.1, 0.22, 0.5);
+  const taillightGeo = new THREE.BoxGeometry(0.12, 0.28, 0.6);
   
-  const taillightLeft = new THREE.Mesh(taillightGeometry, taillightMaterial);
-  taillightLeft.position.set(-2.41, 0.7, 0.6);
-  car.add(taillightLeft);
+  const taillightL = new THREE.Mesh(taillightGeo, taillightMaterial);
+  taillightL.position.set(-2.76, 0.75, 0.7);
+  car.add(taillightL);
 
-  const taillightRight = new THREE.Mesh(taillightGeometry, taillightMaterial);
-  taillightRight.position.set(-2.41, 0.7, -0.6);
-  car.add(taillightRight);
+  const taillightR = new THREE.Mesh(taillightGeo, taillightMaterial);
+  taillightR.position.set(-2.76, 0.75, -0.7);
+  car.add(taillightR);
 
+  // === DETAILS ===
+  
   // Grille
-  const grilleGeometry = new THREE.BoxGeometry(0.06, 0.4, 1.4);
-  const grille = new THREE.Mesh(grilleGeometry, darkMaterial);
-  grille.position.set(2.42, 0.5, 0);
+  const grille = new THREE.Mesh(
+    new THREE.BoxGeometry(0.08, 0.5, 1.6),
+    darkMaterial
+  );
+  grille.position.set(2.77, 0.55, 0);
   car.add(grille);
 
-  // Grille lines
-  for (let i = -3; i <= 3; i++) {
-    const lineGeometry = new THREE.BoxGeometry(0.08, 0.35, 0.04);
-    const line = new THREE.Mesh(lineGeometry, chromeMaterial);
-    line.position.set(2.43, 0.5, i * 0.18);
-    car.add(line);
+  // Grille bars
+  for (let i = -4; i <= 4; i++) {
+    const bar = new THREE.Mesh(
+      new THREE.BoxGeometry(0.1, 0.45, 0.05),
+      chromeMaterial
+    );
+    bar.position.set(2.78, 0.55, i * 0.16);
+    car.add(bar);
   }
 
-  // Bumpers
-  const frontBumperGeometry = new THREE.BoxGeometry(0.25, 0.3, 2.2);
-  const frontBumper = new THREE.Mesh(frontBumperGeometry, darkMaterial);
-  frontBumper.position.set(2.5, 0.25, 0);
+  // Front bumper
+  const frontBumper = new THREE.Mesh(
+    new THREE.BoxGeometry(0.3, 0.35, 2.6),
+    darkMaterial
+  );
+  frontBumper.position.set(2.85, 0.28, 0);
   car.add(frontBumper);
 
-  const rearBumper = new THREE.Mesh(frontBumperGeometry, darkMaterial);
-  rearBumper.position.set(-2.5, 0.25, 0);
+  // Rear bumper
+  const rearBumper = new THREE.Mesh(
+    new THREE.BoxGeometry(0.3, 0.35, 2.6),
+    darkMaterial
+  );
+  rearBumper.position.set(-2.85, 0.28, 0);
   car.add(rearBumper);
 
   // Side mirrors
-  const mirrorArmGeometry = new THREE.BoxGeometry(0.25, 0.05, 0.05);
-  const mirrorHeadGeometry = new THREE.BoxGeometry(0.08, 0.12, 0.2);
+  const mirrorArm = new THREE.Mesh(
+    new THREE.BoxGeometry(0.3, 0.06, 0.06),
+    bodyMaterial
+  );
+  mirrorArm.position.set(0.9, 1.65, 1.25);
+  car.add(mirrorArm);
 
-  const mirrorArmLeft = new THREE.Mesh(mirrorArmGeometry, bodyMaterial);
-  mirrorArmLeft.position.set(0.8, 1.5, 1.1);
-  car.add(mirrorArmLeft);
+  const mirrorHead = new THREE.Mesh(
+    new THREE.BoxGeometry(0.1, 0.15, 0.25),
+    darkMaterial
+  );
+  mirrorHead.position.set(0.9, 1.65, 1.4);
+  car.add(mirrorHead);
 
-  const mirrorHeadLeft = new THREE.Mesh(mirrorHeadGeometry, darkMaterial);
-  mirrorHeadLeft.position.set(0.8, 1.5, 1.25);
-  car.add(mirrorHeadLeft);
+  const mirrorArm2 = mirrorArm.clone();
+  mirrorArm2.position.z = -1.25;
+  car.add(mirrorArm2);
 
-  const mirrorArmRight = new THREE.Mesh(mirrorArmGeometry, bodyMaterial);
-  mirrorArmRight.position.set(0.8, 1.5, -1.1);
-  car.add(mirrorArmRight);
-
-  const mirrorHeadRight = new THREE.Mesh(mirrorHeadGeometry, darkMaterial);
-  mirrorHeadRight.position.set(0.8, 1.5, -1.25);
-  car.add(mirrorHeadRight);
+  const mirrorHead2 = mirrorHead.clone();
+  mirrorHead2.position.z = -1.4;
+  car.add(mirrorHead2);
 
   // Door handles
-  const handleGeometry = new THREE.BoxGeometry(0.2, 0.05, 0.05);
+  const handleGeo = new THREE.BoxGeometry(0.25, 0.06, 0.06);
   
-  [-0.5, 0.5].forEach(xOffset => {
-    const handleLeft = new THREE.Mesh(handleGeometry, chromeMaterial);
-    handleLeft.position.set(xOffset, 1.2, 1.06);
-    car.add(handleLeft);
+  [0.5, -0.6].forEach(x => {
+    const handleL = new THREE.Mesh(handleGeo, chromeMaterial);
+    handleL.position.set(x, 1.3, 1.21);
+    car.add(handleL);
 
-    const handleRight = new THREE.Mesh(handleGeometry, chromeMaterial);
-    handleRight.position.set(xOffset, 1.2, -1.06);
-    car.add(handleRight);
+    const handleR = new THREE.Mesh(handleGeo, chromeMaterial);
+    handleR.position.set(x, 1.3, -1.21);
+    car.add(handleR);
   });
 
   // Door lines
-  const doorLineGeometry = new THREE.BoxGeometry(0.02, 0.85, 0.02);
-  
-  [0.1, -0.9].forEach(x => {
-    const doorLineLeft = new THREE.Mesh(doorLineGeometry, darkMaterial);
-    doorLineLeft.position.set(x, 0.55, 1.06);
-    car.add(doorLineLeft);
+  [0.15, -1].forEach(x => {
+    const lineL = new THREE.Mesh(
+      new THREE.BoxGeometry(0.02, 1, 0.02),
+      darkMaterial
+    );
+    lineL.position.set(x, 0.7, 1.21);
+    car.add(lineL);
 
-    const doorLineRight = new THREE.Mesh(doorLineGeometry, darkMaterial);
-    doorLineRight.position.set(x, 0.55, -1.06);
-    car.add(doorLineRight);
+    const lineR = new THREE.Mesh(
+      new THREE.BoxGeometry(0.02, 1, 0.02),
+      darkMaterial
+    );
+    lineR.position.set(x, 0.7, -1.21);
+    car.add(lineR);
   });
 
   // License plates
-  const plateGeometry = new THREE.BoxGeometry(0.04, 0.18, 0.55);
-  const plateMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+  const plateGeo = new THREE.BoxGeometry(0.05, 0.22, 0.65);
+  const plateMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
   
-  const frontPlate = new THREE.Mesh(plateGeometry, plateMaterial);
-  frontPlate.position.set(2.52, 0.35, 0);
+  const frontPlate = new THREE.Mesh(plateGeo, plateMat);
+  frontPlate.position.set(2.88, 0.4, 0);
   car.add(frontPlate);
 
-  const rearPlate = new THREE.Mesh(plateGeometry, plateMaterial);
-  rearPlate.position.set(-2.52, 0.35, 0);
+  const rearPlate = new THREE.Mesh(plateGeo, plateMat);
+  rearPlate.position.set(-2.88, 0.4, 0);
   car.add(rearPlate);
 
   // Antenna
-  const antennaGeometry = new THREE.CylinderGeometry(0.015, 0.01, 0.5, 8);
-  const antenna = new THREE.Mesh(antennaGeometry, darkMaterial);
-  antenna.position.set(-0.8, 2.8, 0.6);
+  const antenna = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.02, 0.012, 0.6, 8),
+    darkMaterial
+  );
+  antenna.position.set(-0.9, 3.05, 0.7);
   car.add(antenna);
 
-  // Exhaust pipes
-  const exhaustGeometry = new THREE.CylinderGeometry(0.06, 0.06, 0.15, 16);
-  const exhaustMaterial = new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.8 });
+  // Exhaust
+  const exhaustGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.18, 16);
+  const exhaustMat = new THREE.MeshStandardMaterial({ 
+    color: 0x555555, 
+    metalness: 0.9 
+  });
   
-  const exhaust1 = new THREE.Mesh(exhaustGeometry, exhaustMaterial);
-  exhaust1.position.set(-2.55, 0.2, 0.5);
+  const exhaust1 = new THREE.Mesh(exhaustGeo, exhaustMat);
+  exhaust1.position.set(-2.95, 0.22, 0.6);
   exhaust1.rotation.z = Math.PI / 2;
   car.add(exhaust1);
 
-  const exhaust2 = new THREE.Mesh(exhaustGeometry, exhaustMaterial);
-  exhaust2.position.set(-2.55, 0.2, -0.5);
+  const exhaust2 = new THREE.Mesh(exhaustGeo, exhaustMat);
+  exhaust2.position.set(-2.95, 0.22, -0.6);
   exhaust2.rotation.z = Math.PI / 2;
   car.add(exhaust2);
+
+  // Sunroof
+  const sunroof = new THREE.Mesh(
+    new THREE.BoxGeometry(1.2, 0.02, 0.9),
+    glassMaterial
+  );
+  sunroof.position.set(-0.1, 2.77, 0);
+  car.add(sunroof);
 
   return car;
 }
