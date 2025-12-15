@@ -123,7 +123,7 @@ export default function Home() {
     };
   }, []);
 
-  // Detection loop
+  // Detection loop - ALWAYS RUNS IN AR MODE FOR TRACKING
   useEffect(() => {
     if (!model || !videoRef.current || !canvasRef.current) return;
     if (!isScanning && !arMode) return;
@@ -162,6 +162,7 @@ export default function Home() {
           const scaleX = window.innerWidth / canvas.width;
           const scaleY = window.innerHeight / canvas.height;
           
+          // ALWAYS UPDATE POSITION - this makes 3D track the car
           const newPosition = {
             x: x * scaleX,
             y: y * scaleY,
@@ -175,9 +176,10 @@ export default function Home() {
             score: car.score
           });
 
+          // Update position in real-time
           setCarPosition(newPosition);
 
-          // Only draw detection box when SCANNING
+          // Only draw detection box when SCANNING (not in AR mode)
           if (isScanning && !arMode) {
             ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 4;
@@ -185,7 +187,6 @@ export default function Home() {
 
             const cornerLength = 30;
             ctx.lineWidth = 6;
-            ctx.strokeStyle = '#00ff00';
 
             // Corners
             ctx.beginPath();
@@ -221,10 +222,12 @@ export default function Home() {
             );
           }
         } else {
-          if (!arMode) {
+          // Car lost - only clear if scanning, keep last position in AR
+          if (isScanning && !arMode) {
             setDetectedCar(null);
             setCarPosition(null);
           }
+          // In AR mode, keep tracking even if briefly lost
         }
       } catch (e) {
         console.error('Detection error:', e);
@@ -371,7 +374,7 @@ export default function Home() {
         }}
       />
 
-      {/* 3D Car - 5X BIGGER with touch spin */}
+      {/* 3D Car - TRACKS REAL CAR + 5X BIGGER + TOUCH SPIN */}
       {arMode && carPosition && (
         <ThreeDCar 
           position={carPosition}
@@ -468,7 +471,7 @@ export default function Home() {
             borderRadius: '50%',
             animation: 'pulse 1s infinite' 
           }} />
-          AR MODE
+          AR TRACKING
           <style>{`
             @keyframes pulse {
               0%, 100% { opacity: 1; transform: scale(1); }
@@ -519,7 +522,7 @@ export default function Home() {
           zIndex: 100,
           backdropFilter: 'blur(10px)'
         }}>
-          👆 Hold & drag to spin the car
+          👆 Hold & drag to spin • 3D tracks the car
         </div>
       )}
 
@@ -586,7 +589,7 @@ export default function Home() {
   );
 }
 
-// 3D Car - 5X BIGGER + TOUCH SPIN CONTROL
+// 3D Car Component - TRACKS POSITION + 5X BIGGER + TOUCH SPIN
 function ThreeDCar({ 
   position, 
   carType 
@@ -613,36 +616,43 @@ function ThreeDCar({
     }
   }, [carType]);
 
-  // Calculate 5X bigger size centered on detection
-  const size = {
-    width: position.width * 5,
-    height: position.height * 5,
-    x: position.x + position.width / 2 - (position.width * 5) / 2,
-    y: position.y + position.height / 2 - (position.height * 5) / 2
-  };
+  // Calculate 5X bigger size CENTERED on the detected car
+  const centerX = position.x + position.width / 2;
+  const centerY = position.y + position.height / 2;
+  const bigWidth = position.width * 5;
+  const bigHeight = position.height * 5;
 
   // Keep within screen bounds
-  const boundedSize = {
-    width: Math.min(size.width, window.innerWidth * 0.95),
-    height: Math.min(size.height, window.innerHeight * 0.7),
-    x: Math.max(10, Math.min(size.x, window.innerWidth - size.width - 10)),
-    y: Math.max(100, Math.min(size.y, window.innerHeight - size.height - 150))
+  const finalSize = {
+    width: Math.min(bigWidth, window.innerWidth - 20),
+    height: Math.min(bigHeight, window.innerHeight - 200),
+    x: Math.max(10, centerX - Math.min(bigWidth, window.innerWidth - 20) / 2),
+    y: Math.max(100, centerY - Math.min(bigHeight, window.innerHeight - 200) / 2)
   };
 
-  // Touch handlers for spinning
+  // Ensure it stays on screen
+  if (finalSize.x + finalSize.width > window.innerWidth - 10) {
+    finalSize.x = window.innerWidth - finalSize.width - 10;
+  }
+  if (finalSize.y + finalSize.height > window.innerHeight - 150) {
+    finalSize.y = window.innerHeight - finalSize.height - 150;
+  }
+
+  // Touch handlers
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    e.stopPropagation();
     isDraggingRef.current = true;
     lastTouchXRef.current = e.touches[0].clientX;
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    e.stopPropagation();
     if (!isDraggingRef.current || !carRef.current) return;
     
     const touchX = e.touches[0].clientX;
     const deltaX = touchX - lastTouchXRef.current;
     
-    // Rotate based on drag direction
-    rotationRef.current += deltaX * 0.01;
+    rotationRef.current += deltaX * 0.015;
     carRef.current.rotation.y = rotationRef.current;
     
     lastTouchXRef.current = touchX;
@@ -652,8 +662,9 @@ function ThreeDCar({
     isDraggingRef.current = false;
   }, []);
 
-  // Mouse handlers for desktop
+  // Mouse handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
     isDraggingRef.current = true;
     lastTouchXRef.current = e.clientX;
   }, []);
@@ -662,7 +673,7 @@ function ThreeDCar({
     if (!isDraggingRef.current || !carRef.current) return;
     
     const deltaX = e.clientX - lastTouchXRef.current;
-    rotationRef.current += deltaX * 0.01;
+    rotationRef.current += deltaX * 0.015;
     carRef.current.rotation.y = rotationRef.current;
     
     lastTouchXRef.current = e.clientX;
@@ -678,17 +689,14 @@ function ThreeDCar({
 
     const container = containerRef.current;
 
-    // Scene
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
-    // Camera
     const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 1000);
     camera.position.set(0, 3, 10);
     camera.lookAt(0, 0.5, 0);
     cameraRef.current = camera;
 
-    // Renderer
     const renderer = new THREE.WebGLRenderer({ 
       alpha: true, 
       antialias: true 
@@ -696,7 +704,6 @@ function ThreeDCar({
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -717,12 +724,10 @@ function ThreeDCar({
     bottomLight.position.set(0, -3, 0);
     scene.add(bottomLight);
 
-    // Create car
     const car = createCar(getColor());
     scene.add(car);
     carRef.current = car;
 
-    // Animation loop
     const animate = () => {
       if (rendererRef.current && sceneRef.current && cameraRef.current) {
         rendererRef.current.render(sceneRef.current, cameraRef.current);
@@ -744,14 +749,14 @@ function ThreeDCar({
     };
   }, [getColor]);
 
-  // Update size
+  // Update size when position changes (TRACKING)
   useEffect(() => {
     if (!rendererRef.current || !cameraRef.current) return;
 
-    rendererRef.current.setSize(boundedSize.width, boundedSize.height);
-    cameraRef.current.aspect = boundedSize.width / boundedSize.height;
+    rendererRef.current.setSize(finalSize.width, finalSize.height);
+    cameraRef.current.aspect = finalSize.width / finalSize.height;
     cameraRef.current.updateProjectionMatrix();
-  }, [boundedSize.width, boundedSize.height]);
+  }, [finalSize.width, finalSize.height]);
 
   return (
     <div
@@ -765,13 +770,15 @@ function ThreeDCar({
       onMouseLeave={handleMouseUp}
       style={{
         position: 'absolute',
-        left: boundedSize.x,
-        top: boundedSize.y,
-        width: boundedSize.width,
-        height: boundedSize.height,
+        left: finalSize.x,
+        top: finalSize.y,
+        width: finalSize.width,
+        height: finalSize.height,
         zIndex: 50,
-        cursor: 'grab',
-        touchAction: 'none'
+        cursor: isDraggingRef.current ? 'grabbing' : 'grab',
+        touchAction: 'none',
+        // Smooth tracking transition
+        transition: 'left 0.1s ease-out, top 0.1s ease-out'
       }}
     />
   );
@@ -781,7 +788,6 @@ function ThreeDCar({
 function createCar(color: number): THREE.Group {
   const car = new THREE.Group();
 
-  // Materials
   const bodyMaterial = new THREE.MeshStandardMaterial({
     color: color,
     metalness: 0.8,
@@ -832,8 +838,6 @@ function createCar(color: number): THREE.Group {
     roughness: 0.5
   });
 
-  // ===== BODY =====
-  
   // Lower body
   const bodyLowerGeometry = new THREE.BoxGeometry(4.8, 0.9, 2.1);
   const bodyLower = new THREE.Mesh(bodyLowerGeometry, bodyMaterial);
@@ -861,8 +865,7 @@ function createCar(color: number): THREE.Group {
   trunk.rotation.z = 0.08;
   car.add(trunk);
 
-  // ===== CABIN =====
-  
+  // Cabin
   const cabinGeometry = new THREE.BoxGeometry(2.6, 1.1, 1.9);
   const cabin = new THREE.Mesh(cabinGeometry, bodyMaterial);
   cabin.position.set(-0.1, 1.95, 0);
@@ -875,8 +878,6 @@ function createCar(color: number): THREE.Group {
   roof.position.set(-0.1, 2.55, 0);
   car.add(roof);
 
-  // ===== WINDOWS =====
-  
   // Windshield
   const windshieldGeometry = new THREE.PlaneGeometry(1.8, 1);
   const windshield = new THREE.Mesh(windshieldGeometry, glassMaterial);
@@ -904,8 +905,7 @@ function createCar(color: number): THREE.Group {
   sideWindowRight.rotation.y = Math.PI;
   car.add(sideWindowRight);
 
-  // ===== WHEELS =====
-  
+  // Wheels
   const wheelGeometry = new THREE.CylinderGeometry(0.45, 0.45, 0.32, 32);
   const rimGeometry = new THREE.CylinderGeometry(0.28, 0.28, 0.34, 24);
   const hubGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.36, 16);
@@ -945,8 +945,6 @@ function createCar(color: number): THREE.Group {
     }
   });
 
-  // ===== LIGHTS =====
-  
   // Headlights
   const headlightGeometry = new THREE.BoxGeometry(0.1, 0.25, 0.6);
   
@@ -985,8 +983,6 @@ function createCar(color: number): THREE.Group {
   taillightRight.position.set(-2.41, 0.7, -0.6);
   car.add(taillightRight);
 
-  // ===== DETAILS =====
-  
   // Grille
   const grilleGeometry = new THREE.BoxGeometry(0.06, 0.4, 1.4);
   const grille = new THREE.Mesh(grilleGeometry, darkMaterial);
@@ -1001,13 +997,12 @@ function createCar(color: number): THREE.Group {
     car.add(line);
   }
 
-  // Front bumper
+  // Bumpers
   const frontBumperGeometry = new THREE.BoxGeometry(0.25, 0.3, 2.2);
   const frontBumper = new THREE.Mesh(frontBumperGeometry, darkMaterial);
   frontBumper.position.set(2.5, 0.25, 0);
   car.add(frontBumper);
 
-  // Rear bumper
   const rearBumper = new THREE.Mesh(frontBumperGeometry, darkMaterial);
   rearBumper.position.set(-2.5, 0.25, 0);
   car.add(rearBumper);
