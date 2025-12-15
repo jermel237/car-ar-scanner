@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import * as THREE from 'three';
 
 interface Detection {
   bbox: [number, number, number, number];
@@ -11,6 +12,7 @@ interface Detection {
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const threeContainerRef = useRef<HTMLDivElement>(null);
   
   const [isLoading, setIsLoading] = useState(true);
   const [loadingText, setLoadingText] = useState('Starting...');
@@ -151,9 +153,8 @@ export default function Home() {
           const car = vehicles[0];
           const [x, y, width, height] = car.bbox;
           
-          // Scale to screen size
-          const scaleX = canvas.clientWidth / canvas.width;
-          const scaleY = canvas.clientHeight / canvas.height;
+          const scaleX = window.innerWidth / canvas.width;
+          const scaleY = window.innerHeight / canvas.height;
           
           setDetectedCar({
             bbox: car.bbox,
@@ -169,14 +170,12 @@ export default function Home() {
           });
 
           if (!arMode) {
-            // Draw detection box when scanning
             ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 4;
             ctx.strokeRect(x, y, width, height);
 
-            // Label
             ctx.fillStyle = '#00ff00';
-            ctx.font = 'bold 20px Arial';
+            ctx.font = 'bold 24px Arial';
             ctx.fillText(
               `${car.class.toUpperCase()} ${Math.round(car.score * 100)}%`,
               x + 5,
@@ -213,7 +212,6 @@ export default function Home() {
       setArMode(false);
       setDetectedCar(null);
     } else if (detectedCar) {
-      // Capture and enable AR mode
       setIsScanning(false);
       setArMode(true);
     } else {
@@ -250,12 +248,12 @@ export default function Home() {
           onClick={() => window.location.reload()}
           style={{
             marginTop: 30,
-            padding: '14px 40px',
+            padding: '20px 50px',
             background: 'linear-gradient(135deg, #667eea, #764ba2)',
             border: 'none',
             borderRadius: 50,
             color: 'white',
-            fontSize: 16,
+            fontSize: 18,
             cursor: 'pointer'
           }}
         >
@@ -303,7 +301,8 @@ export default function Home() {
       width: '100vw',
       height: '100vh',
       background: '#000',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      touchAction: 'none'
     }}>
       {/* Camera Feed */}
       <video
@@ -335,28 +334,12 @@ export default function Home() {
         }}
       />
 
-      {/* AR 3D Car Overlay - Shows on detected car position */}
+      {/* 3D Car Overlay */}
       {arMode && carPosition && (
-        <div
-          style={{
-            position: 'absolute',
-            left: carPosition.x,
-            top: carPosition.y,
-            width: carPosition.width,
-            height: carPosition.height,
-            pointerEvents: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            perspective: '1000px'
-          }}
-        >
-          <Car3D 
-            width={carPosition.width} 
-            height={carPosition.height}
-            carType={detectedCar?.class || 'car'}
-          />
-        </div>
+        <ThreeDCar 
+          position={carPosition}
+          carType={detectedCar?.class || 'car'}
+        />
       )}
 
       {/* Scanning Line */}
@@ -366,37 +349,40 @@ export default function Home() {
             position: 'absolute',
             left: 0,
             width: '100%',
-            height: 3,
+            height: 4,
             background: 'linear-gradient(90deg, transparent, #00ff00, transparent)',
-            boxShadow: '0 0 20px #00ff00',
+            boxShadow: '0 0 30px #00ff00',
             animation: 'scanMove 2s ease-in-out infinite'
           }} />
           <style>{`
             @keyframes scanMove {
-              0%, 100% { top: 15%; }
-              50% { top: 85%; }
+              0%, 100% { top: 10%; }
+              50% { top: 90%; }
             }
           `}</style>
         </>
       )}
 
-      {/* Camera Switch Button */}
+      {/* Camera Switch Button - BIGGER */}
       <button
         onClick={switchCamera}
         style={{
           position: 'absolute',
-          top: 20,
-          right: 20,
-          width: 50,
-          height: 50,
+          top: 15,
+          right: 15,
+          width: 60,
+          height: 60,
           borderRadius: '50%',
           border: 'none',
-          background: 'rgba(0,0,0,0.5)',
+          background: 'rgba(0,0,0,0.6)',
           backdropFilter: 'blur(10px)',
           color: 'white',
-          fontSize: 22,
+          fontSize: 28,
           cursor: 'pointer',
-          zIndex: 100
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}
       >
         🔄
@@ -405,13 +391,13 @@ export default function Home() {
       {/* Camera Indicator */}
       <div style={{
         position: 'absolute',
-        top: 25,
-        left: 20,
-        background: 'rgba(0,0,0,0.5)',
+        top: 20,
+        left: 15,
+        background: 'rgba(0,0,0,0.6)',
         color: 'white',
-        padding: '8px 16px',
-        borderRadius: 20,
-        fontSize: 12,
+        padding: '10px 18px',
+        borderRadius: 25,
+        fontSize: 14,
         backdropFilter: 'blur(10px)',
         zIndex: 100
       }}>
@@ -422,25 +408,33 @@ export default function Home() {
       {arMode && (
         <div style={{
           position: 'absolute',
-          top: 25,
+          top: 20,
           left: '50%',
           transform: 'translateX(-50%)',
           background: 'linear-gradient(135deg, #00b894, #00cec9)',
           color: 'white',
-          padding: '10px 20px',
-          borderRadius: 25,
-          fontSize: 14,
+          padding: '12px 24px',
+          borderRadius: 30,
+          fontSize: 16,
           fontWeight: 'bold',
           zIndex: 100,
           display: 'flex',
           alignItems: 'center',
-          gap: 8
+          gap: 10,
+          boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
         }}>
-          <span style={{ animation: 'pulse 1s infinite' }}>●</span> AR MODE
+          <span style={{ 
+            width: 10, 
+            height: 10, 
+            background: 'white', 
+            borderRadius: '50%',
+            animation: 'pulse 1s infinite' 
+          }} />
+          AR MODE
           <style>{`
             @keyframes pulse {
-              0%, 100% { opacity: 1; }
-              50% { opacity: 0.5; }
+              0%, 100% { opacity: 1; transform: scale(1); }
+              50% { opacity: 0.5; transform: scale(0.8); }
             }
           `}</style>
         </div>
@@ -450,14 +444,14 @@ export default function Home() {
       {!arMode && (
         <div style={{
           position: 'absolute',
-          top: 80,
+          top: 90,
           left: '50%',
           transform: 'translateX(-50%)',
           background: 'rgba(0,0,0,0.7)',
           color: 'white',
-          padding: '12px 24px',
-          borderRadius: 25,
-          fontSize: 14,
+          padding: '14px 28px',
+          borderRadius: 30,
+          fontSize: 16,
           textAlign: 'center',
           maxWidth: '90%',
           backdropFilter: 'blur(10px)',
@@ -465,36 +459,40 @@ export default function Home() {
         }}>
           {isScanning
             ? detectedCar
-              ? `🎯 ${detectedCar.class.toUpperCase()} detected! Tap to activate AR`
+              ? `🎯 ${detectedCar.class.toUpperCase()} detected!`
               : '🔍 Looking for vehicles...'
             : '📱 Point at a car and tap Scan'
           }
         </div>
       )}
 
-      {/* Main Button */}
+      {/* Main Buttons - MUCH BIGGER */}
       <div style={{
         position: 'absolute',
-        bottom: 50,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 100,
+        bottom: 40,
+        left: 0,
+        right: 0,
         display: 'flex',
-        gap: 15
+        justifyContent: 'center',
+        gap: 20,
+        padding: '0 20px',
+        zIndex: 100
       }}>
         {arMode ? (
           <button
             onClick={exitAR}
             style={{
-              padding: '18px 40px',
-              fontSize: 16,
+              padding: '22px 50px',
+              fontSize: 20,
               fontWeight: 'bold',
               border: 'none',
-              borderRadius: 50,
+              borderRadius: 60,
               background: 'linear-gradient(135deg, #e74c3c, #c0392b)',
               color: 'white',
               cursor: 'pointer',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+              boxShadow: '0 6px 25px rgba(0,0,0,0.4)',
+              minWidth: 200,
+              touchAction: 'manipulation'
             }}
           >
             ✕ Exit AR
@@ -503,24 +501,26 @@ export default function Home() {
           <button
             onClick={handleScan}
             style={{
-              padding: '18px 50px',
-              fontSize: 18,
+              padding: '22px 60px',
+              fontSize: 20,
               fontWeight: 'bold',
               border: 'none',
-              borderRadius: 50,
+              borderRadius: 60,
               background: isScanning && detectedCar
                 ? 'linear-gradient(135deg, #00b894, #00cec9)'
                 : 'linear-gradient(135deg, #667eea, #764ba2)',
               color: 'white',
               cursor: 'pointer',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+              boxShadow: '0 6px 25px rgba(0,0,0,0.4)',
+              minWidth: 220,
+              touchAction: 'manipulation'
             }}
           >
             {isScanning
               ? detectedCar
                 ? '✨ Activate AR'
-                : '⏹️ Stop'
-              : '🔍 Scan'
+                : '⏹️ Stop Scan'
+              : '🔍 Scan Car'
             }
           </button>
         )}
@@ -530,250 +530,317 @@ export default function Home() {
       {arMode && (
         <div style={{
           position: 'absolute',
-          bottom: 120,
+          bottom: 130,
           left: '50%',
           transform: 'translateX(-50%)',
-          background: 'rgba(0,0,0,0.6)',
+          background: 'rgba(0,0,0,0.7)',
           color: 'white',
-          padding: '10px 20px',
-          borderRadius: 15,
-          fontSize: 13,
+          padding: '12px 24px',
+          borderRadius: 20,
+          fontSize: 14,
           textAlign: 'center',
           backdropFilter: 'blur(10px)',
           zIndex: 100
         }}>
-          🚗 3D car overlaid on real car • Move phone to see AR effect
+          🚗 3D car model overlaid in real world
         </div>
       )}
     </div>
   );
 }
 
-// 3D Car Component that overlays on real car
-function Car3D({ width, height, carType }: { width: number; height: number; carType: string }) {
-  const [rotation, setRotation] = useState(0);
-  
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRotation(prev => (prev + 1) % 360);
-    }, 50);
-    return () => clearInterval(interval);
-  }, []);
+// Real Three.js 3D Car Component
+function ThreeDCar({ 
+  position, 
+  carType 
+}: { 
+  position: { x: number; y: number; width: number; height: number };
+  carType: string;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<{
+    scene: THREE.Scene;
+    camera: THREE.PerspectiveCamera;
+    renderer: THREE.WebGLRenderer;
+    car: THREE.Group;
+  } | null>(null);
 
+  // Get color based on vehicle type
   const getColor = () => {
     switch(carType) {
-      case 'truck': return { main: '#3498db', dark: '#2980b9' };
-      case 'bus': return { main: '#f39c12', dark: '#d68910' };
-      case 'motorcycle': return { main: '#9b59b6', dark: '#8e44ad' };
-      default: return { main: '#e74c3c', dark: '#c0392b' };
+      case 'truck': return 0x3498db;
+      case 'bus': return 0xf39c12;
+      case 'motorcycle': return 0x9b59b6;
+      default: return 0xe74c3c;
     }
   };
 
-  const colors = getColor();
-  const carWidth = Math.min(width * 0.9, 300);
-  const carHeight = carWidth * 0.5;
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const container = containerRef.current;
+    const width = position.width;
+    const height = position.height;
+
+    // Scene
+    const scene = new THREE.Scene();
+
+    // Camera
+    const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
+    camera.position.set(0, 2, 6);
+    camera.lookAt(0, 0, 0);
+
+    // Renderer with transparency
+    const renderer = new THREE.WebGLRenderer({ 
+      alpha: true, 
+      antialias: true 
+    });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setClearColor(0x000000, 0);
+    container.appendChild(renderer.domElement);
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(5, 10, 7);
+    directionalLight.castShadow = true;
+    scene.add(directionalLight);
+
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.3);
+    backLight.position.set(-5, 5, -5);
+    scene.add(backLight);
+
+    // Create 3D Car (like the simple car model)
+    const car = new THREE.Group();
+    const carColor = getColor();
+
+    // Car body material
+    const bodyMaterial = new THREE.MeshStandardMaterial({
+      color: carColor,
+      metalness: 0.6,
+      roughness: 0.4,
+    });
+
+    // Main body (lower part)
+    const bodyGeometry = new THREE.BoxGeometry(4, 1, 2);
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.position.y = 0.5;
+    body.castShadow = true;
+    car.add(body);
+
+    // Hood (front slope)
+    const hoodGeometry = new THREE.BoxGeometry(1.2, 0.3, 1.9);
+    const hood = new THREE.Mesh(hoodGeometry, bodyMaterial);
+    hood.position.set(1.8, 0.85, 0);
+    hood.rotation.z = -0.2;
+    car.add(hood);
+
+    // Cabin (upper part)
+    const cabinGeometry = new THREE.BoxGeometry(2, 1, 1.8);
+    const cabin = new THREE.Mesh(cabinGeometry, bodyMaterial);
+    cabin.position.set(-0.2, 1.5, 0);
+    cabin.castShadow = true;
+    car.add(cabin);
+
+    // Windshield (front)
+    const windshieldMaterial = new THREE.MeshStandardMaterial({
+      color: 0x88ccff,
+      metalness: 0.9,
+      roughness: 0.1,
+      transparent: true,
+      opacity: 0.7
+    });
+
+    const windshieldGeometry = new THREE.PlaneGeometry(1.6, 0.8);
+    const windshield = new THREE.Mesh(windshieldGeometry, windshieldMaterial);
+    windshield.position.set(0.85, 1.5, 0);
+    windshield.rotation.y = Math.PI / 2;
+    windshield.rotation.x = 0.1;
+    car.add(windshield);
+
+    // Rear window
+    const rearWindow = new THREE.Mesh(windshieldGeometry, windshieldMaterial);
+    rearWindow.position.set(-1.25, 1.5, 0);
+    rearWindow.rotation.y = -Math.PI / 2;
+    rearWindow.rotation.x = -0.1;
+    car.add(rearWindow);
+
+    // Side windows
+    const sideWindowGeometry = new THREE.PlaneGeometry(1.8, 0.7);
+    const sideWindowLeft = new THREE.Mesh(sideWindowGeometry, windshieldMaterial);
+    sideWindowLeft.position.set(-0.2, 1.5, 0.91);
+    car.add(sideWindowLeft);
+
+    const sideWindowRight = new THREE.Mesh(sideWindowGeometry, windshieldMaterial);
+    sideWindowRight.position.set(-0.2, 1.5, -0.91);
+    sideWindowRight.rotation.y = Math.PI;
+    car.add(sideWindowRight);
+
+    // Wheels
+    const wheelGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 32);
+    const wheelMaterial = new THREE.MeshStandardMaterial({
+      color: 0x222222,
+      metalness: 0.3,
+      roughness: 0.8
+    });
+
+    const wheelPositions = [
+      { x: 1.3, z: 1.1 },
+      { x: 1.3, z: -1.1 },
+      { x: -1.3, z: 1.1 },
+      { x: -1.3, z: -1.1 }
+    ];
+
+    wheelPositions.forEach(pos => {
+      const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+      wheel.position.set(pos.x, 0.4, pos.z);
+      wheel.rotation.x = Math.PI / 2;
+      wheel.castShadow = true;
+      car.add(wheel);
+
+      // Wheel rim
+      const rimGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.32, 16);
+      const rimMaterial = new THREE.MeshStandardMaterial({
+        color: 0xcccccc,
+        metalness: 0.8,
+        roughness: 0.2
+      });
+      const rim = new THREE.Mesh(rimGeometry, rimMaterial);
+      rim.position.set(pos.x, 0.4, pos.z);
+      rim.rotation.x = Math.PI / 2;
+      car.add(rim);
+    });
+
+    // Headlights
+    const headlightGeometry = new THREE.BoxGeometry(0.1, 0.2, 0.4);
+    const headlightMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffffcc,
+      emissive: 0xffffcc,
+      emissiveIntensity: 0.5
+    });
+
+    const headlightLeft = new THREE.Mesh(headlightGeometry, headlightMaterial);
+    headlightLeft.position.set(2.01, 0.6, 0.6);
+    car.add(headlightLeft);
+
+    const headlightRight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+    headlightRight.position.set(2.01, 0.6, -0.6);
+    car.add(headlightRight);
+
+    // Taillights
+    const taillightMaterial = new THREE.MeshStandardMaterial({
+      color: 0xff0000,
+      emissive: 0xff0000,
+      emissiveIntensity: 0.3
+    });
+
+    const taillightLeft = new THREE.Mesh(headlightGeometry, taillightMaterial);
+    taillightLeft.position.set(-2.01, 0.6, 0.6);
+    car.add(taillightLeft);
+
+    const taillightRight = new THREE.Mesh(headlightGeometry, taillightMaterial);
+    taillightRight.position.set(-2.01, 0.6, -0.6);
+    car.add(taillightRight);
+
+    // Bumpers
+    const bumperGeometry = new THREE.BoxGeometry(0.2, 0.3, 2);
+    const bumperMaterial = new THREE.MeshStandardMaterial({
+      color: 0x333333,
+      metalness: 0.5,
+      roughness: 0.5
+    });
+
+    const frontBumper = new THREE.Mesh(bumperGeometry, bumperMaterial);
+    frontBumper.position.set(2.1, 0.25, 0);
+    car.add(frontBumper);
+
+    const rearBumper = new THREE.Mesh(bumperGeometry, bumperMaterial);
+    rearBumper.position.set(-2.1, 0.25, 0);
+    car.add(rearBumper);
+
+    // Add car to scene
+    scene.add(car);
+
+    // Store refs
+    sceneRef.current = { scene, camera, renderer, car };
+
+    // Animation
+    let rotation = 0;
+    const animate = () => {
+      if (!sceneRef.current) return;
+      
+      rotation += 0.02;
+      sceneRef.current.car.rotation.y = rotation;
+      
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    };
+    animate();
+
+    // Cleanup
+    return () => {
+      sceneRef.current = null;
+      renderer.dispose();
+      if (container.contains(renderer.domElement)) {
+        container.removeChild(renderer.domElement);
+      }
+    };
+  }, [position.width, position.height, carType]);
 
   return (
     <div
+      ref={containerRef}
       style={{
-        width: carWidth,
-        height: carHeight,
-        position: 'relative',
-        transformStyle: 'preserve-3d',
-        transform: `rotateY(${rotation}deg) rotateX(-5deg)`,
-        filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.5))'
+        position: 'absolute',
+        left: position.x,
+        top: position.y,
+        width: position.width,
+        height: position.height,
+        pointerEvents: 'none',
+        zIndex: 50
       }}
     >
-      {/* Glowing outline effect */}
+      {/* AR Label */}
       <div style={{
         position: 'absolute',
-        top: -5,
-        left: -5,
-        right: -5,
-        bottom: -5,
-        border: `3px solid ${colors.main}`,
+        top: -40,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        background: 'linear-gradient(135deg, #667eea, #764ba2)',
+        color: 'white',
+        padding: '8px 20px',
         borderRadius: 20,
-        boxShadow: `0 0 20px ${colors.main}, 0 0 40px ${colors.main}55, inset 0 0 20px ${colors.main}33`,
-        animation: 'glow 2s ease-in-out infinite'
-      }} />
-      
-      <style>{`
-        @keyframes glow {
-          0%, 100% { opacity: 1; box-shadow: 0 0 20px ${colors.main}, 0 0 40px ${colors.main}55; }
-          50% { opacity: 0.8; box-shadow: 0 0 30px ${colors.main}, 0 0 60px ${colors.main}77; }
-        }
-        @keyframes float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-5px); }
-        }
-      `}</style>
-
-      {/* Car Body */}
-      <div style={{
-        position: 'absolute',
-        width: '100%',
-        height: '50%',
-        bottom: '20%',
-        background: `linear-gradient(180deg, ${colors.main}ee, ${colors.dark}ee)`,
-        borderRadius: 12,
-        backdropFilter: 'blur(5px)',
-        border: `2px solid ${colors.main}`,
-        boxShadow: `inset 0 5px 15px rgba(255,255,255,0.3), inset 0 -5px 15px rgba(0,0,0,0.3)`
-      }} />
-      
-      {/* Car Roof */}
-      <div style={{
-        position: 'absolute',
-        width: '50%',
-        height: '35%',
-        bottom: '45%',
-        left: '20%',
-        background: `linear-gradient(180deg, ${colors.main}ee, ${colors.dark}ee)`,
-        borderRadius: '10px 10px 5px 5px',
-        border: `2px solid ${colors.main}`,
-        boxShadow: `inset 0 5px 10px rgba(255,255,255,0.2)`
-      }} />
-      
-      {/* Windshield */}
-      <div style={{
-        position: 'absolute',
-        width: '40%',
-        height: '25%',
-        bottom: '50%',
-        left: '25%',
-        background: 'linear-gradient(135deg, rgba(116,185,255,0.7), rgba(9,132,227,0.7))',
-        borderRadius: '8px 8px 3px 3px',
-        border: '1px solid rgba(255,255,255,0.3)',
-        boxShadow: 'inset 0 0 20px rgba(255,255,255,0.2)'
-      }} />
-
-      {/* Headlights */}
-      <div style={{
-        position: 'absolute',
-        width: '8%',
-        height: '12%',
-        bottom: '35%',
-        left: '5%',
-        background: 'radial-gradient(circle, #fffacd, #ffd700)',
-        borderRadius: 4,
-        boxShadow: '0 0 15px #ffd700, 0 0 30px #ffd70066'
-      }} />
-      <div style={{
-        position: 'absolute',
-        width: '8%',
-        height: '12%',
-        bottom: '35%',
-        right: '5%',
-        background: 'radial-gradient(circle, #fffacd, #ffd700)',
-        borderRadius: 4,
-        boxShadow: '0 0 15px #ffd700, 0 0 30px #ffd70066'
-      }} />
-
-      {/* Tail lights */}
-      <div style={{
-        position: 'absolute',
-        width: '6%',
-        height: '10%',
-        bottom: '30%',
-        left: '2%',
-        background: 'radial-gradient(circle, #ff6b6b, #ee5a24)',
-        borderRadius: 3,
-        boxShadow: '0 0 10px #ff0000'
-      }} />
-      <div style={{
-        position: 'absolute',
-        width: '6%',
-        height: '10%',
-        bottom: '30%',
-        right: '2%',
-        background: 'radial-gradient(circle, #ff6b6b, #ee5a24)',
-        borderRadius: 3,
-        boxShadow: '0 0 10px #ff0000'
-      }} />
-
-      {/* Wheels */}
-      <div style={{
-        position: 'absolute',
-        width: '18%',
-        height: '36%',
-        bottom: '5%',
-        left: '12%',
-        background: 'radial-gradient(circle, #555, #222)',
-        borderRadius: '50%',
-        border: '3px solid #333',
-        boxShadow: 'inset 0 0 10px rgba(0,0,0,0.8), 0 5px 15px rgba(0,0,0,0.5)'
+        fontSize: 14,
+        fontWeight: 'bold',
+        whiteSpace: 'nowrap',
+        boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+        zIndex: 60
       }}>
-        {/* Wheel rim */}
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '50%',
-          height: '50%',
-          background: 'radial-gradient(circle, #ccc, #888)',
-          borderRadius: '50%'
-        }} />
-      </div>
-      <div style={{
-        position: 'absolute',
-        width: '18%',
-        height: '36%',
-        bottom: '5%',
-        right: '12%',
-        background: 'radial-gradient(circle, #555, #222)',
-        borderRadius: '50%',
-        border: '3px solid #333',
-        boxShadow: 'inset 0 0 10px rgba(0,0,0,0.8), 0 5px 15px rgba(0,0,0,0.5)'
-      }}>
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '50%',
-          height: '50%',
-          background: 'radial-gradient(circle, #ccc, #888)',
-          borderRadius: '50%'
-        }} />
+        🚗 {carType.toUpperCase()} • 3D AR
       </div>
 
-      {/* Holographic effect lines */}
+      {/* Glowing border */}
       <div style={{
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        background: `repeating-linear-gradient(
-          0deg,
-          transparent,
-          transparent 3px,
-          ${colors.main}22 3px,
-          ${colors.main}22 6px
-        )`,
+        border: '3px solid #00ff00',
         borderRadius: 15,
-        pointerEvents: 'none',
-        opacity: 0.5
+        boxShadow: '0 0 20px #00ff00, 0 0 40px #00ff0055, inset 0 0 20px #00ff0022',
+        animation: 'glow 2s ease-in-out infinite',
+        pointerEvents: 'none'
       }} />
-
-      {/* AR Label */}
-      <div style={{
-        position: 'absolute',
-        top: -35,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        background: 'linear-gradient(135deg, #667eea, #764ba2)',
-        color: 'white',
-        padding: '5px 15px',
-        borderRadius: 15,
-        fontSize: 12,
-        fontWeight: 'bold',
-        whiteSpace: 'nowrap',
-        boxShadow: '0 3px 10px rgba(0,0,0,0.3)'
-      }}>
-        🚗 {carType.toUpperCase()} • AR
-      </div>
+      <style>{`
+        @keyframes glow {
+          0%, 100% { box-shadow: 0 0 20px #00ff00, 0 0 40px #00ff0055; }
+          50% { box-shadow: 0 0 30px #00ff00, 0 0 60px #00ff0077; }
+        }
+      `}</style>
     </div>
   );
 }
