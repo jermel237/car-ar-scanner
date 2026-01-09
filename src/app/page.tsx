@@ -45,7 +45,7 @@ export default function Home() {
   const [placementMode, setPlacementMode] = useState(false);
   const [placedCars, setPlacedCars] = useState<PlacedCar[]>([]);
   const [showFloorGrid, setShowFloorGrid] = useState(false);
-  const [floorLevel, setFloorLevel] = useState(0.7); // 70% down the screen = floor
+  const [floorLevel, setFloorLevel] = useState(0.7);
 
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
     try {
@@ -163,7 +163,7 @@ export default function Home() {
       ctx.strokeStyle = 'rgba(0, 255, 150, 0.4)';
       ctx.lineWidth = 1;
 
-      // Horizontal lines (perspective)
+      // Horizontal lines
       for (let i = 0; i < 10; i++) {
         const y = floorY + (i * (canvas.height - floorY) / 10);
         const perspective = 1 - (i / 15);
@@ -173,7 +173,7 @@ export default function Home() {
         ctx.stroke();
       }
 
-      // Vertical lines (perspective)
+      // Vertical lines
       for (let i = -5; i <= 5; i++) {
         const startX = canvas.width / 2;
         const endX = canvas.width / 2 + (i * canvas.width / 8);
@@ -183,7 +183,7 @@ export default function Home() {
         ctx.stroke();
       }
 
-      // Floor indicator line
+      // Floor line
       ctx.strokeStyle = 'rgba(0, 255, 150, 0.8)';
       ctx.lineWidth = 2;
       ctx.setLineDash([10, 10]);
@@ -259,11 +259,12 @@ export default function Home() {
 
           setCarPosition(newPosition);
 
-          // Estimate floor level based on car position
+          // Estimate floor level
           const carBottom = (y + height) / canvas.height;
           setFloorLevel(Math.min(0.9, Math.max(0.5, carBottom)));
 
           if (isScanning && !arMode) {
+            // Draw detection box
             ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 4;
             ctx.strokeRect(x, y, width, height);
@@ -271,6 +272,7 @@ export default function Home() {
             const cornerLength = 30;
             ctx.lineWidth = 6;
 
+            // Corners
             ctx.beginPath();
             ctx.moveTo(x, y + cornerLength);
             ctx.lineTo(x, y);
@@ -295,6 +297,7 @@ export default function Home() {
             ctx.lineTo(x + width, y + height - cornerLength);
             ctx.stroke();
 
+            // Label
             ctx.fillStyle = '#00ff00';
             ctx.font = 'bold 22px Arial';
             ctx.fillText(
@@ -326,18 +329,23 @@ export default function Home() {
     };
   }, [isScanning, arMode, model]);
 
+  // SCAN BUTTON HANDLER
   const handleScan = () => {
     if (!isScanning) {
+      // Start scanning
       setIsScanning(true);
       setArMode(false);
       setPlacementMode(false);
+      setShowFloorGrid(false);
       setDetectedCar(null);
       setCarPosition(null);
     } else if (detectedCar) {
+      // Car detected - start AR
       setIsScanning(false);
       setArMode(true);
       setShowFloorGrid(true);
     } else {
+      // Stop scanning
       setIsScanning(false);
     }
   };
@@ -350,19 +358,19 @@ export default function Home() {
     setCarPosition(null);
   };
 
-  const enterPlacementMode = () => {
-    setPlacementMode(true);
+  const togglePlacementMode = () => {
+    setPlacementMode(!placementMode);
     setShowFloorGrid(true);
   };
 
   // Handle tap to place car
-  const handlePlaceCar = (e: React.TouchEvent | React.MouseEvent) => {
+  const handleScreenTap = (e: React.TouchEvent | React.MouseEvent) => {
     if (!placementMode) return;
 
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
 
-    // Only place if tapping on floor area
+    // Only place if tapping on floor area (below floor line)
     if (clientY > window.innerHeight * floorLevel * 0.8) {
       const newCar: PlacedCar = {
         id: Date.now(),
@@ -370,7 +378,7 @@ export default function Home() {
         y: clientY,
         rotation: 0,
         scale: 1,
-        color: [0xe74c3c, 0x3498db, 0xf39c12, 0x9b59b6, 0x00b894][Math.floor(Math.random() * 5)]
+        color: [0xe74c3c, 0x3498db, 0xf39c12, 0x9b59b6, 0x00b894, 0x6c5ce7][Math.floor(Math.random() * 6)]
       };
 
       setPlacedCars(prev => [...prev, newCar]);
@@ -381,6 +389,11 @@ export default function Home() {
     setPlacedCars([]);
   };
 
+  const removeCar = (id: number) => {
+    setPlacedCars(prev => prev.filter(c => c.id !== id));
+  };
+
+  // Error screen
   if (error) {
     return (
       <div style={{
@@ -418,6 +431,7 @@ export default function Home() {
     );
   }
 
+  // Loading screen
   if (isLoading) {
     return (
       <div style={{
@@ -459,10 +473,10 @@ export default function Home() {
         overflow: 'hidden',
         touchAction: 'none'
       }}
-      onClick={handlePlaceCar}
-      onTouchStart={handlePlaceCar}
+      onClick={handleScreenTap}
+      onTouchEnd={handleScreenTap}
     >
-      {/* Camera */}
+      {/* Camera Video */}
       <video
         ref={videoRef}
         playsInline
@@ -512,7 +526,6 @@ export default function Home() {
         <ThreeDCar 
           position={carPosition}
           carType={detectedCar?.class || 'car'}
-          floorLevel={floorLevel}
         />
       )}
 
@@ -521,11 +534,11 @@ export default function Home() {
         <PlacedCarModel
           key={car.id}
           car={car}
-          onRemove={() => setPlacedCars(prev => prev.filter(c => c.id !== car.id))}
+          onRemove={() => removeCar(car.id)}
         />
       ))}
 
-      {/* Scanning Line */}
+      {/* Scanning Line Animation */}
       {isScanning && !arMode && (
         <>
           <div style={{
@@ -546,7 +559,9 @@ export default function Home() {
         </>
       )}
 
-      {/* Camera Switch */}
+      {/* ===== TOP UI ===== */}
+      
+      {/* Camera Switch Button */}
       <button
         onClick={(e) => { e.stopPropagation(); switchCamera(); }}
         style={{
@@ -588,16 +603,18 @@ export default function Home() {
         {cameraFacing === 'environment' ? '📷 Back' : '🤳 Front'}
       </div>
 
-      {/* AR Mode Indicator */}
-      {arMode && (
+      {/* Mode Indicator */}
+      {(arMode || isScanning) && (
         <div style={{
           position: 'absolute',
           top: 22,
           left: '50%',
           transform: 'translateX(-50%)',
-          background: placementMode 
-            ? 'linear-gradient(135deg, #f39c12, #e74c3c)'
-            : 'linear-gradient(135deg, #00b894, #00cec9)',
+          background: arMode 
+            ? placementMode 
+              ? 'linear-gradient(135deg, #f39c12, #e74c3c)'
+              : 'linear-gradient(135deg, #00b894, #00cec9)'
+            : 'linear-gradient(135deg, #667eea, #764ba2)',
           color: 'white',
           padding: '12px 24px',
           borderRadius: 30,
@@ -616,7 +633,12 @@ export default function Home() {
             borderRadius: '50%',
             animation: 'pulse 1s infinite' 
           }} />
-          {placementMode ? '📍 PLACEMENT MODE' : 'AR TRACKING'}
+          {arMode 
+            ? placementMode 
+              ? '📍 PLACE MODE' 
+              : 'AR TRACKING'
+            : '🔍 SCANNING'
+          }
           <style>{`
             @keyframes pulse {
               0%, 100% { opacity: 1; }
@@ -626,55 +648,33 @@ export default function Home() {
         </div>
       )}
 
-      {/* Status */}
-      {!arMode && (
-        <div style={{
-          position: 'absolute',
-          top: 95,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'rgba(0,0,0,0.75)',
-          color: 'white',
-          padding: '14px 28px',
-          borderRadius: 30,
-          fontSize: 16,
-          textAlign: 'center',
-          maxWidth: '90%',
-          backdropFilter: 'blur(10px)',
-          zIndex: 100
-        }}>
-          {isScanning
-            ? detectedCar
-              ? `🎯 ${detectedCar.class.toUpperCase()} detected!`
-              : '🔍 Looking for vehicles...'
-            : '📱 Point at a car and tap Scan'
-          }
-        </div>
-      )}
-
-      {/* AR Instructions */}
-      {arMode && (
-        <div style={{
-          position: 'absolute',
-          top: 85,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'rgba(0,0,0,0.6)',
-          color: 'white',
-          padding: '10px 18px',
-          borderRadius: 18,
-          fontSize: 13,
-          zIndex: 100,
-          backdropFilter: 'blur(10px)',
-          textAlign: 'center',
-          maxWidth: '90%'
-        }}>
-          {placementMode 
-            ? '👆 Tap on the floor to place a car'
+      {/* Status Message */}
+      <div style={{
+        position: 'absolute',
+        top: 80,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        background: 'rgba(0,0,0,0.7)',
+        color: 'white',
+        padding: '12px 24px',
+        borderRadius: 25,
+        fontSize: 14,
+        textAlign: 'center',
+        maxWidth: '90%',
+        backdropFilter: 'blur(10px)',
+        zIndex: 100
+      }}>
+        {arMode
+          ? placementMode
+            ? '👆 Tap on the floor to place a 3D car'
             : '👆 Drag to rotate • Tap "Place Mode" to add cars'
-          }
-        </div>
-      )}
+          : isScanning
+            ? detectedCar
+              ? `🎯 ${detectedCar.class.toUpperCase()} detected! Tap "Start AR"`
+              : '🔍 Point camera at a car...'
+            : '📱 Point at a car and tap "Scan Car"'
+        }
+      </div>
 
       {/* Placed cars count */}
       {placedCars.length > 0 && (
@@ -684,20 +684,21 @@ export default function Home() {
           left: '50%',
           transform: 'translateX(-50%)',
           background: 'rgba(0,0,0,0.6)',
-          color: 'white',
+          color: '#00ff00',
           padding: '8px 16px',
           borderRadius: 15,
-          fontSize: 12,
-          zIndex: 100
+          fontSize: 13,
+          zIndex: 100,
+          fontWeight: 'bold'
         }}>
           🚗 {placedCars.length} car{placedCars.length > 1 ? 's' : ''} placed
         </div>
       )}
 
-      {/* Buttons */}
+      {/* ===== BOTTOM BUTTONS ===== */}
       <div style={{
         position: 'absolute',
-        bottom: 40,
+        bottom: 30,
         left: 0,
         right: 0,
         display: 'flex',
@@ -710,47 +711,51 @@ export default function Home() {
         {arMode ? (
           <>
             {/* AR Mode Buttons */}
-            <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+              {/* Place Mode Toggle */}
               <button
-                onClick={(e) => { e.stopPropagation(); setPlacementMode(!placementMode); }}
+                onClick={(e) => { e.stopPropagation(); togglePlacementMode(); }}
                 style={{
-                  padding: '18px 35px',
-                  fontSize: 18,
+                  padding: '16px 28px',
+                  fontSize: 16,
                   fontWeight: 'bold',
                   border: 'none',
-                  borderRadius: 50,
+                  borderRadius: 45,
                   background: placementMode
                     ? 'linear-gradient(135deg, #00b894, #00cec9)'
                     : 'linear-gradient(135deg, #f39c12, #e74c3c)',
                   color: 'white',
                   cursor: 'pointer',
-                  boxShadow: '0 6px 25px rgba(0,0,0,0.4)',
+                  boxShadow: '0 5px 20px rgba(0,0,0,0.3)',
                   touchAction: 'manipulation'
                 }}
               >
                 {placementMode ? '✓ Done' : '📍 Place Mode'}
               </button>
 
+              {/* Clear All Button */}
               {placedCars.length > 0 && (
                 <button
                   onClick={(e) => { e.stopPropagation(); clearPlacedCars(); }}
                   style={{
-                    padding: '18px 30px',
-                    fontSize: 18,
+                    padding: '16px 28px',
+                    fontSize: 16,
                     fontWeight: 'bold',
                     border: 'none',
-                    borderRadius: 50,
+                    borderRadius: 45,
                     background: 'rgba(255,255,255,0.2)',
                     color: 'white',
                     cursor: 'pointer',
-                    touchAction: 'manipulation'
+                    touchAction: 'manipulation',
+                    backdropFilter: 'blur(10px)'
                   }}
                 >
-                  🗑️ Clear
+                  🗑️ Clear All
                 </button>
               )}
             </div>
 
+            {/* Exit AR Button */}
             <button
               onClick={(e) => { e.stopPropagation(); exitAR(); }}
               style={{
@@ -763,35 +768,41 @@ export default function Home() {
                 color: 'white',
                 cursor: 'pointer',
                 boxShadow: '0 6px 25px rgba(0,0,0,0.4)',
-                touchAction: 'manipulation'
+                touchAction: 'manipulation',
+                minWidth: 200
               }}
             >
               ✕ Exit AR
             </button>
           </>
         ) : (
+          /* ===== MAIN SCAN BUTTON - ALWAYS VISIBLE ===== */
           <button
             onClick={(e) => { e.stopPropagation(); handleScan(); }}
             style={{
-              padding: '22px 60px',
+              padding: '24px 60px',
               fontSize: 22,
               fontWeight: 'bold',
               border: 'none',
-              borderRadius: 55,
-              background: isScanning && detectedCar
-                ? 'linear-gradient(135deg, #00b894, #00cec9)'
+              borderRadius: 60,
+              background: isScanning 
+                ? detectedCar
+                  ? 'linear-gradient(135deg, #00b894, #00cec9)'
+                  : 'linear-gradient(135deg, #e74c3c, #c0392b)'
                 : 'linear-gradient(135deg, #667eea, #764ba2)',
               color: 'white',
               cursor: 'pointer',
-              boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
-              minWidth: 240,
-              touchAction: 'manipulation'
+              boxShadow: '0 8px 35px rgba(0,0,0,0.4)',
+              minWidth: 260,
+              touchAction: 'manipulation',
+              transform: 'scale(1)',
+              transition: 'transform 0.2s'
             }}
           >
             {isScanning
               ? detectedCar
                 ? '✨ Start AR'
-                : '⏹️ Stop'
+                : '⏹️ Stop Scan'
               : '🔍 Scan Car'
             }
           </button>
@@ -801,15 +812,13 @@ export default function Home() {
   );
 }
 
-// Main 3D Car that tracks real car
+// ===== 3D CAR COMPONENT - TRACKS REAL CAR =====
 function ThreeDCar({ 
   position, 
-  carType,
-  floorLevel
+  carType
 }: { 
   position: CarPosition;
   carType: string;
-  floorLevel: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -830,6 +839,7 @@ function ThreeDCar({
     }
   }, [carType]);
 
+  // 2.5x size centered on detection
   const scale = 2.5;
   const displaySize = {
     width: position.width * scale,
@@ -852,10 +862,8 @@ function ThreeDCar({
     
     const touchX = e.touches[0].clientX;
     const deltaX = touchX - lastTouchXRef.current;
-    
     rotationRef.current += deltaX * 0.02;
     carRef.current.rotation.y = rotationRef.current;
-    
     lastTouchXRef.current = touchX;
   }, []);
 
@@ -878,10 +886,7 @@ function ThreeDCar({
     camera.lookAt(0, 1, 0);
     cameraRef.current = camera;
 
-    const renderer = new THREE.WebGLRenderer({ 
-      alpha: true, 
-      antialias: true
-    });
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
@@ -893,7 +898,6 @@ function ThreeDCar({
 
     const mainLight = new THREE.DirectionalLight(0xffffff, 1.5);
     mainLight.position.set(5, 15, 10);
-    mainLight.castShadow = true;
     scene.add(mainLight);
 
     const fillLight = new THREE.DirectionalLight(0xffffff, 0.6);
@@ -925,7 +929,6 @@ function ThreeDCar({
 
   useEffect(() => {
     if (!rendererRef.current || !cameraRef.current) return;
-
     rendererRef.current.setSize(displaySize.width, displaySize.height);
     cameraRef.current.aspect = displaySize.width / displaySize.height;
     cameraRef.current.updateProjectionMatrix();
@@ -951,7 +954,7 @@ function ThreeDCar({
   );
 }
 
-// Placed Car Model (can be placed anywhere on floor)
+// ===== PLACED CAR MODEL =====
 function PlacedCarModel({ 
   car, 
   onRemove 
@@ -969,7 +972,7 @@ function PlacedCarModel({
   const isDraggingRef = useRef<boolean>(false);
   const lastTouchXRef = useRef<number>(0);
 
-  const size = 200;
+  const size = 180;
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     e.preventDefault();
@@ -985,10 +988,8 @@ function PlacedCarModel({
     
     const touchX = e.touches[0].clientX;
     const deltaX = touchX - lastTouchXRef.current;
-    
     rotationRef.current += deltaX * 0.03;
     carModelRef.current.rotation.y = rotationRef.current;
-    
     lastTouchXRef.current = touchX;
   }, []);
 
@@ -1030,7 +1031,7 @@ function PlacedCarModel({
     scene.add(carModel);
     carModelRef.current = carModel;
 
-    // Add shadow/ground indicator
+    // Shadow circle
     const shadowGeometry = new THREE.CircleGeometry(3, 32);
     const shadowMaterial = new THREE.MeshBasicMaterial({
       color: 0x000000,
@@ -1090,12 +1091,12 @@ function PlacedCarModel({
         onClick={(e) => { e.stopPropagation(); onRemove(); }}
         style={{
           position: 'absolute',
-          top: 5,
-          right: 5,
-          width: 30,
-          height: 30,
+          top: 0,
+          right: 0,
+          width: 32,
+          height: 32,
           borderRadius: '50%',
-          border: 'none',
+          border: '2px solid white',
           background: 'rgba(231, 76, 60, 0.9)',
           color: 'white',
           fontSize: 16,
@@ -1103,7 +1104,8 @@ function PlacedCarModel({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          touchAction: 'manipulation'
+          touchAction: 'manipulation',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.3)'
         }}
       >
         ✕
@@ -1112,7 +1114,7 @@ function PlacedCarModel({
   );
 }
 
-// Create detailed 3D car
+// ===== CREATE DETAILED 3D CAR =====
 function createDetailedCar(color: number): THREE.Group {
   const car = new THREE.Group();
 
