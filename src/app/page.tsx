@@ -81,7 +81,7 @@ export default function Home() {
       await tf.ready();
       await tf.setBackend('webgl');
       
-      setLoadingText('Loading human detector...');
+      setLoadingText('Loading detector...');
       const cocoSsd = await import('@tensorflow-models/coco-ssd');
       const loadedModel = await cocoSsd.load({ base: 'lite_mobilenet_v2' });
       
@@ -117,7 +117,7 @@ export default function Home() {
     };
   }, []);
 
-  // AUTO DETECTION - Detects HUMAN
+  // AUTO DETECTION - HUMAN
   useEffect(() => {
     if (!model || !videoRef.current || !canvasRef.current) return;
 
@@ -142,12 +142,9 @@ export default function Home() {
       try {
         const predictions = await model.detect(video);
         
-        // DETECT HUMAN
         const humans = predictions.filter(
           (p: any) => p.class === 'person' && p.score > 0.5
         );
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (humans.length > 0) {
           const person = humans[0];
@@ -168,7 +165,6 @@ export default function Home() {
             width: width * scaleX,
             height: height * scaleY
           });
-
         } else {
           setDetectedPerson(null);
           setPersonPosition(null);
@@ -281,7 +277,7 @@ export default function Home() {
         }}
       />
 
-      {/* Hidden canvas for detection */}
+      {/* Hidden canvas */}
       <canvas
         ref={canvasRef}
         style={{
@@ -295,9 +291,9 @@ export default function Home() {
         }}
       />
 
-      {/* REAL 3D CUBE - Appears when human detected */}
+      {/* SIMPLE RED 3D BOX with "1" */}
       {personPosition && (
-        <Real3DCube position={personPosition} />
+        <SimpleRedBox position={personPosition} />
       )}
 
       {/* TOP UI */}
@@ -371,7 +367,7 @@ export default function Home() {
             borderRadius: '50%',
             animation: 'pulse 1s infinite' 
           }} />
-          {detectedPerson ? '👤 HUMAN DETECTED' : '🔍 SCANNING...'}
+          {detectedPerson ? '👤 DETECTED' : '🔍 SCANNING...'}
         </div>
 
         <style>{`
@@ -384,39 +380,18 @@ export default function Home() {
         {/* Instructions */}
         <div style={{
           position: 'absolute',
-          top: 'calc(env(safe-area-inset-top, 20px) + 65px)',
+          top: 'calc(env(safe-area-inset-top, 20px) + 60px)',
           left: '50%',
           transform: 'translateX(-50%)',
           background: 'rgba(0,0,0,0.7)',
           color: 'white',
-          padding: '10px 20px',
-          borderRadius: 20,
-          fontSize: 13,
+          padding: '8px 16px',
+          borderRadius: 15,
+          fontSize: 12,
           textAlign: 'center'
         }}>
-          {detectedPerson 
-            ? '👆 Drag to rotate the 3D cube' 
-            : '📱 Point camera at a person'
-          }
+          {detectedPerson ? '👆 Drag to rotate' : '📱 Point at person'}
         </div>
-
-        {/* Confidence */}
-        {detectedPerson && (
-          <div style={{
-            position: 'absolute',
-            top: 'calc(env(safe-area-inset-top, 20px) + 110px)',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(0,0,0,0.6)',
-            color: '#00ff00',
-            padding: '8px 16px',
-            borderRadius: 15,
-            fontSize: 12,
-            fontWeight: 'bold'
-          }}>
-            Confidence: {Math.round(detectedPerson.score * 100)}%
-          </div>
-        )}
       </div>
 
       {/* Scanning animation */}
@@ -426,9 +401,9 @@ export default function Home() {
             position: 'absolute',
             left: 0,
             width: '100%',
-            height: 4,
+            height: 3,
             background: 'linear-gradient(90deg, transparent, #667eea, transparent)',
-            boxShadow: '0 0 30px #667eea',
+            boxShadow: '0 0 20px #667eea',
             animation: 'scanMove 2s ease-in-out infinite'
           }} />
           <style>{`
@@ -443,77 +418,40 @@ export default function Home() {
   );
 }
 
-// REAL 3D CUBE with "1" painted on faces - NO AUTO SPIN
-function Real3DCube({ position }: { position: Position }) {
+// SIMPLE RED 3D BOX with "1"
+function SimpleRedBox({ position }: { position: Position }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cubeRef = useRef<THREE.Mesh | null>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const rotationRef = useRef({ x: 0.3, y: 0.5 });
+  const rotationRef = useRef({ x: 0.4, y: 0.6 });
   const isDragging = useRef(false);
   const lastTouch = useRef({ x: 0, y: 0 });
 
   // Size
-  const scale = 1.8;
   const size = {
-    width: Math.max(position.width * scale, 200),
-    height: Math.max(position.height * scale, 200),
-    x: position.x + position.width / 2 - Math.max(position.width * scale, 200) / 2,
-    y: position.y + position.height / 2 - Math.max(position.height * scale, 200) / 2
+    width: Math.max(position.width * 1.5, 180),
+    height: Math.max(position.height * 1.5, 180),
+    x: position.x + position.width / 2 - Math.max(position.width * 1.5, 180) / 2,
+    y: position.y + position.height / 2 - Math.max(position.height * 1.5, 180) / 2
   };
 
-  // Create texture with number "1" painted on colored background
-  const createFaceTexture = (bgColor: string, textColor: string, number: string) => {
+  // Create simple texture - red with white "1"
+  const createSimpleTexture = () => {
     const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
+    canvas.width = 256;
+    canvas.height = 256;
     const ctx = canvas.getContext('2d')!;
     
-    // Fill background color
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, 512, 512);
+    // Red background
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillRect(0, 0, 256, 256);
     
-    // Add subtle gradient for 3D effect
-    const gradient = ctx.createLinearGradient(0, 0, 512, 512);
-    gradient.addColorStop(0, 'rgba(255,255,255,0.2)');
-    gradient.addColorStop(0.5, 'rgba(255,255,255,0)');
-    gradient.addColorStop(1, 'rgba(0,0,0,0.2)');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 512, 512);
-    
-    // Draw border
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-    ctx.lineWidth = 8;
-    ctx.strokeRect(20, 20, 472, 472);
-    
-    // Draw inner border
-    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(40, 40, 432, 432);
-    
-    // Draw the number with shadow
-    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    ctx.shadowBlur = 15;
-    ctx.shadowOffsetX = 5;
-    ctx.shadowOffsetY = 5;
-    
-    ctx.fillStyle = textColor;
-    ctx.font = 'bold 280px Arial';
+    // White "1"
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 200px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(number, 256, 270);
-    
-    // Reset shadow and add highlight
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
-    
-    // Add text outline for depth
-    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-    ctx.lineWidth = 3;
-    ctx.strokeText(number, 254, 268);
+    ctx.fillText('1', 128, 138);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
@@ -526,74 +464,46 @@ function Real3DCube({ position }: { position: Position }) {
 
     // Scene
     const scene = new THREE.Scene();
-    sceneRef.current = scene;
 
     // Camera
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
-    camera.position.set(0, 0, 4);
+    camera.position.set(0, 0, 3.5);
     camera.lookAt(0, 0, 0);
-    cameraRef.current = camera;
 
     // Renderer
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(size.width, size.height);
-    renderer.shadowMap.enabled = true;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
     directionalLight.position.set(5, 5, 5);
-    directionalLight.castShadow = true;
     scene.add(directionalLight);
 
-    const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
-    directionalLight2.position.set(-5, 3, -5);
-    scene.add(directionalLight2);
+    // Create simple red box with "1" on all faces
+    const texture = createSimpleTexture();
+    const material = new THREE.MeshStandardMaterial({
+      map: texture,
+      metalness: 0.1,
+      roughness: 0.5,
+    });
 
-    const pointLight = new THREE.PointLight(0xffffff, 0.5);
-    pointLight.position.set(0, 5, 0);
-    scene.add(pointLight);
-
-    // Create 6 different textures for each face with "1"
-    const textures = [
-      createFaceTexture('#e74c3c', '#ffffff', '1'), // Right - Red
-      createFaceTexture('#3498db', '#ffffff', '1'), // Left - Blue  
-      createFaceTexture('#2ecc71', '#ffffff', '1'), // Top - Green
-      createFaceTexture('#f39c12', '#ffffff', '1'), // Bottom - Orange
-      createFaceTexture('#9b59b6', '#ffffff', '1'), // Front - Purple
-      createFaceTexture('#1abc9c', '#ffffff', '1'), // Back - Teal
-    ];
-
-    // Create materials with textures
-    const materials = textures.map(texture => 
-      new THREE.MeshStandardMaterial({
-        map: texture,
-        metalness: 0.1,
-        roughness: 0.3,
-      })
-    );
-
-    // Create cube
-    const cubeSize = 1.5;
-    const geometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
-    const cube = new THREE.Mesh(geometry, materials);
-    cube.castShadow = true;
-    cube.receiveShadow = true;
+    const geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+    const cube = new THREE.Mesh(geometry, material);
     
-    // Set initial rotation
     cube.rotation.x = rotationRef.current.x;
     cube.rotation.y = rotationRef.current.y;
     
     scene.add(cube);
     cubeRef.current = cube;
 
-    // Animation loop - NO AUTO SPIN
+    // Animation loop
     const animate = () => {
       if (cubeRef.current) {
         cubeRef.current.rotation.x = rotationRef.current.x;
@@ -617,10 +527,8 @@ function Real3DCube({ position }: { position: Position }) {
 
   // Update size
   useEffect(() => {
-    if (rendererRef.current && cameraRef.current) {
+    if (rendererRef.current) {
       rendererRef.current.setSize(size.width, size.height);
-      cameraRef.current.aspect = size.width / size.height;
-      cameraRef.current.updateProjectionMatrix();
     }
   }, [size.width, size.height]);
 
@@ -641,8 +549,8 @@ function Real3DCube({ position }: { position: Position }) {
     const deltaX = e.touches[0].clientX - lastTouch.current.x;
     const deltaY = e.touches[0].clientY - lastTouch.current.y;
 
-    rotationRef.current.y += deltaX * 0.015;
-    rotationRef.current.x += deltaY * 0.015;
+    rotationRef.current.y += deltaX * 0.01;
+    rotationRef.current.x += deltaY * 0.01;
 
     lastTouch.current = {
       x: e.touches[0].clientX,
@@ -668,8 +576,8 @@ function Real3DCube({ position }: { position: Position }) {
     const deltaX = e.clientX - lastTouch.current.x;
     const deltaY = e.clientY - lastTouch.current.y;
 
-    rotationRef.current.y += deltaX * 0.015;
-    rotationRef.current.x += deltaY * 0.015;
+    rotationRef.current.y += deltaX * 0.01;
+    rotationRef.current.x += deltaY * 0.01;
 
     lastTouch.current = { x: e.clientX, y: e.clientY };
   };
