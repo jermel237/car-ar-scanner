@@ -242,7 +242,7 @@ export default function Home() {
           borderRadius: '50%',
           animation: 'spin 1s linear infinite'
         }} />
-        <h2 style={{ marginTop: 30, fontSize: 24 }}>👤 Human Detector</h2>
+        <h2 style={{ marginTop: 30, fontSize: 24 }}>📊 1D Array Visualizer</h2>
         <p style={{ marginTop: 10, opacity: 0.7, fontSize: 16 }}>{loadingText}</p>
         <style>{`
           @keyframes spin { to { transform: rotate(360deg); } }
@@ -291,9 +291,9 @@ export default function Home() {
         }}
       />
 
-      {/* SIMPLE RED 3D BOX with "1" */}
+      {/* 1D ARRAY 3D MODEL */}
       {personPosition && (
-        <SimpleRedBox position={personPosition} />
+        <OneDimensionalArray position={personPosition} />
       )}
 
       {/* TOP UI */}
@@ -367,7 +367,7 @@ export default function Home() {
             borderRadius: '50%',
             animation: 'pulse 1s infinite' 
           }} />
-          {detectedPerson ? '👤 DETECTED' : '🔍 SCANNING...'}
+          {detectedPerson ? '📊 1D ARRAY' : '🔍 SCANNING...'}
         </div>
 
         <style>{`
@@ -390,8 +390,27 @@ export default function Home() {
           fontSize: 12,
           textAlign: 'center'
         }}>
-          {detectedPerson ? '👆 Drag to rotate' : '📱 Point at person'}
+          {detectedPerson ? '👆 Drag to rotate array' : '📱 Point at person'}
         </div>
+
+        {/* Array Label */}
+        {detectedPerson && (
+          <div style={{
+            position: 'absolute',
+            top: 'calc(env(safe-area-inset-top, 20px) + 95px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(0,0,0,0.8)',
+            color: '#00ff00',
+            padding: '8px 16px',
+            borderRadius: 10,
+            fontSize: 14,
+            fontFamily: 'monospace',
+            fontWeight: 'bold'
+          }}>
+            int arr[5] = {'{1, 2, 3, 4, 5}'}
+          </div>
+        )}
       </div>
 
       {/* Scanning animation */}
@@ -418,40 +437,52 @@ export default function Home() {
   );
 }
 
-// SIMPLE RED 3D BOX with "1"
-function SimpleRedBox({ position }: { position: Position }) {
+// 1D ARRAY - Row of 3D boxes [1][2][3][4][5]
+function OneDimensionalArray({ position }: { position: Position }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const cubeRef = useRef<THREE.Mesh | null>(null);
-  const rotationRef = useRef({ x: 0.4, y: 0.6 });
+  const groupRef = useRef<THREE.Group | null>(null);
+  const rotationRef = useRef({ x: 0.2, y: 0 });
   const isDragging = useRef(false);
   const lastTouch = useRef({ x: 0, y: 0 });
 
+  // Array data
+  const arrayData = [1, 2, 3, 4, 5];
+  
+  // Colors for each box
+  const colors = [
+    '#e74c3c', // Red
+    '#3498db', // Blue
+    '#2ecc71', // Green
+    '#f39c12', // Orange
+    '#9b59b6', // Purple
+  ];
+
   // Size
   const size = {
-    width: Math.max(position.width * 1.5, 180),
-    height: Math.max(position.height * 1.5, 180),
-    x: position.x + position.width / 2 - Math.max(position.width * 1.5, 180) / 2,
-    y: position.y + position.height / 2 - Math.max(position.height * 1.5, 180) / 2
+    width: Math.min(window.innerWidth - 40, 400),
+    height: 200,
+    x: position.x + position.width / 2 - Math.min(window.innerWidth - 40, 400) / 2,
+    y: position.y + position.height / 2 - 100
   };
 
-  // Create simple texture - red with white "1"
-  const createSimpleTexture = () => {
+  // Create texture with number
+  const createNumberTexture = (num: number, bgColor: string) => {
     const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
+    canvas.width = 128;
+    canvas.height = 128;
     const ctx = canvas.getContext('2d')!;
     
-    // Red background
-    ctx.fillStyle = '#e74c3c';
-    ctx.fillRect(0, 0, 256, 256);
+    // Background
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, 128, 128);
     
-    // White "1"
+    // White number
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 200px Arial';
+    ctx.font = 'bold 80px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('1', 128, 138);
+    ctx.fillText(num.toString(), 64, 68);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
@@ -466,8 +497,8 @@ function SimpleRedBox({ position }: { position: Position }) {
     const scene = new THREE.Scene();
 
     // Camera
-    const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
-    camera.position.set(0, 0, 3.5);
+    const camera = new THREE.PerspectiveCamera(50, size.width / size.height, 0.1, 1000);
+    camera.position.set(0, 1, 8);
     camera.lookAt(0, 0, 0);
 
     // Renderer
@@ -479,43 +510,110 @@ function SimpleRedBox({ position }: { position: Position }) {
     rendererRef.current = renderer;
 
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
     directionalLight.position.set(5, 5, 5);
     scene.add(directionalLight);
 
-    // Create simple red box with "1" on all faces
-    const texture = createSimpleTexture();
-    const material = new THREE.MeshStandardMaterial({
-      map: texture,
-      metalness: 0.1,
-      roughness: 0.5,
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.3);
+    backLight.position.set(-5, 3, -5);
+    scene.add(backLight);
+
+    // Create array group
+    const arrayGroup = new THREE.Group();
+
+    // Box size and spacing
+    const boxSize = 1;
+    const spacing = 1.3;
+    const startX = -((arrayData.length - 1) * spacing) / 2;
+
+    // Create each box in the array
+    arrayData.forEach((num, index) => {
+      const texture = createNumberTexture(num, colors[index]);
+      
+      const material = new THREE.MeshStandardMaterial({
+        map: texture,
+        metalness: 0.2,
+        roughness: 0.5,
+      });
+
+      const geometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
+      const cube = new THREE.Mesh(geometry, material);
+      
+      // Position in a row
+      cube.position.x = startX + index * spacing;
+      cube.position.y = 0;
+      cube.position.z = 0;
+
+      arrayGroup.add(cube);
+
+      // Add index label below each box
+      const indexCanvas = document.createElement('canvas');
+      indexCanvas.width = 64;
+      indexCanvas.height = 32;
+      const indexCtx = indexCanvas.getContext('2d')!;
+      indexCtx.fillStyle = '#ffffff';
+      indexCtx.font = 'bold 24px Arial';
+      indexCtx.textAlign = 'center';
+      indexCtx.textBaseline = 'middle';
+      indexCtx.fillText(`[${index}]`, 32, 16);
+
+      const indexTexture = new THREE.CanvasTexture(indexCanvas);
+      const indexMaterial = new THREE.SpriteMaterial({ 
+        map: indexTexture,
+        transparent: true
+      });
+      const indexSprite = new THREE.Sprite(indexMaterial);
+      indexSprite.position.set(startX + index * spacing, -1, 0);
+      indexSprite.scale.set(0.8, 0.4, 1);
+      arrayGroup.add(indexSprite);
     });
 
-    const geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
-    const cube = new THREE.Mesh(geometry, material);
-    
-    cube.rotation.x = rotationRef.current.x;
-    cube.rotation.y = rotationRef.current.y;
-    
-    scene.add(cube);
-    cubeRef.current = cube;
+    // Add brackets [ ]
+    const createBracket = (text: string, x: number) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 64;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 100px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 32, 64);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      const material = new THREE.SpriteMaterial({ 
+        map: texture,
+        transparent: true
+      });
+      const sprite = new THREE.Sprite(material);
+      sprite.position.set(x, 0, 0.5);
+      sprite.scale.set(0.5, 1, 1);
+      return sprite;
+    };
+
+    arrayGroup.add(createBracket('[', startX - 0.9));
+    arrayGroup.add(createBracket(']', startX + (arrayData.length - 1) * spacing + 0.9));
+
+    // Set initial rotation
+    arrayGroup.rotation.x = rotationRef.current.x;
+    arrayGroup.rotation.y = rotationRef.current.y;
+
+    scene.add(arrayGroup);
+    groupRef.current = arrayGroup;
 
     // Animation loop
     const animate = () => {
-      if (cubeRef.current) {
-        cubeRef.current.rotation.x = rotationRef.current.x;
-        cubeRef.current.rotation.y = rotationRef.current.y;
+      if (groupRef.current) {
+        groupRef.current.rotation.x = rotationRef.current.x;
+        groupRef.current.rotation.y = rotationRef.current.y;
       }
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     };
     animate();
-
-    camera.aspect = size.width / size.height;
-    camera.updateProjectionMatrix();
 
     return () => {
       renderer.dispose();
@@ -552,6 +650,9 @@ function SimpleRedBox({ position }: { position: Position }) {
     rotationRef.current.y += deltaX * 0.01;
     rotationRef.current.x += deltaY * 0.01;
 
+    // Limit vertical rotation
+    rotationRef.current.x = Math.max(-0.5, Math.min(0.5, rotationRef.current.x));
+
     lastTouch.current = {
       x: e.touches[0].clientX,
       y: e.touches[0].clientY
@@ -578,6 +679,7 @@ function SimpleRedBox({ position }: { position: Position }) {
 
     rotationRef.current.y += deltaX * 0.01;
     rotationRef.current.x += deltaY * 0.01;
+    rotationRef.current.x = Math.max(-0.5, Math.min(0.5, rotationRef.current.x));
 
     lastTouch.current = { x: e.clientX, y: e.clientY };
   };
