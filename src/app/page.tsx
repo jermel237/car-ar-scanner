@@ -142,7 +142,7 @@ export default function Home() {
       try {
         const predictions = await model.detect(video);
         
-        // DETECT HUMAN (person class)
+        // DETECT HUMAN
         const humans = predictions.filter(
           (p: any) => p.class === 'person' && p.score > 0.5
         );
@@ -281,7 +281,7 @@ export default function Home() {
         }}
       />
 
-      {/* Detection Canvas (hidden) */}
+      {/* Hidden canvas for detection */}
       <canvas
         ref={canvasRef}
         style={{
@@ -290,15 +290,14 @@ export default function Home() {
           left: 0,
           width: '100%',
           height: '100%',
-          objectFit: 'cover',
           pointerEvents: 'none',
           opacity: 0
         }}
       />
 
-      {/* 3D CUBE - Appears when HUMAN detected */}
+      {/* REAL 3D CUBE - Appears when human detected */}
       {personPosition && (
-        <ThreeDCube position={personPosition} />
+        <Real3DCube position={personPosition} />
       )}
 
       {/* TOP UI */}
@@ -396,7 +395,7 @@ export default function Home() {
           textAlign: 'center'
         }}>
           {detectedPerson 
-            ? '👆 Drag cube to rotate' 
+            ? '👆 Drag to rotate the 3D cube' 
             : '📱 Point camera at a person'
           }
         </div>
@@ -420,7 +419,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* Scanning animation when no human detected */}
+      {/* Scanning animation */}
       {!detectedPerson && (
         <>
           <div style={{
@@ -444,24 +443,81 @@ export default function Home() {
   );
 }
 
-// 3D CUBE with number "1" - NO AUTO SPIN
-function ThreeDCube({ position }: { position: Position }) {
+// REAL 3D CUBE with "1" painted on faces - NO AUTO SPIN
+function Real3DCube({ position }: { position: Position }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const cubeRef = useRef<THREE.Group | null>(null);
+  const cubeRef = useRef<THREE.Mesh | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const rotationRef = useRef({ x: 0, y: 0 });
+  const rotationRef = useRef({ x: 0.3, y: 0.5 });
   const isDragging = useRef(false);
   const lastTouch = useRef({ x: 0, y: 0 });
 
-  // Size - centered on detected person
-  const scale = 1.5;
+  // Size
+  const scale = 1.8;
   const size = {
-    width: Math.max(position.width * scale, 180),
-    height: Math.max(position.height * scale, 180),
-    x: position.x + position.width / 2 - Math.max(position.width * scale, 180) / 2,
-    y: position.y + position.height / 2 - Math.max(position.height * scale, 180) / 2
+    width: Math.max(position.width * scale, 200),
+    height: Math.max(position.height * scale, 200),
+    x: position.x + position.width / 2 - Math.max(position.width * scale, 200) / 2,
+    y: position.y + position.height / 2 - Math.max(position.height * scale, 200) / 2
+  };
+
+  // Create texture with number "1" painted on colored background
+  const createFaceTexture = (bgColor: string, textColor: string, number: string) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d')!;
+    
+    // Fill background color
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, 512, 512);
+    
+    // Add subtle gradient for 3D effect
+    const gradient = ctx.createLinearGradient(0, 0, 512, 512);
+    gradient.addColorStop(0, 'rgba(255,255,255,0.2)');
+    gradient.addColorStop(0.5, 'rgba(255,255,255,0)');
+    gradient.addColorStop(1, 'rgba(0,0,0,0.2)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 512, 512);
+    
+    // Draw border
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 8;
+    ctx.strokeRect(20, 20, 472, 472);
+    
+    // Draw inner border
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(40, 40, 432, 432);
+    
+    // Draw the number with shadow
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 15;
+    ctx.shadowOffsetX = 5;
+    ctx.shadowOffsetY = 5;
+    
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 280px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(number, 256, 270);
+    
+    // Reset shadow and add highlight
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    
+    // Add text outline for depth
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 3;
+    ctx.strokeText(number, 254, 268);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
   };
 
   useEffect(() => {
@@ -474,7 +530,7 @@ function ThreeDCube({ position }: { position: Position }) {
 
     // Camera
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
-    camera.position.set(0, 0, 5);
+    camera.position.set(0, 0, 4);
     camera.lookAt(0, 0, 0);
     cameraRef.current = camera;
 
@@ -483,118 +539,63 @@ function ThreeDCube({ position }: { position: Position }) {
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(size.width, size.height);
+    renderer.shadowMap.enabled = true;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
     directionalLight.position.set(5, 5, 5);
+    directionalLight.castShadow = true;
     scene.add(directionalLight);
 
-    const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    backLight.position.set(-5, -5, -5);
-    scene.add(backLight);
+    const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+    directionalLight2.position.set(-5, 3, -5);
+    scene.add(directionalLight2);
 
-    // Create cube group
-    const cubeGroup = new THREE.Group();
-    
-    // Cube geometry
-    const cubeSize = 1.5;
-    const geometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
-    
-    // Materials for each face (6 faces) - different colors
-    const materials = [
-      new THREE.MeshStandardMaterial({ color: 0xe74c3c, metalness: 0.3, roughness: 0.4 }), // Right - Red
-      new THREE.MeshStandardMaterial({ color: 0x3498db, metalness: 0.3, roughness: 0.4 }), // Left - Blue
-      new THREE.MeshStandardMaterial({ color: 0x2ecc71, metalness: 0.3, roughness: 0.4 }), // Top - Green
-      new THREE.MeshStandardMaterial({ color: 0xf39c12, metalness: 0.3, roughness: 0.4 }), // Bottom - Orange
-      new THREE.MeshStandardMaterial({ color: 0x9b59b6, metalness: 0.3, roughness: 0.4 }), // Front - Purple
-      new THREE.MeshStandardMaterial({ color: 0x1abc9c, metalness: 0.3, roughness: 0.4 }), // Back - Teal
+    const pointLight = new THREE.PointLight(0xffffff, 0.5);
+    pointLight.position.set(0, 5, 0);
+    scene.add(pointLight);
+
+    // Create 6 different textures for each face with "1"
+    const textures = [
+      createFaceTexture('#e74c3c', '#ffffff', '1'), // Right - Red
+      createFaceTexture('#3498db', '#ffffff', '1'), // Left - Blue  
+      createFaceTexture('#2ecc71', '#ffffff', '1'), // Top - Green
+      createFaceTexture('#f39c12', '#ffffff', '1'), // Bottom - Orange
+      createFaceTexture('#9b59b6', '#ffffff', '1'), // Front - Purple
+      createFaceTexture('#1abc9c', '#ffffff', '1'), // Back - Teal
     ];
 
+    // Create materials with textures
+    const materials = textures.map(texture => 
+      new THREE.MeshStandardMaterial({
+        map: texture,
+        metalness: 0.1,
+        roughness: 0.3,
+      })
+    );
+
+    // Create cube
+    const cubeSize = 1.5;
+    const geometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
     const cube = new THREE.Mesh(geometry, materials);
-    cubeGroup.add(cube);
+    cube.castShadow = true;
+    cube.receiveShadow = true;
+    
+    // Set initial rotation
+    cube.rotation.x = rotationRef.current.x;
+    cube.rotation.y = rotationRef.current.y;
+    
+    scene.add(cube);
+    cubeRef.current = cube;
 
-    // Create "1" texture for faces
-    const createNumberTexture = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 256;
-      canvas.height = 256;
-      const ctx = canvas.getContext('2d')!;
-      
-      ctx.clearRect(0, 0, 256, 256);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 180px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('1', 128, 128);
-
-      const texture = new THREE.CanvasTexture(canvas);
-      texture.needsUpdate = true;
-      return texture;
-    };
-
-    const numberTexture = createNumberTexture();
-
-    // Add "1" planes on each face
-    const planeGeometry = new THREE.PlaneGeometry(1.2, 1.2);
-    const planeMaterial = new THREE.MeshBasicMaterial({
-      map: numberTexture,
-      transparent: true,
-      side: THREE.DoubleSide
-    });
-
-    // Front
-    const front = new THREE.Mesh(planeGeometry, planeMaterial);
-    front.position.set(0, 0, cubeSize / 2 + 0.01);
-    cubeGroup.add(front);
-
-    // Back
-    const back = new THREE.Mesh(planeGeometry, planeMaterial);
-    back.position.set(0, 0, -cubeSize / 2 - 0.01);
-    back.rotation.y = Math.PI;
-    cubeGroup.add(back);
-
-    // Right
-    const right = new THREE.Mesh(planeGeometry, planeMaterial);
-    right.position.set(cubeSize / 2 + 0.01, 0, 0);
-    right.rotation.y = Math.PI / 2;
-    cubeGroup.add(right);
-
-    // Left
-    const left = new THREE.Mesh(planeGeometry, planeMaterial);
-    left.position.set(-cubeSize / 2 - 0.01, 0, 0);
-    left.rotation.y = -Math.PI / 2;
-    cubeGroup.add(left);
-
-    // Top
-    const top = new THREE.Mesh(planeGeometry, planeMaterial);
-    top.position.set(0, cubeSize / 2 + 0.01, 0);
-    top.rotation.x = -Math.PI / 2;
-    cubeGroup.add(top);
-
-    // Bottom
-    const bottom = new THREE.Mesh(planeGeometry, planeMaterial);
-    bottom.position.set(0, -cubeSize / 2 - 0.01, 0);
-    bottom.rotation.x = Math.PI / 2;
-    cubeGroup.add(bottom);
-
-    // Edges for better visibility
-    const edges = new THREE.EdgesGeometry(geometry);
-    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
-    const wireframe = new THREE.LineSegments(edges, lineMaterial);
-    cubeGroup.add(wireframe);
-
-    scene.add(cubeGroup);
-    cubeRef.current = cubeGroup;
-
-    // Animation loop - NO AUTO SPIN, only renders
+    // Animation loop - NO AUTO SPIN
     const animate = () => {
       if (cubeRef.current) {
-        // Only apply rotation from drag, NO auto spin
         cubeRef.current.rotation.x = rotationRef.current.x;
         cubeRef.current.rotation.y = rotationRef.current.y;
       }
@@ -603,7 +604,6 @@ function ThreeDCube({ position }: { position: Position }) {
     };
     animate();
 
-    // Update camera aspect
     camera.aspect = size.width / size.height;
     camera.updateProjectionMatrix();
 
@@ -615,7 +615,7 @@ function ThreeDCube({ position }: { position: Position }) {
     };
   }, []);
 
-  // Update size when position changes
+  // Update size
   useEffect(() => {
     if (rendererRef.current && cameraRef.current) {
       rendererRef.current.setSize(size.width, size.height);
@@ -641,8 +641,8 @@ function ThreeDCube({ position }: { position: Position }) {
     const deltaX = e.touches[0].clientX - lastTouch.current.x;
     const deltaY = e.touches[0].clientY - lastTouch.current.y;
 
-    rotationRef.current.y += deltaX * 0.02;
-    rotationRef.current.x += deltaY * 0.02;
+    rotationRef.current.y += deltaX * 0.015;
+    rotationRef.current.x += deltaY * 0.015;
 
     lastTouch.current = {
       x: e.touches[0].clientX,
@@ -668,8 +668,8 @@ function ThreeDCube({ position }: { position: Position }) {
     const deltaX = e.clientX - lastTouch.current.x;
     const deltaY = e.clientY - lastTouch.current.y;
 
-    rotationRef.current.y += deltaX * 0.02;
-    rotationRef.current.x += deltaY * 0.02;
+    rotationRef.current.y += deltaX * 0.015;
+    rotationRef.current.x += deltaY * 0.015;
 
     lastTouch.current = { x: e.clientX, y: e.clientY };
   };
