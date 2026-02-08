@@ -9,7 +9,7 @@ interface Detection {
   score: number;
 }
 
-interface CarPosition {
+interface Position {
   x: number;
   y: number;
   width: number;
@@ -23,11 +23,11 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadingText, setLoadingText] = useState('Starting...');
   const [model, setModel] = useState<any>(null);
-  const [detectedCar, setDetectedCar] = useState<Detection | null>(null);
+  const [detectedPerson, setDetectedPerson] = useState<Detection | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [carPosition, setCarPosition] = useState<CarPosition | null>(null);
+  const [personPosition, setPersonPosition] = useState<Position | null>(null);
 
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
     try {
@@ -81,7 +81,7 @@ export default function Home() {
       await tf.ready();
       await tf.setBackend('webgl');
       
-      setLoadingText('Loading detector...');
+      setLoadingText('Loading human detector...');
       const cocoSsd = await import('@tensorflow-models/coco-ssd');
       const loadedModel = await cocoSsd.load({ base: 'lite_mobilenet_v2' });
       
@@ -117,7 +117,7 @@ export default function Home() {
     };
   }, []);
 
-  // AUTO DETECTION - Always running, 3D cube appears automatically
+  // AUTO DETECTION - Detects HUMAN
   useEffect(() => {
     if (!model || !videoRef.current || !canvasRef.current) return;
 
@@ -142,26 +142,27 @@ export default function Home() {
       try {
         const predictions = await model.detect(video);
         
-        const vehicles = predictions.filter(
-          (p: any) => ['car', 'truck', 'bus', 'motorcycle'].includes(p.class) && p.score > 0.35
+        // DETECT HUMAN (person class)
+        const humans = predictions.filter(
+          (p: any) => p.class === 'person' && p.score > 0.5
         );
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        if (vehicles.length > 0) {
-          const car = vehicles[0];
-          const [x, y, width, height] = car.bbox;
+        if (humans.length > 0) {
+          const person = humans[0];
+          const [x, y, width, height] = person.bbox;
           
           const scaleX = window.innerWidth / canvas.width;
           const scaleY = window.innerHeight / canvas.height;
           
-          setDetectedCar({
-            bbox: car.bbox,
-            class: car.class,
-            score: car.score
+          setDetectedPerson({
+            bbox: person.bbox,
+            class: person.class,
+            score: person.score
           });
 
-          setCarPosition({
+          setPersonPosition({
             x: x * scaleX,
             y: y * scaleY,
             width: width * scaleX,
@@ -169,8 +170,8 @@ export default function Home() {
           });
 
         } else {
-          setDetectedCar(null);
-          setCarPosition(null);
+          setDetectedPerson(null);
+          setPersonPosition(null);
         }
       } catch (e) {
         console.error('Detection error:', e);
@@ -245,7 +246,7 @@ export default function Home() {
           borderRadius: '50%',
           animation: 'spin 1s linear infinite'
         }} />
-        <h2 style={{ marginTop: 30, fontSize: 24 }}>🎯 AR Auto Scanner</h2>
+        <h2 style={{ marginTop: 30, fontSize: 24 }}>👤 Human Detector</h2>
         <p style={{ marginTop: 10, opacity: 0.7, fontSize: 16 }}>{loadingText}</p>
         <style>{`
           @keyframes spin { to { transform: rotate(360deg); } }
@@ -280,7 +281,7 @@ export default function Home() {
         }}
       />
 
-      {/* Detection Canvas (hidden, just for processing) */}
+      {/* Detection Canvas (hidden) */}
       <canvas
         ref={canvasRef}
         style={{
@@ -295,9 +296,9 @@ export default function Home() {
         }}
       />
 
-      {/* 3D CUBE - Appears automatically when car detected */}
-      {carPosition && (
-        <ThreeDCube position={carPosition} />
+      {/* 3D CUBE - Appears when HUMAN detected */}
+      {personPosition && (
+        <ThreeDCube position={personPosition} />
       )}
 
       {/* TOP UI */}
@@ -352,7 +353,7 @@ export default function Home() {
           top: 'calc(env(safe-area-inset-top, 20px) + 15px)',
           left: '50%',
           transform: 'translateX(-50%)',
-          background: detectedCar 
+          background: detectedPerson 
             ? 'linear-gradient(135deg, #00b894, #00cec9)'
             : 'linear-gradient(135deg, #667eea, #764ba2)',
           color: 'white',
@@ -371,7 +372,7 @@ export default function Home() {
             borderRadius: '50%',
             animation: 'pulse 1s infinite' 
           }} />
-          {detectedCar ? `🎯 ${detectedCar.class.toUpperCase()} FOUND` : '🔍 SCANNING...'}
+          {detectedPerson ? '👤 HUMAN DETECTED' : '🔍 SCANNING...'}
         </div>
 
         <style>{`
@@ -394,15 +395,33 @@ export default function Home() {
           fontSize: 13,
           textAlign: 'center'
         }}>
-          {detectedCar 
+          {detectedPerson 
             ? '👆 Drag cube to rotate' 
-            : '📱 Point camera at a car'
+            : '📱 Point camera at a person'
           }
         </div>
+
+        {/* Confidence */}
+        {detectedPerson && (
+          <div style={{
+            position: 'absolute',
+            top: 'calc(env(safe-area-inset-top, 20px) + 110px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(0,0,0,0.6)',
+            color: '#00ff00',
+            padding: '8px 16px',
+            borderRadius: 15,
+            fontSize: 12,
+            fontWeight: 'bold'
+          }}>
+            Confidence: {Math.round(detectedPerson.score * 100)}%
+          </div>
+        )}
       </div>
 
-      {/* Scanning animation when no car detected */}
-      {!detectedCar && (
+      {/* Scanning animation when no human detected */}
+      {!detectedPerson && (
         <>
           <div style={{
             position: 'absolute',
@@ -425,8 +444,8 @@ export default function Home() {
   );
 }
 
-// 3D CUBE with number "1"
-function ThreeDCube({ position }: { position: CarPosition }) {
+// 3D CUBE with number "1" - NO AUTO SPIN
+function ThreeDCube({ position }: { position: Position }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cubeRef = useRef<THREE.Group | null>(null);
@@ -436,13 +455,13 @@ function ThreeDCube({ position }: { position: CarPosition }) {
   const isDragging = useRef(false);
   const lastTouch = useRef({ x: 0, y: 0 });
 
-  // Size of cube area (2x the detection box)
-  const scale = 2;
+  // Size - centered on detected person
+  const scale = 1.5;
   const size = {
-    width: Math.max(position.width * scale, 200),
-    height: Math.max(position.height * scale, 200),
-    x: position.x + position.width / 2 - Math.max(position.width * scale, 200) / 2,
-    y: position.y + position.height / 2 - Math.max(position.height * scale, 200) / 2
+    width: Math.max(position.width * scale, 180),
+    height: Math.max(position.height * scale, 180),
+    x: position.x + position.width / 2 - Math.max(position.width * scale, 180) / 2,
+    y: position.y + position.height / 2 - Math.max(position.height * scale, 180) / 2
   };
 
   useEffect(() => {
@@ -482,11 +501,11 @@ function ThreeDCube({ position }: { position: CarPosition }) {
     // Create cube group
     const cubeGroup = new THREE.Group();
     
-    // Create cube with different colors on each face
+    // Cube geometry
     const cubeSize = 1.5;
     const geometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
     
-    // Materials for each face (6 faces)
+    // Materials for each face (6 faces) - different colors
     const materials = [
       new THREE.MeshStandardMaterial({ color: 0xe74c3c, metalness: 0.3, roughness: 0.4 }), // Right - Red
       new THREE.MeshStandardMaterial({ color: 0x3498db, metalness: 0.3, roughness: 0.4 }), // Left - Blue
@@ -499,67 +518,71 @@ function ThreeDCube({ position }: { position: CarPosition }) {
     const cube = new THREE.Mesh(geometry, materials);
     cubeGroup.add(cube);
 
-    // Add "1" text on each face
-    const createTextSprite = (text: string, color: string) => {
+    // Create "1" texture for faces
+    const createNumberTexture = () => {
       const canvas = document.createElement('canvas');
       canvas.width = 256;
       canvas.height = 256;
       const ctx = canvas.getContext('2d')!;
       
-      // Transparent background
       ctx.clearRect(0, 0, 256, 256);
-      
-      // Draw text
-      ctx.fillStyle = color;
+      ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 180px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(text, 128, 128);
+      ctx.fillText('1', 128, 128);
 
       const texture = new THREE.CanvasTexture(canvas);
       texture.needsUpdate = true;
-      
-      const spriteMaterial = new THREE.SpriteMaterial({ 
-        map: texture,
-        transparent: true
-      });
-      const sprite = new THREE.Sprite(spriteMaterial);
-      sprite.scale.set(1, 1, 1);
-      
-      return sprite;
+      return texture;
     };
 
-    // Add "1" to front face
-    const frontText = createTextSprite('1', '#ffffff');
-    frontText.position.set(0, 0, cubeSize / 2 + 0.01);
-    cubeGroup.add(frontText);
+    const numberTexture = createNumberTexture();
 
-    // Add "1" to back face
-    const backText = createTextSprite('1', '#ffffff');
-    backText.position.set(0, 0, -cubeSize / 2 - 0.01);
-    cubeGroup.add(backText);
+    // Add "1" planes on each face
+    const planeGeometry = new THREE.PlaneGeometry(1.2, 1.2);
+    const planeMaterial = new THREE.MeshBasicMaterial({
+      map: numberTexture,
+      transparent: true,
+      side: THREE.DoubleSide
+    });
 
-    // Add "1" to right face
-    const rightText = createTextSprite('1', '#ffffff');
-    rightText.position.set(cubeSize / 2 + 0.01, 0, 0);
-    cubeGroup.add(rightText);
+    // Front
+    const front = new THREE.Mesh(planeGeometry, planeMaterial);
+    front.position.set(0, 0, cubeSize / 2 + 0.01);
+    cubeGroup.add(front);
 
-    // Add "1" to left face
-    const leftText = createTextSprite('1', '#ffffff');
-    leftText.position.set(-cubeSize / 2 - 0.01, 0, 0);
-    cubeGroup.add(leftText);
+    // Back
+    const back = new THREE.Mesh(planeGeometry, planeMaterial);
+    back.position.set(0, 0, -cubeSize / 2 - 0.01);
+    back.rotation.y = Math.PI;
+    cubeGroup.add(back);
 
-    // Add "1" to top face
-    const topText = createTextSprite('1', '#ffffff');
-    topText.position.set(0, cubeSize / 2 + 0.01, 0);
-    cubeGroup.add(topText);
+    // Right
+    const right = new THREE.Mesh(planeGeometry, planeMaterial);
+    right.position.set(cubeSize / 2 + 0.01, 0, 0);
+    right.rotation.y = Math.PI / 2;
+    cubeGroup.add(right);
 
-    // Add "1" to bottom face
-    const bottomText = createTextSprite('1', '#ffffff');
-    bottomText.position.set(0, -cubeSize / 2 - 0.01, 0);
-    cubeGroup.add(bottomText);
+    // Left
+    const left = new THREE.Mesh(planeGeometry, planeMaterial);
+    left.position.set(-cubeSize / 2 - 0.01, 0, 0);
+    left.rotation.y = -Math.PI / 2;
+    cubeGroup.add(left);
 
-    // Add edges/wireframe for better visibility
+    // Top
+    const top = new THREE.Mesh(planeGeometry, planeMaterial);
+    top.position.set(0, cubeSize / 2 + 0.01, 0);
+    top.rotation.x = -Math.PI / 2;
+    cubeGroup.add(top);
+
+    // Bottom
+    const bottom = new THREE.Mesh(planeGeometry, planeMaterial);
+    bottom.position.set(0, -cubeSize / 2 - 0.01, 0);
+    bottom.rotation.x = Math.PI / 2;
+    cubeGroup.add(bottom);
+
+    // Edges for better visibility
     const edges = new THREE.EdgesGeometry(geometry);
     const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
     const wireframe = new THREE.LineSegments(edges, lineMaterial);
@@ -568,13 +591,10 @@ function ThreeDCube({ position }: { position: CarPosition }) {
     scene.add(cubeGroup);
     cubeRef.current = cubeGroup;
 
-    // Animation loop
+    // Animation loop - NO AUTO SPIN, only renders
     const animate = () => {
       if (cubeRef.current) {
-        // Auto rotate slightly when not dragging
-        if (!isDragging.current) {
-          rotationRef.current.y += 0.01;
-        }
+        // Only apply rotation from drag, NO auto spin
         cubeRef.current.rotation.x = rotationRef.current.x;
         cubeRef.current.rotation.y = rotationRef.current.y;
       }
@@ -583,7 +603,7 @@ function ThreeDCube({ position }: { position: CarPosition }) {
     };
     animate();
 
-    // Update size
+    // Update camera aspect
     camera.aspect = size.width / size.height;
     camera.updateProjectionMatrix();
 
@@ -604,7 +624,7 @@ function ThreeDCube({ position }: { position: CarPosition }) {
     }
   }, [size.width, size.height]);
 
-  // Touch handlers for rotation
+  // Touch handlers
   const onTouchStart = (e: React.TouchEvent) => {
     e.stopPropagation();
     isDragging.current = true;
@@ -635,7 +655,7 @@ function ThreeDCube({ position }: { position: CarPosition }) {
     isDragging.current = false;
   };
 
-  // Mouse handlers for desktop
+  // Mouse handlers
   const onMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
     isDragging.current = true;
