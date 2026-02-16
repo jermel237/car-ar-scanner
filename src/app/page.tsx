@@ -251,11 +251,11 @@ export default function Home() {
   // ==================== ZOOM FUNCTIONS ====================
   
   const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 0.2, 3));
+    setZoomLevel(prev => Math.min(prev + 0.3, 3));
   };
 
   const handleZoomOut = () => {
-    setZoomLevel(prev => Math.max(prev - 0.2, 0.5));
+    setZoomLevel(prev => Math.max(prev - 0.3, 0.5));
   };
 
   const handleResetZoom = () => {
@@ -780,7 +780,8 @@ export default function Home() {
         left: 0,
         right: 0,
         paddingTop: 'env(safe-area-inset-top, 15px)',
-        zIndex: 100
+        zIndex: 100,
+        pointerEvents: 'none'
       }}>
         {/* Camera Switch */}
         <button
@@ -799,13 +800,15 @@ export default function Home() {
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            pointerEvents: 'auto',
+            zIndex: 200
           }}
         >
           🔄
         </button>
 
-        {/* Zoom Controls */}
+        {/* Zoom Controls - BIGGER and MORE VISIBLE */}
         {detectedPerson && (
           <div style={{
             position: 'absolute',
@@ -813,74 +816,102 @@ export default function Home() {
             left: 10,
             display: 'flex',
             flexDirection: 'column',
-            gap: 5
+            gap: 8,
+            pointerEvents: 'auto',
+            zIndex: 200
           }}>
             <button
-              onClick={handleZoomIn}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleZoomIn();
+              }}
               style={{
-                width: 40,
-                height: 40,
+                width: 50,
+                height: 50,
                 borderRadius: '50%',
-                border: 'none',
-                background: 'rgba(0,0,0,0.7)',
+                border: '2px solid #fff',
+                background: 'linear-gradient(135deg, #667eea, #764ba2)',
                 color: 'white',
-                fontSize: 20,
+                fontSize: 28,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontWeight: 'bold'
+                fontWeight: 'bold',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                WebkitTapHighlightColor: 'transparent',
+                userSelect: 'none'
               }}
             >
               +
             </button>
+            
             <div style={{
-              width: 40,
-              height: 40,
+              width: 50,
+              height: 50,
               borderRadius: '50%',
-              background: 'rgba(0,0,0,0.7)',
+              background: 'rgba(0,0,0,0.85)',
               color: '#00ff00',
-              fontSize: 10,
+              fontSize: 11,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+              border: '2px solid #00ff00',
+              boxShadow: '0 0 10px rgba(0,255,0,0.3)'
             }}>
               {Math.round(zoomLevel * 100)}%
             </div>
+            
             <button
-              onClick={handleZoomOut}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleZoomOut();
+              }}
               style={{
-                width: 40,
-                height: 40,
+                width: 50,
+                height: 50,
                 borderRadius: '50%',
-                border: 'none',
-                background: 'rgba(0,0,0,0.7)',
+                border: '2px solid #fff',
+                background: 'linear-gradient(135deg, #f093fb, #f5576c)',
+                color: 'white',
+                fontSize: 32,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                WebkitTapHighlightColor: 'transparent',
+                userSelect: 'none'
+              }}
+            >
+              −
+            </button>
+            
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleResetZoom();
+              }}
+              style={{
+                width: 50,
+                height: 50,
+                borderRadius: '50%',
+                border: '2px solid #fff',
+                background: 'linear-gradient(135deg, #4facfe, #00f2fe)',
                 color: 'white',
                 fontSize: 20,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontWeight: 'bold'
-              }}
-            >
-              −
-            </button>
-            <button
-              onClick={handleResetZoom}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                border: 'none',
-                background: 'rgba(0,0,0,0.7)',
-                color: 'white',
-                fontSize: 14,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                WebkitTapHighlightColor: 'transparent',
+                userSelect: 'none'
               }}
             >
               ⟲
@@ -904,7 +935,8 @@ export default function Home() {
           fontWeight: 'bold',
           display: 'flex',
           alignItems: 'center',
-          gap: 6
+          gap: 6,
+          pointerEvents: 'none'
         }}>
           {envInfo.icon} {envInfo.title}
         </div>
@@ -920,7 +952,8 @@ export default function Home() {
             color: '#aaa',
             padding: '5px 12px',
             borderRadius: 10,
-            fontSize: 11
+            fontSize: 11,
+            pointerEvents: 'none'
           }}>
             {envInfo.surface}
           </div>
@@ -937,7 +970,8 @@ export default function Home() {
             gap: 6,
             background: 'rgba(0,0,0,0.5)',
             padding: 4,
-            borderRadius: 20
+            borderRadius: 20,
+            pointerEvents: 'auto'
           }}>
             <EnvTab 
               active={currentEnv === 'grocery'}
@@ -974,7 +1008,8 @@ export default function Home() {
             fontSize: 12,
             fontWeight: 'bold',
             maxWidth: '90%',
-            textAlign: 'center'
+            textAlign: 'center',
+            pointerEvents: 'none'
           }}>
             {operationMessage}
           </div>
@@ -995,7 +1030,8 @@ export default function Home() {
             fontFamily: 'monospace',
             whiteSpace: 'pre-wrap',
             maxWidth: '85%',
-            border: '1px solid #333'
+            border: '1px solid #333',
+            pointerEvents: 'none'
           }}>
             {codeDisplay}
           </div>
@@ -1012,7 +1048,8 @@ export default function Home() {
           paddingBottom: 'calc(env(safe-area-inset-bottom, 15px) + 10px)',
           paddingTop: 10,
           background: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 70%, transparent 100%)',
-          zIndex: 100
+          zIndex: 100,
+          pointerEvents: 'none'
         }}>
           {/* Key Concepts */}
           <div style={{
@@ -1041,7 +1078,8 @@ export default function Home() {
             gap: 6,
             flexWrap: 'wrap',
             padding: '0 10px',
-            marginBottom: 8
+            marginBottom: 8,
+            pointerEvents: 'auto'
           }}>
             {currentEnv === 'grocery' && (
               <>
@@ -1130,6 +1168,13 @@ export default function Home() {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.4; }
         }
+        * {
+          -webkit-tap-highlight-color: transparent;
+        }
+        button {
+          -webkit-user-select: none;
+          user-select: none;
+        }
       `}</style>
     </div>
   );
@@ -1157,7 +1202,8 @@ function EnvTab({ active, onClick, icon, label }: {
         display: 'flex',
         alignItems: 'center',
         gap: 4,
-        opacity: active ? 1 : 0.7
+        opacity: active ? 1 : 0.7,
+        WebkitTapHighlightColor: 'transparent'
       }}
     >
       {icon} {label}
@@ -1186,7 +1232,8 @@ function OpButton({ onClick, disabled, color, label }: {
         color: 'white',
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.5 : 1,
-        touchAction: 'manipulation'
+        touchAction: 'manipulation',
+        WebkitTapHighlightColor: 'transparent'
       }}
     >
       {label}
@@ -1397,6 +1444,7 @@ function ArrayVisualization3D({
   }, [arrayData, highlightIndex, highlightIndex2, environment]);
 
   const onTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault();
     e.stopPropagation();
 
     if (e.touches.length === 2) {
@@ -1415,6 +1463,7 @@ function ArrayVisualization3D({
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault();
     e.stopPropagation();
 
     if (e.touches.length === 2 && initialPinchDistance.current !== null) {
@@ -1439,6 +1488,9 @@ function ArrayVisualization3D({
   };
 
   const onTouchEnd = (e: React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (e.touches.length < 2) {
       initialPinchDistance.current = null;
     }
