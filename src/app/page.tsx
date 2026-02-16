@@ -54,6 +54,9 @@ export default function Home() {
   // Environment state
   const [currentEnv, setCurrentEnv] = useState<Environment>('grocery');
   
+  // Zoom state
+  const [zoomLevel, setZoomLevel] = useState(1);
+  
   // Array states for each environment
   const [groceryItems, setGroceryItems] = useState<GroceryItem[]>([
     { id: 1, name: 'Milk', color: '#3498db' },
@@ -244,6 +247,20 @@ export default function Home() {
   }, [model]);
 
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // ==================== ZOOM FUNCTIONS ====================
+  
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 0.2, 3));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(prev - 0.2, 0.5));
+  };
+
+  const handleResetZoom = () => {
+    setZoomLevel(1);
+  };
 
   // ==================== GROCERY SHELF OPERATIONS ====================
   
@@ -751,6 +768,8 @@ export default function Home() {
           highlightIndex={highlightIndex}
           highlightIndex2={highlightIndex2}
           environment={currentEnv}
+          zoomLevel={zoomLevel}
+          onZoomChange={setZoomLevel}
         />
       )}
 
@@ -785,6 +804,89 @@ export default function Home() {
         >
           🔄
         </button>
+
+        {/* Zoom Controls */}
+        {detectedPerson && (
+          <div style={{
+            position: 'absolute',
+            top: 'calc(env(safe-area-inset-top, 15px) + 8px)',
+            left: 10,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 5
+          }}>
+            <button
+              onClick={handleZoomIn}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                border: 'none',
+                background: 'rgba(0,0,0,0.7)',
+                color: 'white',
+                fontSize: 20,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold'
+              }}
+            >
+              +
+            </button>
+            <div style={{
+              width: 40,
+              height: 40,
+              borderRadius: '50%',
+              background: 'rgba(0,0,0,0.7)',
+              color: '#00ff00',
+              fontSize: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 'bold'
+            }}>
+              {Math.round(zoomLevel * 100)}%
+            </div>
+            <button
+              onClick={handleZoomOut}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                border: 'none',
+                background: 'rgba(0,0,0,0.7)',
+                color: 'white',
+                fontSize: 20,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold'
+              }}
+            >
+              −
+            </button>
+            <button
+              onClick={handleResetZoom}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                border: 'none',
+                background: 'rgba(0,0,0,0.7)',
+                color: 'white',
+                fontSize: 14,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              ⟲
+            </button>
+          </div>
+        )}
 
         {/* Environment Title */}
         <div style={{
@@ -1098,13 +1200,17 @@ function ArrayVisualization3D({
   arrayData,
   highlightIndex,
   highlightIndex2,
-  environment
+  environment,
+  zoomLevel,
+  onZoomChange
 }: {
   position: Position;
   arrayData: { label: string; color: string; subLabel?: string }[];
   highlightIndex: number | null;
   highlightIndex2: number | null;
   environment: Environment;
+  zoomLevel: number;
+  onZoomChange: (zoom: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -1114,6 +1220,8 @@ function ArrayVisualization3D({
   const rotationRef = useRef({ x: 0.25, y: 0 });
   const isDragging = useRef(false);
   const lastTouch = useRef({ x: 0, y: 0 });
+  const initialPinchDistance = useRef<number | null>(null);
+  const initialZoom = useRef<number>(1);
 
   const size = {
     width: Math.min(window.innerWidth - 20, 360),
@@ -1166,6 +1274,14 @@ function ArrayVisualization3D({
     return texture;
   };
 
+  // Calculate distance between two touch points
+  const getTouchDistance = (touches: TouchList) => {
+    if (touches.length < 2) return null;
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
@@ -1198,19 +1314,38 @@ function ArrayVisualization3D({
       if (groupRef.current) {
         groupRef.current.rotation.x = rotationRef.current.x;
         groupRef.current.rotation.y = rotationRef.current.y;
+        groupRef.current.scale.set(zoomLevel, zoomLevel, zoomLevel);
       }
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     };
     animate();
 
+    // Mouse wheel zoom
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      const newZoom = Math.max(0.5, Math.min(3, zoomLevel + delta));
+      onZoomChange(newZoom);
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+
     return () => {
       renderer.dispose();
+      container.removeEventListener('wheel', handleWheel);
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
     };
   }, []);
+
+  // Update zoom
+  useEffect(() => {
+    if (groupRef.current) {
+      groupRef.current.scale.set(zoomLevel, zoomLevel, zoomLevel);
+    }
+  }, [zoomLevel]);
 
   // Update when array changes
   useEffect(() => {
@@ -1263,26 +1398,53 @@ function ArrayVisualization3D({
 
   const onTouchStart = (e: React.TouchEvent) => {
     e.stopPropagation();
-    isDragging.current = true;
-    lastTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+
+    if (e.touches.length === 2) {
+      // Pinch to zoom
+      const distance = getTouchDistance(e.touches);
+      if (distance) {
+        initialPinchDistance.current = distance;
+        initialZoom.current = zoomLevel;
+      }
+      isDragging.current = false;
+    } else if (e.touches.length === 1) {
+      // Single touch to rotate
+      isDragging.current = true;
+      lastTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
     e.stopPropagation();
-    if (!isDragging.current) return;
 
-    const deltaX = e.touches[0].clientX - lastTouch.current.x;
-    const deltaY = e.touches[0].clientY - lastTouch.current.y;
+    if (e.touches.length === 2 && initialPinchDistance.current !== null) {
+      // Pinch zoom
+      const currentDistance = getTouchDistance(e.touches);
+      if (currentDistance) {
+        const scale = currentDistance / initialPinchDistance.current;
+        const newZoom = Math.max(0.5, Math.min(3, initialZoom.current * scale));
+        onZoomChange(newZoom);
+      }
+    } else if (e.touches.length === 1 && isDragging.current) {
+      // Rotate
+      const deltaX = e.touches[0].clientX - lastTouch.current.x;
+      const deltaY = e.touches[0].clientY - lastTouch.current.y;
 
-    rotationRef.current.y += deltaX * 0.01;
-    rotationRef.current.x += deltaY * 0.01;
-    rotationRef.current.x = Math.max(-0.5, Math.min(0.5, rotationRef.current.x));
+      rotationRef.current.y += deltaX * 0.01;
+      rotationRef.current.x += deltaY * 0.01;
+      rotationRef.current.x = Math.max(-0.5, Math.min(0.5, rotationRef.current.x));
 
-    lastTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      lastTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
   };
 
-  const onTouchEnd = () => {
-    isDragging.current = false;
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (e.touches.length < 2) {
+      initialPinchDistance.current = null;
+    }
+    if (e.touches.length === 0) {
+      isDragging.current = false;
+    }
   };
 
   const onMouseDown = (e: React.MouseEvent) => {
@@ -1322,7 +1484,7 @@ function ArrayVisualization3D({
         width: size.width,
         height: size.height,
         zIndex: 50,
-        cursor: 'grab',
+        cursor: isDragging.current ? 'grabbing' : 'grab',
         touchAction: 'none',
         transition: 'left 0.15s, top 0.15s'
       }}
