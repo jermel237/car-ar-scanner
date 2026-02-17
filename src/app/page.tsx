@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import * as THREE from 'three';
 
+// ==================== INTERFACES ====================
+
 interface Detection {
   bbox: [number, number, number, number];
   class: string;
@@ -24,10 +26,19 @@ interface GroceryItem {
   color: string;
 }
 
+interface HumanAppearance {
+  skinTone: string;
+  shirtColor: string;
+  pantsColor: string;
+  hairColor: string;
+  hairStyle: 'short' | 'long' | 'bald';
+  gender: 'male' | 'female';
+}
+
 interface Student {
   id: number;
   name: string;
-  avatar: string;
+  appearance: HumanAppearance;
 }
 
 interface Task {
@@ -35,6 +46,16 @@ interface Task {
   text: string;
   priority: 'high' | 'medium' | 'low';
 }
+
+interface ArrayDataItem {
+  label: string;
+  color: string;
+  subLabel?: string;
+  appearance?: HumanAppearance;
+  name?: string;
+}
+
+// ==================== MAIN COMPONENT ====================
 
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -51,6 +72,7 @@ export default function Home() {
   const [currentEnv, setCurrentEnv] = useState<Environment>('grocery');
   const [zoomLevel, setZoomLevel] = useState(1.0);
   
+  // GROCERY DATA
   const [groceryItems, setGroceryItems] = useState<GroceryItem[]>([
     { id: 1, name: 'Milk', color: '#3498db' },
     { id: 2, name: 'Bread', color: '#e67e22' },
@@ -59,14 +81,71 @@ export default function Home() {
     { id: 5, name: 'Juice', color: '#9b59b6' },
   ]);
   
+  // STUDENT DATA WITH 3D APPEARANCE
   const [students, setStudents] = useState<Student[]>([
-    { id: 1, name: 'Alex', avatar: '👦' },
-    { id: 2, name: 'Beth', avatar: '👧' },
-    { id: 3, name: 'Carl', avatar: '👨' },
-    { id: 4, name: 'Dana', avatar: '👩' },
-    { id: 5, name: 'Erik', avatar: '🧑' },
+    { 
+      id: 1, 
+      name: 'Alex',
+      appearance: {
+        skinTone: '#ffdbac',
+        shirtColor: '#3498db',
+        pantsColor: '#2c3e50',
+        hairColor: '#4a3728',
+        hairStyle: 'short',
+        gender: 'male'
+      }
+    },
+    { 
+      id: 2, 
+      name: 'Beth',
+      appearance: {
+        skinTone: '#f5d0c5',
+        shirtColor: '#e91e63',
+        pantsColor: '#8e44ad',
+        hairColor: '#2c1810',
+        hairStyle: 'long',
+        gender: 'female'
+      }
+    },
+    { 
+      id: 3, 
+      name: 'Carl',
+      appearance: {
+        skinTone: '#8d5524',
+        shirtColor: '#27ae60',
+        pantsColor: '#2c3e50',
+        hairColor: '#1a1a1a',
+        hairStyle: 'short',
+        gender: 'male'
+      }
+    },
+    { 
+      id: 4, 
+      name: 'Dana',
+      appearance: {
+        skinTone: '#ffcd94',
+        shirtColor: '#f39c12',
+        pantsColor: '#3498db',
+        hairColor: '#d4a574',
+        hairStyle: 'long',
+        gender: 'female'
+      }
+    },
+    { 
+      id: 5, 
+      name: 'Erik',
+      appearance: {
+        skinTone: '#ffe0bd',
+        shirtColor: '#9b59b6',
+        pantsColor: '#34495e',
+        hairColor: '#b86b3e',
+        hairStyle: 'short',
+        gender: 'male'
+      }
+    },
   ]);
   
+  // TASK DATA
   const [tasks, setTasks] = useState<Task[]>([
     { id: 1, text: 'Study', priority: 'high' },
     { id: 2, text: 'Code', priority: 'high' },
@@ -81,10 +160,10 @@ export default function Home() {
   const [isAnimating, setIsAnimating] = useState(false);
 
   // ==================== ZOOM FUNCTIONS ====================
+  
   const zoomIn = useCallback(() => {
     setZoomLevel(prev => {
       const newZoom = Math.min(prev + 0.25, 2.5);
-      console.log('Zoom In:', newZoom);
       return newZoom;
     });
   }, []);
@@ -92,15 +171,15 @@ export default function Home() {
   const zoomOut = useCallback(() => {
     setZoomLevel(prev => {
       const newZoom = Math.max(prev - 0.25, 0.5);
-      console.log('Zoom Out:', newZoom);
       return newZoom;
     });
   }, []);
 
   const resetZoom = useCallback(() => {
     setZoomLevel(1.0);
-    console.log('Zoom Reset: 1.0');
   }, []);
+
+  // ==================== CAMERA FUNCTIONS ====================
 
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
     try {
@@ -147,6 +226,8 @@ export default function Home() {
     }
   };
 
+  // ==================== MODEL LOADING ====================
+
   const loadModel = async () => {
     try {
       setLoadingText('Loading AI...');
@@ -164,6 +245,8 @@ export default function Home() {
       throw new Error('Failed to load AI model.');
     }
   };
+
+  // ==================== INITIALIZATION ====================
 
   useEffect(() => {
     const init = async () => {
@@ -186,14 +269,25 @@ export default function Home() {
     };
   }, []);
 
+  // ==================== DETECTION LOOP ====================
+
   useEffect(() => {
     if (!model || !videoRef.current || !canvasRef.current) return;
 
     let animationId: number;
     let running = true;
+    let lastDetection = 0;
+    const DETECTION_INTERVAL = 100; // 10 FPS for better performance
 
     const detect = async () => {
       if (!running || !videoRef.current || !canvasRef.current) return;
+
+      const now = Date.now();
+      if (now - lastDetection < DETECTION_INTERVAL) {
+        animationId = requestAnimationFrame(detect);
+        return;
+      }
+      lastDetection = now;
 
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -249,9 +343,12 @@ export default function Home() {
     };
   }, [model]);
 
+  // ==================== UTILITY ====================
+
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // ==================== OPERATIONS ====================
+  // ==================== GROCERY OPERATIONS ====================
+
   const groceryAccess = async () => {
     if (isAnimating) return;
     setIsAnimating(true);
@@ -318,15 +415,19 @@ export default function Home() {
     setIsAnimating(false);
   };
 
+  // ==================== STUDENT OPERATIONS ====================
+
   const studentAccess = async () => {
     if (isAnimating) return;
     setIsAnimating(true);
     const index = Math.floor(Math.random() * students.length);
     setHighlightIndex(index);
-    setOperationMessage(`Seat ${index}: ${students[index].avatar} ${students[index].name}`);
+    setOperationMessage(`Seat ${index}: ${students[index].name}`);
+    setCodeDisplay(`// O(1) Random Access\nstudent = seats[${index}]; // ${students[index].name}`);
     await delay(2000);
     setHighlightIndex(null);
     setOperationMessage('');
+    setCodeDisplay('');
     setIsAnimating(false);
   };
 
@@ -340,6 +441,7 @@ export default function Home() {
     setHighlightIndex(idx1);
     setHighlightIndex2(idx2);
     setOperationMessage(`Swapping ${students[idx1].name} ↔ ${students[idx2].name}`);
+    setCodeDisplay(`// Swap Operation\ntemp = seats[${idx1}];\nseats[${idx1}] = seats[${idx2}];\nseats[${idx2}] = temp;`);
     await delay(1500);
     
     setStudents(prev => {
@@ -352,8 +454,11 @@ export default function Home() {
     setHighlightIndex(null);
     setHighlightIndex2(null);
     setOperationMessage('');
+    setCodeDisplay('');
     setIsAnimating(false);
   };
+
+  // ==================== TODO OPERATIONS ====================
 
   const todoAppend = async () => {
     if (isAnimating || tasks.length >= 6) return;
@@ -362,11 +467,13 @@ export default function Home() {
     const task = newTasks[Math.floor(Math.random() * newTasks.length)];
     
     setOperationMessage(`Appending "${task}"...`);
+    setCodeDisplay(`// O(1) Append\ntasks.push("${task}");`);
     setTasks(prev => [...prev, { id: Date.now(), text: task, priority: 'medium' }]);
     setHighlightIndex(tasks.length);
     await delay(1500);
     setHighlightIndex(null);
     setOperationMessage('');
+    setCodeDisplay('');
     setIsAnimating(false);
   };
 
@@ -376,87 +483,134 @@ export default function Home() {
     const idx = Math.floor(Math.random() * tasks.length);
     setHighlightIndex(idx);
     setOperationMessage(`Completing "${tasks[idx].text}"...`);
+    setCodeDisplay(`// Delete at index\ntasks.splice(${idx}, 1);`);
     await delay(1000);
     setTasks(prev => prev.filter((_, i) => i !== idx));
     await delay(1000);
     setHighlightIndex(null);
     setOperationMessage('');
+    setCodeDisplay('');
     setIsAnimating(false);
   };
 
-  const getCurrentArrayData = () => {
+  // ==================== GET ARRAY DATA ====================
+
+  const getCurrentArrayData = (): ArrayDataItem[] => {
     switch (currentEnv) {
       case 'grocery':
-        return groceryItems.map(item => ({ label: item.name, color: item.color }));
+        return groceryItems.map(item => ({ 
+          label: item.name, 
+          color: item.color 
+        }));
       case 'classroom':
-        return students.map(s => ({ label: s.avatar, color: '#3498db', subLabel: s.name }));
+        return students.map(s => ({ 
+          label: s.name, 
+          color: s.appearance.shirtColor,
+          appearance: s.appearance,
+          name: s.name
+        }));
       case 'todo':
         return tasks.map(t => ({
           label: t.text,
-          color: t.priority === 'high' ? '#e74c3c' : t.priority === 'medium' ? '#f39c12' : '#2ecc71'
+          color: t.priority === 'high' ? '#e74c3c' : 
+                 t.priority === 'medium' ? '#f39c12' : '#2ecc71'
         }));
       default:
         return [];
     }
   };
 
+  // ==================== ERROR STATE ====================
+
   if (error) {
     return (
       <div style={{
         width: '100vw', height: '100vh',
-        background: '#1a1a2e',
+        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         color: 'white', padding: 20, textAlign: 'center'
       }}>
-        <div style={{ fontSize: 60 }}>📷</div>
-        <h2>Camera Access Needed</h2>
-        <p style={{ opacity: 0.7 }}>{error}</p>
+        <div style={{ fontSize: 80, marginBottom: 20 }}>📷</div>
+        <h2 style={{ marginBottom: 10 }}>Camera Access Needed</h2>
+        <p style={{ opacity: 0.7, marginBottom: 30 }}>{error}</p>
         <button onClick={() => window.location.reload()}
-          style={{ marginTop: 30, padding: '15px 40px', background: '#667eea',
-            border: 'none', borderRadius: 30, color: 'white', fontSize: 16 }}>
-          Try Again
+          style={{ 
+            padding: '15px 40px', 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            border: 'none', borderRadius: 30, color: 'white', 
+            fontSize: 16, fontWeight: 'bold', cursor: 'pointer',
+            boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
+          }}>
+          🔄 Try Again
         </button>
       </div>
     );
   }
 
+  // ==================== LOADING STATE ====================
+
   if (isLoading) {
     return (
       <div style={{
         width: '100vw', height: '100vh',
-        background: '#1a1a2e',
+        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         color: 'white'
       }}>
         <div style={{
-          width: 60, height: 60,
+          width: 70, height: 70,
           border: '4px solid rgba(255,255,255,0.2)',
           borderTopColor: '#667eea',
           borderRadius: '50%',
           animation: 'spin 1s linear infinite'
         }} />
-        <h2 style={{ marginTop: 20 }}>📊 Array Learning AR</h2>
-        <p style={{ opacity: 0.7 }}>{loadingText}</p>
+        <h2 style={{ marginTop: 25, fontSize: 24 }}>📊 Array Learning AR</h2>
+        <p style={{ opacity: 0.7, marginTop: 10 }}>{loadingText}</p>
+        <div style={{ 
+          marginTop: 30, 
+          display: 'flex', 
+          gap: 10 
+        }}>
+          <span style={{ fontSize: 30 }}>🛒</span>
+          <span style={{ fontSize: 30 }}>🧑‍🤝‍🧑</span>
+          <span style={{ fontSize: 30 }}>📝</span>
+        </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
+  // ==================== ENVIRONMENT INFO ====================
+
   const envInfo = {
-    grocery: { icon: '🛒', title: 'Grocery Shelf' },
-    classroom: { icon: '🪑', title: 'Student Seats' },
-    todo: { icon: '📝', title: 'To-Do List' }
+    grocery: { icon: '🛒', title: 'Grocery Shelf', desc: 'Array as shelf items' },
+    classroom: { icon: '🧑‍🤝‍🧑', title: 'Student Seats', desc: '3D Students in seats' },
+    todo: { icon: '📝', title: 'To-Do List', desc: 'Array as task list' }
   }[currentEnv];
+
+  // ==================== MAIN RENDER ====================
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#000', overflow: 'hidden' }}>
-      <video ref={videoRef} playsInline muted autoPlay
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+      {/* VIDEO FEED */}
+      <video 
+        ref={videoRef} 
+        playsInline 
+        muted 
+        autoPlay
+        style={{ 
+          position: 'absolute', 
+          inset: 0, 
+          width: '100%', 
+          height: '100%', 
+          objectFit: 'cover' 
+        }} 
+      />
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-      {/* 3D Visualization */}
+      {/* 3D VISUALIZATION */}
       {personPosition && (
         <ArrayVisualization3D
           position={personPosition}
@@ -469,22 +623,38 @@ export default function Home() {
         />
       )}
 
-      {/* TOP UI */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: 10, zIndex: 100 }}>
-        {/* Camera Switch */}
-        <button onClick={switchCamera}
+      {/* ==================== TOP UI ==================== */}
+      <div style={{ 
+        position: 'absolute', 
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        padding: 10, 
+        zIndex: 100 
+      }}>
+        
+        {/* CAMERA SWITCH BUTTON */}
+        <button 
+          onClick={switchCamera}
           style={{
             position: 'absolute', top: 10, right: 10,
-            width: 44, height: 44, borderRadius: '50%',
-            border: 'none', background: 'rgba(0,0,0,0.6)',
-            color: 'white', fontSize: 20, cursor: 'pointer'
-          }}>🔄</button>
+            width: 50, height: 50, borderRadius: '50%',
+            border: '2px solid rgba(255,255,255,0.3)',
+            background: 'rgba(0,0,0,0.6)',
+            color: 'white', fontSize: 24, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          🔄
+        </button>
 
         {/* ZOOM CONTROLS */}
         {detectedPerson && (
           <div style={{
             position: 'absolute', top: 10, left: 10,
-            display: 'flex', flexDirection: 'column', gap: 8, zIndex: 200
+            display: 'flex', flexDirection: 'column', 
+            gap: 8, zIndex: 200
           }}>
             <button
               onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); zoomIn(); }}
@@ -497,7 +667,10 @@ export default function Home() {
                 alignItems: 'center', justifyContent: 'center',
                 boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
                 touchAction: 'none'
-              }}>+</button>
+              }}
+            >
+              +
+            </button>
 
             <div style={{
               width: 56, height: 56, borderRadius: '50%',
@@ -506,7 +679,9 @@ export default function Home() {
               color: '#00ff00', fontSize: 14, fontWeight: 'bold',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: '0 0 15px rgba(0,255,0,0.3)'
-            }}>{Math.round(zoomLevel * 100)}%</div>
+            }}>
+              {Math.round(zoomLevel * 100)}%
+            </div>
 
             <button
               onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); zoomOut(); }}
@@ -519,7 +694,10 @@ export default function Home() {
                 alignItems: 'center', justifyContent: 'center',
                 boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
                 touchAction: 'none'
-              }}>−</button>
+              }}
+            >
+              −
+            </button>
 
             <button
               onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); resetZoom(); }}
@@ -532,127 +710,266 @@ export default function Home() {
                 alignItems: 'center', justifyContent: 'center',
                 boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
                 touchAction: 'none'
-              }}>⟲</button>
+              }}
+            >
+              ⟲
+            </button>
           </div>
         )}
 
-        {/* Title */}
+        {/* TITLE BAR */}
         <div style={{
-          position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
-          background: detectedPerson ? '#00b894' : '#667eea',
-          color: 'white', padding: '8px 16px', borderRadius: 20,
-          fontSize: 14, fontWeight: 'bold'
-        }}>{envInfo.icon} {envInfo.title}</div>
+          position: 'absolute', top: 10, left: '50%', 
+          transform: 'translateX(-50%)',
+          background: detectedPerson 
+            ? 'linear-gradient(135deg, #00b894, #00cec9)' 
+            : 'linear-gradient(135deg, #667eea, #764ba2)',
+          color: 'white', padding: '10px 20px', borderRadius: 25,
+          fontSize: 14, fontWeight: 'bold',
+          boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+          display: 'flex', alignItems: 'center', gap: 8
+        }}>
+          <span style={{ fontSize: 20 }}>{envInfo.icon}</span>
+          <span>{envInfo.title}</span>
+          {detectedPerson && <span style={{ fontSize: 10, opacity: 0.8 }}>● LIVE</span>}
+        </div>
 
-        {/* Environment Tabs */}
+        {/* ENVIRONMENT TABS */}
         {detectedPerson && (
           <div style={{
-            position: 'absolute', top: 50, left: '50%', transform: 'translateX(-50%)',
-            display: 'flex', gap: 5, background: 'rgba(0,0,0,0.5)',
-            padding: 4, borderRadius: 20
+            position: 'absolute', top: 55, left: '50%', 
+            transform: 'translateX(-50%)',
+            display: 'flex', gap: 5, 
+            background: 'rgba(0,0,0,0.7)',
+            padding: 5, borderRadius: 25,
+            backdropFilter: 'blur(10px)'
           }}>
             {(['grocery', 'classroom', 'todo'] as Environment[]).map(env => (
-              <button key={env}
+              <button 
+                key={env}
                 onClick={() => !isAnimating && setCurrentEnv(env)}
                 style={{
-                  padding: '6px 12px', fontSize: 12, fontWeight: 'bold',
-                  border: 'none', borderRadius: 15,
-                  background: currentEnv === env ? '#667eea' : 'transparent',
+                  padding: '8px 16px', fontSize: 13, fontWeight: 'bold',
+                  border: 'none', borderRadius: 20,
+                  background: currentEnv === env 
+                    ? 'linear-gradient(135deg, #667eea, #764ba2)' 
+                    : 'transparent',
                   color: 'white', cursor: 'pointer',
-                  opacity: currentEnv === env ? 1 : 0.6
-                }}>
-                {env === 'grocery' ? '🛒' : env === 'classroom' ? '🪑' : '📝'}
+                  opacity: currentEnv === env ? 1 : 0.6,
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                {env === 'grocery' ? '🛒 Shelf' : env === 'classroom' ? '🧑‍🤝‍🧑 Seats' : '📝 Tasks'}
               </button>
             ))}
           </div>
         )}
 
-        {/* Message */}
+        {/* OPERATION MESSAGE */}
         {operationMessage && (
           <div style={{
-            position: 'absolute', top: 90, left: '50%', transform: 'translateX(-50%)',
-            background: 'rgba(0,0,0,0.85)', color: '#00ff00',
-            padding: '8px 16px', borderRadius: 10, fontSize: 12, fontWeight: 'bold'
-          }}>{operationMessage}</div>
+            position: 'absolute', top: 100, left: '50%', 
+            transform: 'translateX(-50%)',
+            background: 'rgba(0,0,0,0.9)', color: '#00ff00',
+            padding: '10px 20px', borderRadius: 15, 
+            fontSize: 14, fontWeight: 'bold',
+            border: '1px solid #00ff00',
+            boxShadow: '0 0 20px rgba(0,255,0,0.3)'
+          }}>
+            ⚡ {operationMessage}
+          </div>
         )}
 
-        {/* Code */}
+        {/* CODE DISPLAY */}
         {codeDisplay && (
           <div style={{
-            position: 'absolute', top: 125, left: '50%', transform: 'translateX(-50%)',
+            position: 'absolute', top: 140, left: '50%', 
+            transform: 'translateX(-50%)',
             background: 'rgba(30,30,30,0.95)', color: '#00ff00',
-            padding: '8px 12px', borderRadius: 8, fontSize: 10,
-            fontFamily: 'monospace', whiteSpace: 'pre-wrap',
-            border: '1px solid #333'
-          }}>{codeDisplay}</div>
+            padding: '10px 15px', borderRadius: 10, 
+            fontSize: 11, fontFamily: 'monospace', 
+            whiteSpace: 'pre-wrap',
+            border: '1px solid #444',
+            maxWidth: '90%',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
+          }}>
+            {codeDisplay}
+          </div>
         )}
       </div>
 
-      {/* BOTTOM CONTROLS */}
+      {/* ==================== BOTTOM CONTROLS ==================== */}
       {detectedPerson && (
         <div style={{
           position: 'fixed', bottom: 0, left: 0, right: 0,
-          padding: '15px 10px', paddingBottom: 25,
+          padding: '20px 10px', paddingBottom: 30,
           background: 'linear-gradient(to top, rgba(0,0,0,0.95), transparent)',
           zIndex: 100
         }}>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            gap: 10, 
+            flexWrap: 'wrap' 
+          }}>
             {currentEnv === 'grocery' && (
               <>
-                <OpBtn onClick={groceryAccess} disabled={isAnimating} color="#f39c12" label="📍 Access" />
-                <OpBtn onClick={groceryInsert} disabled={isAnimating || groceryItems.length >= 6} color="#2ecc71" label="➕ Insert" />
-                <OpBtn onClick={groceryDelete} disabled={isAnimating || groceryItems.length <= 2} color="#e74c3c" label="➖ Delete" />
+                <OperationButton 
+                  onClick={groceryAccess} 
+                  disabled={isAnimating} 
+                  color="#f39c12" 
+                  label="📍 Access" 
+                />
+                <OperationButton 
+                  onClick={groceryInsert} 
+                  disabled={isAnimating || groceryItems.length >= 6} 
+                  color="#2ecc71" 
+                  label="➕ Insert" 
+                />
+                <OperationButton 
+                  onClick={groceryDelete} 
+                  disabled={isAnimating || groceryItems.length <= 2} 
+                  color="#e74c3c" 
+                  label="➖ Delete" 
+                />
               </>
             )}
             {currentEnv === 'classroom' && (
               <>
-                <OpBtn onClick={studentAccess} disabled={isAnimating} color="#f39c12" label="📍 Access" />
-                <OpBtn onClick={studentSwap} disabled={isAnimating} color="#9b59b6" label="🔀 Swap" />
+                <OperationButton 
+                  onClick={studentAccess} 
+                  disabled={isAnimating} 
+                  color="#f39c12" 
+                  label="📍 Access" 
+                />
+                <OperationButton 
+                  onClick={studentSwap} 
+                  disabled={isAnimating} 
+                  color="#9b59b6" 
+                  label="🔀 Swap" 
+                />
               </>
             )}
             {currentEnv === 'todo' && (
               <>
-                <OpBtn onClick={todoAppend} disabled={isAnimating || tasks.length >= 6} color="#2ecc71" label="⏬ Append" />
-                <OpBtn onClick={todoDelete} disabled={isAnimating || tasks.length <= 2} color="#e74c3c" label="✅ Done" />
+                <OperationButton 
+                  onClick={todoAppend} 
+                  disabled={isAnimating || tasks.length >= 6} 
+                  color="#2ecc71" 
+                  label="⏬ Append" 
+                />
+                <OperationButton 
+                  onClick={todoDelete} 
+                  disabled={isAnimating || tasks.length <= 2} 
+                  color="#e74c3c" 
+                  label="✅ Done" 
+                />
               </>
             )}
+          </div>
+          
+          {/* Array Length Indicator */}
+          <div style={{
+            textAlign: 'center', marginTop: 10,
+            color: 'rgba(255,255,255,0.7)', fontSize: 12
+          }}>
+            Length: {currentEnv === 'grocery' ? groceryItems.length : 
+                     currentEnv === 'classroom' ? students.length : tasks.length}
           </div>
         </div>
       )}
 
-      {/* Scanning */}
+      {/* ==================== SCANNING PROMPT ==================== */}
       {!detectedPerson && (
         <div style={{
-          position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(0,0,0,0.8)', color: 'white',
-          padding: '15px 25px', borderRadius: 15, fontSize: 14
-        }}>📱 Point camera at a person</div>
+          position: 'absolute', bottom: 100, left: '50%', 
+          transform: 'translateX(-50%)',
+          background: 'rgba(0,0,0,0.85)', color: 'white',
+          padding: '20px 30px', borderRadius: 20, 
+          fontSize: 16, textAlign: 'center',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+          animation: 'pulse 2s infinite'
+        }}>
+          <div style={{ fontSize: 40, marginBottom: 10 }}>📱</div>
+          <div>Point camera at a person</div>
+          <div style={{ fontSize: 12, opacity: 0.6, marginTop: 5 }}>
+            AR visualization will appear
+          </div>
+        </div>
       )}
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+          50% { opacity: 0.8; transform: translateX(-50%) scale(1.02); }
+        }
+      `}</style>
     </div>
   );
 }
 
-function OpBtn({ onClick, disabled, color, label }: {
-  onClick: () => void; disabled: boolean; color: string; label: string;
+// ==================== OPERATION BUTTON COMPONENT ====================
+
+function OperationButton({ 
+  onClick, 
+  disabled, 
+  color, 
+  label 
+}: {
+  onClick: () => void; 
+  disabled: boolean; 
+  color: string; 
+  label: string;
 }) {
   return (
-    <button onClick={onClick} disabled={disabled}
+    <button 
+      onClick={onClick} 
+      disabled={disabled}
       style={{
-        padding: '12px 18px', fontSize: 13, fontWeight: 'bold',
-        border: 'none', borderRadius: 25,
-        background: disabled ? '#444' : color,
-        color: 'white', cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.5 : 1, touchAction: 'manipulation'
-      }}>{label}</button>
+        padding: '14px 22px', 
+        fontSize: 14, 
+        fontWeight: 'bold',
+        border: 'none', 
+        borderRadius: 25,
+        background: disabled 
+          ? 'rgba(100,100,100,0.5)' 
+          : `linear-gradient(135deg, ${color}, ${adjustColor(color, -20)})`,
+        color: 'white', 
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.5 : 1, 
+        touchAction: 'manipulation',
+        boxShadow: disabled ? 'none' : `0 4px 15px ${color}40`,
+        transition: 'all 0.3s ease'
+      }}
+    >
+      {label}
+    </button>
   );
 }
 
-// ==================== 3D VISUALIZATION ====================
+// Helper function to darken/lighten colors
+function adjustColor(color: string, amount: number): string {
+  const clamp = (num: number) => Math.min(255, Math.max(0, num));
+  const hex = color.replace('#', '');
+  const r = clamp(parseInt(hex.slice(0, 2), 16) + amount);
+  const g = clamp(parseInt(hex.slice(2, 4), 16) + amount);
+  const b = clamp(parseInt(hex.slice(4, 6), 16) + amount);
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+// ==================== 3D VISUALIZATION COMPONENT ====================
+
 function ArrayVisualization3D({
-  position, arrayData, highlightIndex, highlightIndex2, environment, zoomLevel, setZoomLevel
+  position,
+  arrayData,
+  highlightIndex,
+  highlightIndex2,
+  environment,
+  zoomLevel,
+  setZoomLevel
 }: {
   position: Position;
-  arrayData: { label: string; color: string; subLabel?: string }[];
+  arrayData: ArrayDataItem[];
   highlightIndex: number | null;
   highlightIndex2: number | null;
   environment: Environment;
@@ -664,22 +981,276 @@ function ArrayVisualization3D({
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const groupRef = useRef<THREE.Group | null>(null);
-  const rotationRef = useRef({ x: 0.3, y: 0 });
+  const rotationRef = useRef({ x: 0.2, y: 0 });
   const zoomRef = useRef(zoomLevel);
   
-  // Keep zoomRef in sync
   useEffect(() => {
     zoomRef.current = zoomLevel;
   }, [zoomLevel]);
 
   const size = {
-    width: Math.min(window.innerWidth - 20, 340),
-    height: 150,
-    x: position.x + position.width / 2 - Math.min(window.innerWidth - 20, 340) / 2,
-    y: position.y + position.height / 2 - 75
+    width: Math.min(window.innerWidth - 20, 360),
+    height: 200,
+    x: position.x + position.width / 2 - Math.min(window.innerWidth - 20, 360) / 2,
+    y: position.y + position.height / 2 - 100
   };
 
-  const createTexture = (label: string, bgColor: string, hl1: boolean, hl2: boolean, sub?: string) => {
+  // ==================== CREATE 3D HUMAN ====================
+  
+  const createHuman3D = useCallback((
+    appearance: HumanAppearance,
+    name: string,
+    isHighlighted: boolean,
+    isHighlighted2: boolean
+  ): THREE.Group => {
+    const human = new THREE.Group();
+    const highlightEmission = isHighlighted ? 0.5 : isHighlighted2 ? 0.3 : 0;
+    
+    // ========== HEAD ==========
+    const headGroup = new THREE.Group();
+    
+    // Main head
+    const headGeometry = new THREE.SphereGeometry(0.12, 32, 32);
+    const headMaterial = new THREE.MeshStandardMaterial({ 
+      color: appearance.skinTone,
+      emissive: isHighlighted ? '#ffff00' : isHighlighted2 ? '#ff00ff' : '#000000',
+      emissiveIntensity: highlightEmission * 0.3
+    });
+    const head = new THREE.Mesh(headGeometry, headMaterial);
+    headGroup.add(head);
+    
+    // HAIR
+    if (appearance.hairStyle !== 'bald') {
+      const hairGeometry = appearance.hairStyle === 'long' 
+        ? new THREE.SphereGeometry(0.125, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.55)
+        : new THREE.SphereGeometry(0.123, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.4);
+      
+      const hairMaterial = new THREE.MeshStandardMaterial({ 
+        color: appearance.hairColor 
+      });
+      const hair = new THREE.Mesh(hairGeometry, hairMaterial);
+      hair.position.y = 0.02;
+      headGroup.add(hair);
+      
+      // Long hair back
+      if (appearance.hairStyle === 'long') {
+        const backHairGeometry = new THREE.CapsuleGeometry(0.05, 0.15, 8, 16);
+        const backHair = new THREE.Mesh(backHairGeometry, hairMaterial);
+        backHair.position.set(0, -0.1, -0.06);
+        headGroup.add(backHair);
+      }
+    }
+    
+    // EYES
+    const eyeWhiteGeometry = new THREE.SphereGeometry(0.018, 16, 16);
+    const eyeWhiteMaterial = new THREE.MeshStandardMaterial({ color: '#ffffff' });
+    const eyePupilGeometry = new THREE.SphereGeometry(0.008, 8, 8);
+    const eyePupilMaterial = new THREE.MeshStandardMaterial({ color: '#2c3e50' });
+    
+    [-0.04, 0.04].forEach(xPos => {
+      const eyeWhite = new THREE.Mesh(eyeWhiteGeometry, eyeWhiteMaterial);
+      eyeWhite.position.set(xPos, 0.015, 0.095);
+      eyeWhite.scale.set(1, 1, 0.5);
+      headGroup.add(eyeWhite);
+      
+      const pupil = new THREE.Mesh(eyePupilGeometry, eyePupilMaterial);
+      pupil.position.set(xPos, 0.015, 0.11);
+      headGroup.add(pupil);
+    });
+    
+    // EYEBROWS
+    const eyebrowGeometry = new THREE.BoxGeometry(0.03, 0.006, 0.008);
+    const eyebrowMaterial = new THREE.MeshStandardMaterial({ 
+      color: appearance.hairColor 
+    });
+    [-0.04, 0.04].forEach((xPos, i) => {
+      const eyebrow = new THREE.Mesh(eyebrowGeometry, eyebrowMaterial);
+      eyebrow.position.set(xPos, 0.045, 0.1);
+      eyebrow.rotation.z = i === 0 ? -0.1 : 0.1;
+      headGroup.add(eyebrow);
+    });
+    
+    // NOSE
+    const noseGeometry = new THREE.ConeGeometry(0.012, 0.025, 8);
+    const noseMaterial = new THREE.MeshStandardMaterial({ 
+      color: appearance.skinTone 
+    });
+    const nose = new THREE.Mesh(noseGeometry, noseMaterial);
+    nose.position.set(0, -0.01, 0.11);
+    nose.rotation.x = Math.PI;
+    headGroup.add(nose);
+    
+    // SMILE
+    const smileGeometry = new THREE.TorusGeometry(0.025, 0.004, 8, 16, Math.PI);
+    const smileMaterial = new THREE.MeshStandardMaterial({ color: '#c0392b' });
+    const smile = new THREE.Mesh(smileGeometry, smileMaterial);
+    smile.position.set(0, -0.045, 0.1);
+    smile.rotation.x = Math.PI;
+    headGroup.add(smile);
+    
+    // EARS
+    const earGeometry = new THREE.SphereGeometry(0.02, 8, 8);
+    const earMaterial = new THREE.MeshStandardMaterial({ 
+      color: appearance.skinTone 
+    });
+    [-0.11, 0.11].forEach(xPos => {
+      const ear = new THREE.Mesh(earGeometry, earMaterial);
+      ear.position.set(xPos, 0, 0);
+      ear.scale.set(0.5, 0.8, 0.6);
+      headGroup.add(ear);
+    });
+    
+    headGroup.position.y = 0.42;
+    human.add(headGroup);
+    
+    // ========== NECK ==========
+    const neckGeometry = new THREE.CylinderGeometry(0.03, 0.035, 0.05, 16);
+    const neckMaterial = new THREE.MeshStandardMaterial({ 
+      color: appearance.skinTone 
+    });
+    const neck = new THREE.Mesh(neckGeometry, neckMaterial);
+    neck.position.y = 0.275;
+    human.add(neck);
+    
+    // ========== TORSO ==========
+    const torsoGeometry = new THREE.CylinderGeometry(0.09, 0.07, 0.2, 16);
+    const torsoMaterial = new THREE.MeshStandardMaterial({ 
+      color: appearance.shirtColor,
+      emissive: isHighlighted ? '#ffff00' : isHighlighted2 ? '#ff00ff' : '#000000',
+      emissiveIntensity: highlightEmission
+    });
+    const torso = new THREE.Mesh(torsoGeometry, torsoMaterial);
+    torso.position.y = 0.15;
+    human.add(torso);
+    
+    // ========== ARMS ==========
+    const armGeometry = new THREE.CapsuleGeometry(0.018, 0.12, 8, 16);
+    const sleeveMaterial = new THREE.MeshStandardMaterial({ 
+      color: appearance.shirtColor 
+    });
+    const skinMaterial = new THREE.MeshStandardMaterial({ 
+      color: appearance.skinTone 
+    });
+    
+    [-1, 1].forEach(side => {
+      const armGroup = new THREE.Group();
+      
+      // Upper arm (sleeve)
+      const upperArm = new THREE.Mesh(armGeometry, sleeveMaterial);
+      armGroup.add(upperArm);
+      
+      // Lower arm (skin)
+      const lowerArmGeometry = new THREE.CapsuleGeometry(0.014, 0.08, 8, 16);
+      const lowerArm = new THREE.Mesh(lowerArmGeometry, skinMaterial);
+      lowerArm.position.y = -0.12;
+      armGroup.add(lowerArm);
+      
+      // Hand
+      const handGeometry = new THREE.SphereGeometry(0.022, 12, 12);
+      const hand = new THREE.Mesh(handGeometry, skinMaterial);
+      hand.position.y = -0.19;
+      hand.scale.set(0.7, 0.9, 0.5);
+      armGroup.add(hand);
+      
+      armGroup.position.set(side * 0.11, 0.15, 0);
+      armGroup.rotation.z = side * 0.25;
+      human.add(armGroup);
+    });
+    
+    // ========== HIPS ==========
+    const hipsGeometry = new THREE.CylinderGeometry(0.07, 0.065, 0.05, 16);
+    const hipsMaterial = new THREE.MeshStandardMaterial({ 
+      color: appearance.pantsColor 
+    });
+    const hips = new THREE.Mesh(hipsGeometry, hipsMaterial);
+    hips.position.y = 0.02;
+    human.add(hips);
+    
+    // ========== LEGS ==========
+    const legGeometry = new THREE.CapsuleGeometry(0.028, 0.14, 8, 16);
+    const legMaterial = new THREE.MeshStandardMaterial({ 
+      color: appearance.pantsColor 
+    });
+    
+    [-0.035, 0.035].forEach(xPos => {
+      const leg = new THREE.Mesh(legGeometry, legMaterial);
+      leg.position.set(xPos, -0.1, 0);
+      human.add(leg);
+    });
+    
+    // ========== SHOES ==========
+    const shoeGeometry = new THREE.BoxGeometry(0.04, 0.02, 0.06);
+    const shoeMaterial = new THREE.MeshStandardMaterial({ color: '#1a1a1a' });
+    
+    [-0.035, 0.035].forEach(xPos => {
+      const shoe = new THREE.Mesh(shoeGeometry, shoeMaterial);
+      shoe.position.set(xPos, -0.2, 0.01);
+      human.add(shoe);
+    });
+    
+    // ========== NAME LABEL ==========
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d')!;
+    
+    // Background
+    ctx.fillStyle = isHighlighted ? '#ffff00' : isHighlighted2 ? '#ff00ff' : 'rgba(0,0,0,0.85)';
+    ctx.beginPath();
+    ctx.roundRect(0, 0, 256, 64, 15);
+    ctx.fill();
+    
+    // Border
+    ctx.strokeStyle = isHighlighted || isHighlighted2 ? '#000' : '#fff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(2, 2, 252, 60, 13);
+    ctx.stroke();
+    
+    // Text
+    ctx.fillStyle = isHighlighted || isHighlighted2 ? '#000000' : '#ffffff';
+    ctx.font = 'bold 28px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(name, 128, 32);
+    
+    const labelTexture = new THREE.CanvasTexture(canvas);
+    const labelMaterial = new THREE.SpriteMaterial({ 
+      map: labelTexture,
+      transparent: true
+    });
+    const label = new THREE.Sprite(labelMaterial);
+    label.position.y = 0.62;
+    label.scale.set(0.45, 0.11, 1);
+    human.add(label);
+    
+    // ========== HIGHLIGHT RING ==========
+    if (isHighlighted || isHighlighted2) {
+      const ringGeometry = new THREE.RingGeometry(0.1, 0.18, 32);
+      const ringMaterial = new THREE.MeshBasicMaterial({
+        color: isHighlighted ? '#ffff00' : '#ff00ff',
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.8
+      });
+      const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+      ring.position.y = -0.21;
+      ring.rotation.x = -Math.PI / 2;
+      human.add(ring);
+    }
+    
+    return human;
+  }, []);
+
+  // ==================== CREATE BOX TEXTURE ====================
+
+  const createTexture = useCallback((
+    label: string, 
+    bgColor: string, 
+    hl1: boolean, 
+    hl2: boolean, 
+    sub?: string
+  ): THREE.CanvasTexture => {
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = 128;
     const ctx = canvas.getContext('2d')!;
@@ -687,38 +1258,78 @@ function ArrayVisualization3D({
     ctx.fillStyle = hl1 ? '#ffff00' : hl2 ? '#ff00ff' : bgColor;
     ctx.fillRect(0, 0, 128, 128);
     ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.strokeRect(2, 2, 124, 124);
     
     ctx.fillStyle = hl1 || hl2 ? '#000' : '#fff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = label.length <= 2 ? 'bold 48px Arial' : 'bold 26px Arial';
+    ctx.font = label.length <= 2 ? 'bold 48px Arial' : 'bold 22px Arial';
     ctx.fillText(label, 64, sub ? 50 : 64);
     
     if (sub) {
-      ctx.font = '16px Arial';
+      ctx.font = '14px Arial';
       ctx.fillText(sub, 64, 95);
     }
     
     const tex = new THREE.CanvasTexture(canvas);
     tex.needsUpdate = true;
     return tex;
-  };
+  }, []);
 
-  // Initialize Three.js
+  // ==================== CREATE CHAIR ====================
+
+  const createChair = useCallback((x: number): THREE.Group => {
+    const chair = new THREE.Group();
+    const woodMaterial = new THREE.MeshStandardMaterial({ color: '#8b4513' });
+    
+    // Seat
+    const seatGeometry = new THREE.BoxGeometry(0.28, 0.03, 0.28);
+    const seat = new THREE.Mesh(seatGeometry, woodMaterial);
+    seat.position.y = -0.22;
+    chair.add(seat);
+    
+    // Back
+    const backGeometry = new THREE.BoxGeometry(0.28, 0.2, 0.03);
+    const back = new THREE.Mesh(backGeometry, woodMaterial);
+    back.position.set(0, -0.1, -0.12);
+    chair.add(back);
+    
+    // Legs
+    const legGeometry = new THREE.CylinderGeometry(0.015, 0.015, 0.15, 8);
+    const legPositions = [
+      [-0.1, -0.32, 0.1],
+      [0.1, -0.32, 0.1],
+      [-0.1, -0.32, -0.1],
+      [0.1, -0.32, -0.1]
+    ];
+    legPositions.forEach(([lx, ly, lz]) => {
+      const leg = new THREE.Mesh(legGeometry, woodMaterial);
+      leg.position.set(lx, ly, lz);
+      chair.add(leg);
+    });
+    
+    chair.position.x = x;
+    return chair;
+  }, []);
+
+  // ==================== INITIALIZE THREE.JS ====================
+
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
 
+    // Scene
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
+    // Camera
     const camera = new THREE.PerspectiveCamera(50, size.width / size.height, 0.1, 1000);
-    camera.position.set(0, 1.5, 6);
+    camera.position.set(0, 0.5, 4);
     camera.lookAt(0, 0, 0);
     cameraRef.current = camera;
 
+    // Renderer
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -726,15 +1337,24 @@ function ArrayVisualization3D({
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-    const dir = new THREE.DirectionalLight(0xffffff, 0.5);
-    dir.position.set(5, 5, 5);
-    scene.add(dir);
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(ambientLight);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    directionalLight.position.set(5, 10, 5);
+    scene.add(directionalLight);
+    
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.3);
+    backLight.position.set(-5, 5, -5);
+    scene.add(backLight);
 
+    // Group for all objects
     const group = new THREE.Group();
     groupRef.current = group;
     scene.add(group);
 
+    // Touch/Mouse controls
     let isDragging = false;
     let lastX = 0, lastY = 0;
     let pinchDist: number | null = null;
@@ -784,6 +1404,26 @@ function ArrayVisualization3D({
       if (e.touches.length === 0) isDragging = false;
     };
 
+    const onMouseDown = (e: MouseEvent) => {
+      isDragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      rotationRef.current.y += dx * 0.01;
+      rotationRef.current.x = Math.max(-0.5, Math.min(0.5, rotationRef.current.x + dy * 0.01));
+      lastX = e.clientX;
+      lastY = e.clientY;
+    };
+
+    const onMouseUp = () => {
+      isDragging = false;
+    };
+
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const delta = e.deltaY > 0 ? -0.15 : 0.15;
@@ -793,8 +1433,13 @@ function ArrayVisualization3D({
     container.addEventListener('touchstart', onTouchStart, { passive: false });
     container.addEventListener('touchmove', onTouchMove, { passive: false });
     container.addEventListener('touchend', onTouchEnd, { passive: false });
+    container.addEventListener('mousedown', onMouseDown);
+    container.addEventListener('mousemove', onMouseMove);
+    container.addEventListener('mouseup', onMouseUp);
+    container.addEventListener('mouseleave', onMouseUp);
     container.addEventListener('wheel', onWheel, { passive: false });
 
+    // Animation loop
     const animate = () => {
       if (groupRef.current) {
         groupRef.current.rotation.x = rotationRef.current.x;
@@ -806,11 +1451,17 @@ function ArrayVisualization3D({
     };
     animate();
 
+    // Cleanup
     return () => {
       container.removeEventListener('touchstart', onTouchStart);
       container.removeEventListener('touchmove', onTouchMove);
       container.removeEventListener('touchend', onTouchEnd);
+      container.removeEventListener('mousedown', onMouseDown);
+      container.removeEventListener('mousemove', onMouseMove);
+      container.removeEventListener('mouseup', onMouseUp);
+      container.removeEventListener('mouseleave', onMouseUp);
       container.removeEventListener('wheel', onWheel);
+      
       renderer.dispose();
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
@@ -818,54 +1469,147 @@ function ArrayVisualization3D({
     };
   }, []);
 
-  // Update boxes
+  // ==================== UPDATE VISUALIZATION ====================
+
   useEffect(() => {
     if (!groupRef.current) return;
-    groupRef.current.clear();
+    
+    // Clear previous objects
+    while (groupRef.current.children.length > 0) {
+      const child = groupRef.current.children[0];
+      if (child instanceof THREE.Mesh) {
+        child.geometry.dispose();
+        if (child.material instanceof THREE.Material) {
+          child.material.dispose();
+        }
+      }
+      groupRef.current.remove(child);
+    }
 
-    const boxSize = 0.8;
-    const spacing = 0.95;
+    const spacing = environment === 'classroom' ? 0.8 : 0.95;
     const startX = -((arrayData.length - 1) * spacing) / 2;
 
-    arrayData.forEach((item, i) => {
-      const hl1 = highlightIndex === i;
-      const hl2 = highlightIndex2 === i;
-      const tex = createTexture(item.label, item.color, hl1, hl2, item.subLabel);
-      const mat = new THREE.MeshStandardMaterial({ map: tex, metalness: 0.1, roughness: 0.5 });
-      const geo = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
-      const cube = new THREE.Mesh(geo, mat);
-      cube.position.x = startX + i * spacing;
-      cube.position.y = hl1 || hl2 ? 0.3 : 0;
-      groupRef.current!.add(cube);
+    if (environment === 'classroom') {
+      // ========== CLASSROOM: 3D HUMANS ==========
+      arrayData.forEach((item, i) => {
+        const hl1 = highlightIndex === i;
+        const hl2 = highlightIndex2 === i;
+        
+        if (item.appearance) {
+          // Create 3D human
+          const human = createHuman3D(
+            item.appearance,
+            item.name || item.label,
+            hl1,
+            hl2
+          );
+          human.position.x = startX + i * spacing;
+          human.position.y = hl1 || hl2 ? 0.1 : 0;
+          human.scale.setScalar(0.85);
+          groupRef.current!.add(human);
+          
+          // Add chair
+          const chair = createChair(startX + i * spacing);
+          chair.scale.setScalar(0.85);
+          groupRef.current!.add(chair);
+        }
+        
+        // Index label
+        const indexCanvas = document.createElement('canvas');
+        indexCanvas.width = 64;
+        indexCanvas.height = 32;
+        const ctx = indexCanvas.getContext('2d')!;
+        ctx.fillStyle = hl1 ? '#ffff00' : hl2 ? '#ff00ff' : '#ffffff';
+        ctx.font = 'bold 20px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`[${i}]`, 32, 16);
+        
+        const indexTexture = new THREE.CanvasTexture(indexCanvas);
+        const indexSprite = new THREE.Sprite(
+          new THREE.SpriteMaterial({ map: indexTexture, transparent: true })
+        );
+        indexSprite.position.set(startX + i * spacing, -0.5, 0);
+        indexSprite.scale.set(0.3, 0.15, 1);
+        groupRef.current!.add(indexSprite);
+      });
+      
+    } else {
+      // ========== GROCERY & TODO: BOXES ==========
+      const boxSize = 0.7;
+      
+      arrayData.forEach((item, i) => {
+        const hl1 = highlightIndex === i;
+        const hl2 = highlightIndex2 === i;
+        
+        const tex = createTexture(item.label, item.color, hl1, hl2, item.subLabel);
+        const mat = new THREE.MeshStandardMaterial({ 
+          map: tex, 
+          metalness: 0.1, 
+          roughness: 0.5 
+        });
+        const geo = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
+        const cube = new THREE.Mesh(geo, mat);
+        cube.position.x = startX + i * spacing;
+        cube.position.y = hl1 || hl2 ? 0.25 : 0;
+        groupRef.current!.add(cube);
 
-      // Index label
-      const c = document.createElement('canvas');
-      c.width = 64; c.height = 32;
-      const ctx = c.getContext('2d')!;
-      ctx.fillStyle = hl1 ? '#ffff00' : '#fff';
-      ctx.font = 'bold 18px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(`[${i}]`, 32, 16);
-      const t = new THREE.CanvasTexture(c);
-      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true }));
-      s.position.set(startX + i * spacing, -0.7, 0);
-      s.scale.set(0.5, 0.25, 1);
-      groupRef.current!.add(s);
-    });
-  }, [arrayData, highlightIndex, highlightIndex2]);
+        // Index label
+        const c = document.createElement('canvas');
+        c.width = 64;
+        c.height = 32;
+        const ctx = c.getContext('2d')!;
+        ctx.fillStyle = hl1 ? '#ffff00' : hl2 ? '#ff00ff' : '#fff';
+        ctx.font = 'bold 18px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`[${i}]`, 32, 16);
+        
+        const t = new THREE.CanvasTexture(c);
+        const s = new THREE.Sprite(
+          new THREE.SpriteMaterial({ map: t, transparent: true })
+        );
+        s.position.set(startX + i * spacing, -0.55, 0);
+        s.scale.set(0.4, 0.2, 1);
+        groupRef.current!.add(s);
+      });
+      
+      // Add shelf for grocery
+      if (environment === 'grocery') {
+        const shelfGeometry = new THREE.BoxGeometry(
+          arrayData.length * spacing + 0.5, 
+          0.05, 
+          0.8
+        );
+        const shelfMaterial = new THREE.MeshStandardMaterial({ 
+          color: '#5d4037' 
+        });
+        const shelf = new THREE.Mesh(shelfGeometry, shelfMaterial);
+        shelf.position.y = -0.4;
+        groupRef.current!.add(shelf);
+      }
+    }
+
+  }, [arrayData, highlightIndex, highlightIndex2, environment, createHuman3D, createTexture, createChair]);
+
+  // ==================== RENDER ====================
 
   return (
     <div
       ref={containerRef}
       style={{
         position: 'absolute',
-        left: size.x,
-        top: size.y,
+        left: Math.max(10, Math.min(size.x, window.innerWidth - size.width - 10)),
+        top: Math.max(100, Math.min(size.y, window.innerHeight - size.height - 150)),
         width: size.width,
         height: size.height,
         zIndex: 50,
-        touchAction: 'none'
+        touchAction: 'none',
+        borderRadius: 15,
+        overflow: 'hidden',
+        background: 'rgba(0,0,0,0.3)',
+        backdropFilter: 'blur(5px)',
+        border: '2px solid rgba(255,255,255,0.2)'
       }}
     />
   );
