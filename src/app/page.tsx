@@ -162,17 +162,11 @@ export default function Home() {
   // ==================== ZOOM FUNCTIONS ====================
   
   const zoomIn = useCallback(() => {
-    setZoomLevel(prev => {
-      const newZoom = Math.min(prev + 0.25, 2.5);
-      return newZoom;
-    });
+    setZoomLevel(prev => Math.min(prev + 0.25, 2.5));
   }, []);
 
   const zoomOut = useCallback(() => {
-    setZoomLevel(prev => {
-      const newZoom = Math.max(prev - 0.25, 0.5);
-      return newZoom;
-    });
+    setZoomLevel(prev => Math.max(prev - 0.25, 0.5));
   }, []);
 
   const resetZoom = useCallback(() => {
@@ -277,7 +271,7 @@ export default function Home() {
     let animationId: number;
     let running = true;
     let lastDetection = 0;
-    const DETECTION_INTERVAL = 100; // 10 FPS for better performance
+    const DETECTION_INTERVAL = 100;
 
     const detect = async () => {
       if (!running || !videoRef.current || !canvasRef.current) return;
@@ -568,11 +562,7 @@ export default function Home() {
         }} />
         <h2 style={{ marginTop: 25, fontSize: 24 }}>📊 Array Learning AR</h2>
         <p style={{ opacity: 0.7, marginTop: 10 }}>{loadingText}</p>
-        <div style={{ 
-          marginTop: 30, 
-          display: 'flex', 
-          gap: 10 
-        }}>
+        <div style={{ marginTop: 30, display: 'flex', gap: 10 }}>
           <span style={{ fontSize: 30 }}>🛒</span>
           <span style={{ fontSize: 30 }}>🧑‍🤝‍🧑</span>
           <span style={{ fontSize: 30 }}>📝</span>
@@ -585,9 +575,9 @@ export default function Home() {
   // ==================== ENVIRONMENT INFO ====================
 
   const envInfo = {
-    grocery: { icon: '🛒', title: 'Grocery Shelf', desc: 'Array as shelf items' },
-    classroom: { icon: '🧑‍🤝‍🧑', title: 'Student Seats', desc: '3D Students in seats' },
-    todo: { icon: '📝', title: 'To-Do List', desc: 'Array as task list' }
+    grocery: { icon: '🛒', title: 'Grocery Shelf' },
+    classroom: { icon: '🧑‍🤝‍🧑', title: 'Student Seats' },
+    todo: { icon: '📝', title: 'To-Do List' }
   }[currentEnv];
 
   // ==================== MAIN RENDER ====================
@@ -624,14 +614,7 @@ export default function Home() {
       )}
 
       {/* ==================== TOP UI ==================== */}
-      <div style={{ 
-        position: 'absolute', 
-        top: 0, 
-        left: 0, 
-        right: 0, 
-        padding: 10, 
-        zIndex: 100 
-      }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: 10, zIndex: 100 }}>
         
         {/* CAMERA SWITCH BUTTON */}
         <button 
@@ -644,8 +627,7 @@ export default function Home() {
             color: 'white', fontSize: 24, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             backdropFilter: 'blur(10px)'
-          }}
-        >
+          }}>
           🔄
         </button>
 
@@ -653,8 +635,7 @@ export default function Home() {
         {detectedPerson && (
           <div style={{
             position: 'absolute', top: 10, left: 10,
-            display: 'flex', flexDirection: 'column', 
-            gap: 8, zIndex: 200
+            display: 'flex', flexDirection: 'column', gap: 8, zIndex: 200
           }}>
             <button
               onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); zoomIn(); }}
@@ -667,8 +648,7 @@ export default function Home() {
                 alignItems: 'center', justifyContent: 'center',
                 boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
                 touchAction: 'none'
-              }}
-            >
+              }}>
               +
             </button>
 
@@ -694,8 +674,7 @@ export default function Home() {
                 alignItems: 'center', justifyContent: 'center',
                 boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
                 touchAction: 'none'
-              }}
-            >
+              }}>
               −
             </button>
 
@@ -710,8 +689,7 @@ export default function Home() {
                 alignItems: 'center', justifyContent: 'center',
                 boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
                 touchAction: 'none'
-              }}
-            >
+              }}>
               ⟲
             </button>
           </div>
@@ -719,8 +697,7 @@ export default function Home() {
 
         {/* TITLE BAR */}
         <div style={{
-          position: 'absolute', top: 10, left: '50%', 
-          transform: 'translateX(-50%)',
+          position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
           background: detectedPerson 
             ? 'linear-gradient(135deg, #00b894, #00cec9)' 
             : 'linear-gradient(135deg, #667eea, #764ba2)',
@@ -737,12 +714,9 @@ export default function Home() {
         {/* ENVIRONMENT TABS */}
         {detectedPerson && (
           <div style={{
-            position: 'absolute', top: 55, left: '50%', 
-            transform: 'translateX(-50%)',
-            display: 'flex', gap: 5, 
-            background: 'rgba(0,0,0,0.7)',
-            padding: 5, borderRadius: 25,
-            backdropFilter: 'blur(10px)'
+            position: 'absolute', top: 55, left: '50%', transform: 'translateX(-50%)',
+            display: 'flex', gap: 5, background: 'rgba(0,0,0,0.7)',
+            padding: 5, borderRadius: 25, backdropFilter: 'blur(10px)'
           }}>
             {(['grocery', 'classroom', 'todo'] as Environment[]).map(env => (
               <button 
@@ -757,8 +731,7 @@ export default function Home() {
                   color: 'white', cursor: 'pointer',
                   opacity: currentEnv === env ? 1 : 0.6,
                   transition: 'all 0.3s ease'
-                }}
-              >
+                }}>
                 {env === 'grocery' ? '🛒 Shelf' : env === 'classroom' ? '🧑‍🤝‍🧑 Seats' : '📝 Tasks'}
               </button>
             ))}
@@ -768,13 +741,10 @@ export default function Home() {
         {/* OPERATION MESSAGE */}
         {operationMessage && (
           <div style={{
-            position: 'absolute', top: 100, left: '50%', 
-            transform: 'translateX(-50%)',
+            position: 'absolute', top: 100, left: '50%', transform: 'translateX(-50%)',
             background: 'rgba(0,0,0,0.9)', color: '#00ff00',
-            padding: '10px 20px', borderRadius: 15, 
-            fontSize: 14, fontWeight: 'bold',
-            border: '1px solid #00ff00',
-            boxShadow: '0 0 20px rgba(0,255,0,0.3)'
+            padding: '10px 20px', borderRadius: 15, fontSize: 14, fontWeight: 'bold',
+            border: '1px solid #00ff00', boxShadow: '0 0 20px rgba(0,255,0,0.3)'
           }}>
             ⚡ {operationMessage}
           </div>
@@ -783,14 +753,11 @@ export default function Home() {
         {/* CODE DISPLAY */}
         {codeDisplay && (
           <div style={{
-            position: 'absolute', top: 140, left: '50%', 
-            transform: 'translateX(-50%)',
+            position: 'absolute', top: 140, left: '50%', transform: 'translateX(-50%)',
             background: 'rgba(30,30,30,0.95)', color: '#00ff00',
-            padding: '10px 15px', borderRadius: 10, 
-            fontSize: 11, fontFamily: 'monospace', 
-            whiteSpace: 'pre-wrap',
-            border: '1px solid #444',
-            maxWidth: '90%',
+            padding: '10px 15px', borderRadius: 10, fontSize: 11,
+            fontFamily: 'monospace', whiteSpace: 'pre-wrap',
+            border: '1px solid #444', maxWidth: '90%',
             boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
           }}>
             {codeDisplay}
@@ -806,69 +773,28 @@ export default function Home() {
           background: 'linear-gradient(to top, rgba(0,0,0,0.95), transparent)',
           zIndex: 100
         }}>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            gap: 10, 
-            flexWrap: 'wrap' 
-          }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
             {currentEnv === 'grocery' && (
               <>
-                <OperationButton 
-                  onClick={groceryAccess} 
-                  disabled={isAnimating} 
-                  color="#f39c12" 
-                  label="📍 Access" 
-                />
-                <OperationButton 
-                  onClick={groceryInsert} 
-                  disabled={isAnimating || groceryItems.length >= 6} 
-                  color="#2ecc71" 
-                  label="➕ Insert" 
-                />
-                <OperationButton 
-                  onClick={groceryDelete} 
-                  disabled={isAnimating || groceryItems.length <= 2} 
-                  color="#e74c3c" 
-                  label="➖ Delete" 
-                />
+                <OperationButton onClick={groceryAccess} disabled={isAnimating} color="#f39c12" label="📍 Access" />
+                <OperationButton onClick={groceryInsert} disabled={isAnimating || groceryItems.length >= 6} color="#2ecc71" label="➕ Insert" />
+                <OperationButton onClick={groceryDelete} disabled={isAnimating || groceryItems.length <= 2} color="#e74c3c" label="➖ Delete" />
               </>
             )}
             {currentEnv === 'classroom' && (
               <>
-                <OperationButton 
-                  onClick={studentAccess} 
-                  disabled={isAnimating} 
-                  color="#f39c12" 
-                  label="📍 Access" 
-                />
-                <OperationButton 
-                  onClick={studentSwap} 
-                  disabled={isAnimating} 
-                  color="#9b59b6" 
-                  label="🔀 Swap" 
-                />
+                <OperationButton onClick={studentAccess} disabled={isAnimating} color="#f39c12" label="📍 Access" />
+                <OperationButton onClick={studentSwap} disabled={isAnimating} color="#9b59b6" label="🔀 Swap" />
               </>
             )}
             {currentEnv === 'todo' && (
               <>
-                <OperationButton 
-                  onClick={todoAppend} 
-                  disabled={isAnimating || tasks.length >= 6} 
-                  color="#2ecc71" 
-                  label="⏬ Append" 
-                />
-                <OperationButton 
-                  onClick={todoDelete} 
-                  disabled={isAnimating || tasks.length <= 2} 
-                  color="#e74c3c" 
-                  label="✅ Done" 
-                />
+                <OperationButton onClick={todoAppend} disabled={isAnimating || tasks.length >= 6} color="#2ecc71" label="⏬ Append" />
+                <OperationButton onClick={todoDelete} disabled={isAnimating || tasks.length <= 2} color="#e74c3c" label="✅ Done" />
               </>
             )}
           </div>
           
-          {/* Array Length Indicator */}
           <div style={{
             textAlign: 'center', marginTop: 10,
             color: 'rgba(255,255,255,0.7)', fontSize: 12
@@ -882,13 +808,10 @@ export default function Home() {
       {/* ==================== SCANNING PROMPT ==================== */}
       {!detectedPerson && (
         <div style={{
-          position: 'absolute', bottom: 100, left: '50%', 
-          transform: 'translateX(-50%)',
+          position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)',
           background: 'rgba(0,0,0,0.85)', color: 'white',
-          padding: '20px 30px', borderRadius: 20, 
-          fontSize: 16, textAlign: 'center',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-          animation: 'pulse 2s infinite'
+          padding: '20px 30px', borderRadius: 20, fontSize: 16, textAlign: 'center',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.5)', animation: 'pulse 2s infinite'
         }}>
           <div style={{ fontSize: 40, marginBottom: 10 }}>📱</div>
           <div>Point camera at a person</div>
@@ -910,63 +833,31 @@ export default function Home() {
 
 // ==================== OPERATION BUTTON COMPONENT ====================
 
-function OperationButton({ 
-  onClick, 
-  disabled, 
-  color, 
-  label 
-}: {
-  onClick: () => void; 
-  disabled: boolean; 
-  color: string; 
-  label: string;
+function OperationButton({ onClick, disabled, color, label }: {
+  onClick: () => void; disabled: boolean; color: string; label: string;
 }) {
   return (
     <button 
       onClick={onClick} 
       disabled={disabled}
       style={{
-        padding: '14px 22px', 
-        fontSize: 14, 
-        fontWeight: 'bold',
-        border: 'none', 
-        borderRadius: 25,
-        background: disabled 
-          ? 'rgba(100,100,100,0.5)' 
-          : `linear-gradient(135deg, ${color}, ${adjustColor(color, -20)})`,
-        color: 'white', 
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.5 : 1, 
-        touchAction: 'manipulation',
+        padding: '14px 22px', fontSize: 14, fontWeight: 'bold',
+        border: 'none', borderRadius: 25,
+        background: disabled ? 'rgba(100,100,100,0.5)' : color,
+        color: 'white', cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.5 : 1, touchAction: 'manipulation',
         boxShadow: disabled ? 'none' : `0 4px 15px ${color}40`,
         transition: 'all 0.3s ease'
-      }}
-    >
+      }}>
       {label}
     </button>
   );
 }
 
-// Helper function to darken/lighten colors
-function adjustColor(color: string, amount: number): string {
-  const clamp = (num: number) => Math.min(255, Math.max(0, num));
-  const hex = color.replace('#', '');
-  const r = clamp(parseInt(hex.slice(0, 2), 16) + amount);
-  const g = clamp(parseInt(hex.slice(2, 4), 16) + amount);
-  const b = clamp(parseInt(hex.slice(4, 6), 16) + amount);
-  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-}
-
 // ==================== 3D VISUALIZATION COMPONENT ====================
 
 function ArrayVisualization3D({
-  position,
-  arrayData,
-  highlightIndex,
-  highlightIndex2,
-  environment,
-  zoomLevel,
-  setZoomLevel
+  position, arrayData, highlightIndex, highlightIndex2, environment, zoomLevel, setZoomLevel
 }: {
   position: Position;
   arrayData: ArrayDataItem[];
@@ -1006,7 +897,7 @@ function ArrayVisualization3D({
     const human = new THREE.Group();
     const highlightEmission = isHighlighted ? 0.5 : isHighlighted2 ? 0.3 : 0;
     
-    // ========== HEAD ==========
+    // HEAD GROUP
     const headGroup = new THREE.Group();
     
     // Main head
@@ -1025,14 +916,11 @@ function ArrayVisualization3D({
         ? new THREE.SphereGeometry(0.125, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.55)
         : new THREE.SphereGeometry(0.123, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.4);
       
-      const hairMaterial = new THREE.MeshStandardMaterial({ 
-        color: appearance.hairColor 
-      });
+      const hairMaterial = new THREE.MeshStandardMaterial({ color: appearance.hairColor });
       const hair = new THREE.Mesh(hairGeometry, hairMaterial);
       hair.position.y = 0.02;
       headGroup.add(hair);
       
-      // Long hair back
       if (appearance.hairStyle === 'long') {
         const backHairGeometry = new THREE.CapsuleGeometry(0.05, 0.15, 8, 16);
         const backHair = new THREE.Mesh(backHairGeometry, hairMaterial);
@@ -1060,9 +948,7 @@ function ArrayVisualization3D({
     
     // EYEBROWS
     const eyebrowGeometry = new THREE.BoxGeometry(0.03, 0.006, 0.008);
-    const eyebrowMaterial = new THREE.MeshStandardMaterial({ 
-      color: appearance.hairColor 
-    });
+    const eyebrowMaterial = new THREE.MeshStandardMaterial({ color: appearance.hairColor });
     [-0.04, 0.04].forEach((xPos, i) => {
       const eyebrow = new THREE.Mesh(eyebrowGeometry, eyebrowMaterial);
       eyebrow.position.set(xPos, 0.045, 0.1);
@@ -1072,9 +958,7 @@ function ArrayVisualization3D({
     
     // NOSE
     const noseGeometry = new THREE.ConeGeometry(0.012, 0.025, 8);
-    const noseMaterial = new THREE.MeshStandardMaterial({ 
-      color: appearance.skinTone 
-    });
+    const noseMaterial = new THREE.MeshStandardMaterial({ color: appearance.skinTone });
     const nose = new THREE.Mesh(noseGeometry, noseMaterial);
     nose.position.set(0, -0.01, 0.11);
     nose.rotation.x = Math.PI;
@@ -1090,9 +974,7 @@ function ArrayVisualization3D({
     
     // EARS
     const earGeometry = new THREE.SphereGeometry(0.02, 8, 8);
-    const earMaterial = new THREE.MeshStandardMaterial({ 
-      color: appearance.skinTone 
-    });
+    const earMaterial = new THREE.MeshStandardMaterial({ color: appearance.skinTone });
     [-0.11, 0.11].forEach(xPos => {
       const ear = new THREE.Mesh(earGeometry, earMaterial);
       ear.position.set(xPos, 0, 0);
@@ -1103,16 +985,14 @@ function ArrayVisualization3D({
     headGroup.position.y = 0.42;
     human.add(headGroup);
     
-    // ========== NECK ==========
+    // NECK
     const neckGeometry = new THREE.CylinderGeometry(0.03, 0.035, 0.05, 16);
-    const neckMaterial = new THREE.MeshStandardMaterial({ 
-      color: appearance.skinTone 
-    });
+    const neckMaterial = new THREE.MeshStandardMaterial({ color: appearance.skinTone });
     const neck = new THREE.Mesh(neckGeometry, neckMaterial);
     neck.position.y = 0.275;
     human.add(neck);
     
-    // ========== TORSO ==========
+    // TORSO
     const torsoGeometry = new THREE.CylinderGeometry(0.09, 0.07, 0.2, 16);
     const torsoMaterial = new THREE.MeshStandardMaterial({ 
       color: appearance.shirtColor,
@@ -1123,29 +1003,22 @@ function ArrayVisualization3D({
     torso.position.y = 0.15;
     human.add(torso);
     
-    // ========== ARMS ==========
+    // ARMS
     const armGeometry = new THREE.CapsuleGeometry(0.018, 0.12, 8, 16);
-    const sleeveMaterial = new THREE.MeshStandardMaterial({ 
-      color: appearance.shirtColor 
-    });
-    const skinMaterial = new THREE.MeshStandardMaterial({ 
-      color: appearance.skinTone 
-    });
+    const sleeveMaterial = new THREE.MeshStandardMaterial({ color: appearance.shirtColor });
+    const skinMaterial = new THREE.MeshStandardMaterial({ color: appearance.skinTone });
     
     [-1, 1].forEach(side => {
       const armGroup = new THREE.Group();
       
-      // Upper arm (sleeve)
       const upperArm = new THREE.Mesh(armGeometry, sleeveMaterial);
       armGroup.add(upperArm);
       
-      // Lower arm (skin)
       const lowerArmGeometry = new THREE.CapsuleGeometry(0.014, 0.08, 8, 16);
       const lowerArm = new THREE.Mesh(lowerArmGeometry, skinMaterial);
       lowerArm.position.y = -0.12;
       armGroup.add(lowerArm);
       
-      // Hand
       const handGeometry = new THREE.SphereGeometry(0.022, 12, 12);
       const hand = new THREE.Mesh(handGeometry, skinMaterial);
       hand.position.y = -0.19;
@@ -1157,20 +1030,16 @@ function ArrayVisualization3D({
       human.add(armGroup);
     });
     
-    // ========== HIPS ==========
+    // HIPS
     const hipsGeometry = new THREE.CylinderGeometry(0.07, 0.065, 0.05, 16);
-    const hipsMaterial = new THREE.MeshStandardMaterial({ 
-      color: appearance.pantsColor 
-    });
+    const hipsMaterial = new THREE.MeshStandardMaterial({ color: appearance.pantsColor });
     const hips = new THREE.Mesh(hipsGeometry, hipsMaterial);
     hips.position.y = 0.02;
     human.add(hips);
     
-    // ========== LEGS ==========
+    // LEGS
     const legGeometry = new THREE.CapsuleGeometry(0.028, 0.14, 8, 16);
-    const legMaterial = new THREE.MeshStandardMaterial({ 
-      color: appearance.pantsColor 
-    });
+    const legMaterial = new THREE.MeshStandardMaterial({ color: appearance.pantsColor });
     
     [-0.035, 0.035].forEach(xPos => {
       const leg = new THREE.Mesh(legGeometry, legMaterial);
@@ -1178,7 +1047,7 @@ function ArrayVisualization3D({
       human.add(leg);
     });
     
-    // ========== SHOES ==========
+    // SHOES
     const shoeGeometry = new THREE.BoxGeometry(0.04, 0.02, 0.06);
     const shoeMaterial = new THREE.MeshStandardMaterial({ color: '#1a1a1a' });
     
@@ -1188,26 +1057,23 @@ function ArrayVisualization3D({
       human.add(shoe);
     });
     
-    // ========== NAME LABEL ==========
+    // NAME LABEL
     const canvas = document.createElement('canvas');
     canvas.width = 256;
     canvas.height = 64;
     const ctx = canvas.getContext('2d')!;
     
-    // Background
     ctx.fillStyle = isHighlighted ? '#ffff00' : isHighlighted2 ? '#ff00ff' : 'rgba(0,0,0,0.85)';
     ctx.beginPath();
     ctx.roundRect(0, 0, 256, 64, 15);
     ctx.fill();
     
-    // Border
     ctx.strokeStyle = isHighlighted || isHighlighted2 ? '#000' : '#fff';
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.roundRect(2, 2, 252, 60, 13);
     ctx.stroke();
     
-    // Text
     ctx.fillStyle = isHighlighted || isHighlighted2 ? '#000000' : '#ffffff';
     ctx.font = 'bold 28px Arial';
     ctx.textAlign = 'center';
@@ -1215,16 +1081,13 @@ function ArrayVisualization3D({
     ctx.fillText(name, 128, 32);
     
     const labelTexture = new THREE.CanvasTexture(canvas);
-    const labelMaterial = new THREE.SpriteMaterial({ 
-      map: labelTexture,
-      transparent: true
-    });
+    const labelMaterial = new THREE.SpriteMaterial({ map: labelTexture, transparent: true });
     const label = new THREE.Sprite(labelMaterial);
     label.position.y = 0.62;
     label.scale.set(0.45, 0.11, 1);
     human.add(label);
     
-    // ========== HIGHLIGHT RING ==========
+    // HIGHLIGHT RING
     if (isHighlighted || isHighlighted2) {
       const ringGeometry = new THREE.RingGeometry(0.1, 0.18, 32);
       const ringMaterial = new THREE.MeshBasicMaterial({
@@ -1242,14 +1105,9 @@ function ArrayVisualization3D({
     return human;
   }, []);
 
-  // ==================== CREATE BOX TEXTURE ====================
-
+  // CREATE BOX TEXTURE
   const createTexture = useCallback((
-    label: string, 
-    bgColor: string, 
-    hl1: boolean, 
-    hl2: boolean, 
-    sub?: string
+    label: string, bgColor: string, hl1: boolean, hl2: boolean, sub?: string
   ): THREE.CanvasTexture => {
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = 128;
@@ -1277,33 +1135,23 @@ function ArrayVisualization3D({
     return tex;
   }, []);
 
-  // ==================== CREATE CHAIR ====================
-
+  // CREATE CHAIR
   const createChair = useCallback((x: number): THREE.Group => {
     const chair = new THREE.Group();
     const woodMaterial = new THREE.MeshStandardMaterial({ color: '#8b4513' });
     
-    // Seat
     const seatGeometry = new THREE.BoxGeometry(0.28, 0.03, 0.28);
     const seat = new THREE.Mesh(seatGeometry, woodMaterial);
     seat.position.y = -0.22;
     chair.add(seat);
     
-    // Back
     const backGeometry = new THREE.BoxGeometry(0.28, 0.2, 0.03);
     const back = new THREE.Mesh(backGeometry, woodMaterial);
     back.position.set(0, -0.1, -0.12);
     chair.add(back);
     
-    // Legs
     const legGeometry = new THREE.CylinderGeometry(0.015, 0.015, 0.15, 8);
-    const legPositions = [
-      [-0.1, -0.32, 0.1],
-      [0.1, -0.32, 0.1],
-      [-0.1, -0.32, -0.1],
-      [0.1, -0.32, -0.1]
-    ];
-    legPositions.forEach(([lx, ly, lz]) => {
+    [[-0.1, -0.32, 0.1], [0.1, -0.32, 0.1], [-0.1, -0.32, -0.1], [0.1, -0.32, -0.1]].forEach(([lx, ly, lz]) => {
       const leg = new THREE.Mesh(legGeometry, woodMaterial);
       leg.position.set(lx, ly, lz);
       chair.add(leg);
@@ -1313,23 +1161,19 @@ function ArrayVisualization3D({
     return chair;
   }, []);
 
-  // ==================== INITIALIZE THREE.JS ====================
-
+  // INITIALIZE THREE.JS
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
 
-    // Scene
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
-    // Camera
     const camera = new THREE.PerspectiveCamera(50, size.width / size.height, 0.1, 1000);
     camera.position.set(0, 0.5, 4);
     camera.lookAt(0, 0, 0);
     cameraRef.current = camera;
 
-    // Renderer
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -1337,7 +1181,6 @@ function ArrayVisualization3D({
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambientLight);
     
@@ -1349,12 +1192,10 @@ function ArrayVisualization3D({
     backLight.position.set(-5, 5, -5);
     scene.add(backLight);
 
-    // Group for all objects
     const group = new THREE.Group();
     groupRef.current = group;
     scene.add(group);
 
-    // Touch/Mouse controls
     let isDragging = false;
     let lastX = 0, lastY = 0;
     let pinchDist: number | null = null;
@@ -1420,9 +1261,7 @@ function ArrayVisualization3D({
       lastY = e.clientY;
     };
 
-    const onMouseUp = () => {
-      isDragging = false;
-    };
+    const onMouseUp = () => { isDragging = false; };
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
@@ -1439,7 +1278,6 @@ function ArrayVisualization3D({
     container.addEventListener('mouseleave', onMouseUp);
     container.addEventListener('wheel', onWheel, { passive: false });
 
-    // Animation loop
     const animate = () => {
       if (groupRef.current) {
         groupRef.current.rotation.x = rotationRef.current.x;
@@ -1451,7 +1289,6 @@ function ArrayVisualization3D({
     };
     animate();
 
-    // Cleanup
     return () => {
       container.removeEventListener('touchstart', onTouchStart);
       container.removeEventListener('touchmove', onTouchMove);
@@ -1461,7 +1298,6 @@ function ArrayVisualization3D({
       container.removeEventListener('mouseup', onMouseUp);
       container.removeEventListener('mouseleave', onMouseUp);
       container.removeEventListener('wheel', onWheel);
-      
       renderer.dispose();
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
@@ -1469,12 +1305,10 @@ function ArrayVisualization3D({
     };
   }, []);
 
-  // ==================== UPDATE VISUALIZATION ====================
-
+  // UPDATE VISUALIZATION
   useEffect(() => {
     if (!groupRef.current) return;
     
-    // Clear previous objects
     while (groupRef.current.children.length > 0) {
       const child = groupRef.current.children[0];
       if (child instanceof THREE.Mesh) {
@@ -1490,31 +1324,22 @@ function ArrayVisualization3D({
     const startX = -((arrayData.length - 1) * spacing) / 2;
 
     if (environment === 'classroom') {
-      // ========== CLASSROOM: 3D HUMANS ==========
       arrayData.forEach((item, i) => {
         const hl1 = highlightIndex === i;
         const hl2 = highlightIndex2 === i;
         
         if (item.appearance) {
-          // Create 3D human
-          const human = createHuman3D(
-            item.appearance,
-            item.name || item.label,
-            hl1,
-            hl2
-          );
+          const human = createHuman3D(item.appearance, item.name || item.label, hl1, hl2);
           human.position.x = startX + i * spacing;
           human.position.y = hl1 || hl2 ? 0.1 : 0;
           human.scale.setScalar(0.85);
           groupRef.current!.add(human);
           
-          // Add chair
           const chair = createChair(startX + i * spacing);
           chair.scale.setScalar(0.85);
           groupRef.current!.add(chair);
         }
         
-        // Index label
         const indexCanvas = document.createElement('canvas');
         indexCanvas.width = 64;
         indexCanvas.height = 32;
@@ -1526,16 +1351,12 @@ function ArrayVisualization3D({
         ctx.fillText(`[${i}]`, 32, 16);
         
         const indexTexture = new THREE.CanvasTexture(indexCanvas);
-        const indexSprite = new THREE.Sprite(
-          new THREE.SpriteMaterial({ map: indexTexture, transparent: true })
-        );
+        const indexSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: indexTexture, transparent: true }));
         indexSprite.position.set(startX + i * spacing, -0.5, 0);
         indexSprite.scale.set(0.3, 0.15, 1);
         groupRef.current!.add(indexSprite);
       });
-      
     } else {
-      // ========== GROCERY & TODO: BOXES ==========
       const boxSize = 0.7;
       
       arrayData.forEach((item, i) => {
@@ -1543,18 +1364,13 @@ function ArrayVisualization3D({
         const hl2 = highlightIndex2 === i;
         
         const tex = createTexture(item.label, item.color, hl1, hl2, item.subLabel);
-        const mat = new THREE.MeshStandardMaterial({ 
-          map: tex, 
-          metalness: 0.1, 
-          roughness: 0.5 
-        });
+        const mat = new THREE.MeshStandardMaterial({ map: tex, metalness: 0.1, roughness: 0.5 });
         const geo = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
         const cube = new THREE.Mesh(geo, mat);
         cube.position.x = startX + i * spacing;
         cube.position.y = hl1 || hl2 ? 0.25 : 0;
         groupRef.current!.add(cube);
 
-        // Index label
         const c = document.createElement('canvas');
         c.width = 64;
         c.height = 32;
@@ -1566,34 +1382,23 @@ function ArrayVisualization3D({
         ctx.fillText(`[${i}]`, 32, 16);
         
         const t = new THREE.CanvasTexture(c);
-        const s = new THREE.Sprite(
-          new THREE.SpriteMaterial({ map: t, transparent: true })
-        );
+        const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true }));
         s.position.set(startX + i * spacing, -0.55, 0);
         s.scale.set(0.4, 0.2, 1);
         groupRef.current!.add(s);
       });
       
-      // Add shelf for grocery
       if (environment === 'grocery') {
-        const shelfGeometry = new THREE.BoxGeometry(
-          arrayData.length * spacing + 0.5, 
-          0.05, 
-          0.8
-        );
-        const shelfMaterial = new THREE.MeshStandardMaterial({ 
-          color: '#5d4037' 
-        });
+        const shelfGeometry = new THREE.BoxGeometry(arrayData.length * spacing + 0.5, 0.05, 0.8);
+        const shelfMaterial = new THREE.MeshStandardMaterial({ color: '#5d4037' });
         const shelf = new THREE.Mesh(shelfGeometry, shelfMaterial);
         shelf.position.y = -0.4;
         groupRef.current!.add(shelf);
       }
     }
-
   }, [arrayData, highlightIndex, highlightIndex2, environment, createHuman3D, createTexture, createChair]);
 
-  // ==================== RENDER ====================
-
+  // ✅ TRANSPARENT BACKGROUND - NO BOX
   return (
     <div
       ref={containerRef}
@@ -1604,12 +1409,7 @@ function ArrayVisualization3D({
         width: size.width,
         height: size.height,
         zIndex: 50,
-        touchAction: 'none',
-        borderRadius: 15,
-        overflow: 'hidden',
-        background: 'rgba(0,0,0,0.3)',
-        backdropFilter: 'blur(5px)',
-        border: '2px solid rgba(255,255,255,0.2)'
+        touchAction: 'none'
       }}
     />
   );
