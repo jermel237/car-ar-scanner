@@ -17,9 +17,7 @@ interface Position {
 }
 
 type Environment = 'grocery' | 'classroom' | 'todo';
-type Operation = 'none' | 'access' | 'insert' | 'delete' | 'update' | 'shift';
 
-// Data types for each environment
 interface GroceryItem {
   id: number;
   name: string;
@@ -50,14 +48,9 @@ export default function Home() {
   const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [personPosition, setPersonPosition] = useState<Position | null>(null);
-  
-  // Environment state
   const [currentEnv, setCurrentEnv] = useState<Environment>('grocery');
+  const [zoomLevel, setZoomLevel] = useState(1.0);
   
-  // Zoom state
-  const [zoomLevel, setZoomLevel] = useState(1);
-  
-  // Array states for each environment
   const [groceryItems, setGroceryItems] = useState<GroceryItem[]>([
     { id: 1, name: 'Milk', color: '#3498db' },
     { id: 2, name: 'Bread', color: '#e67e22' },
@@ -81,13 +74,33 @@ export default function Home() {
     { id: 4, text: 'Rest', priority: 'low' },
   ]);
   
-  // Animation states
   const [highlightIndex, setHighlightIndex] = useState<number | null>(null);
   const [highlightIndex2, setHighlightIndex2] = useState<number | null>(null);
-  const [currentOperation, setCurrentOperation] = useState<Operation>('none');
   const [operationMessage, setOperationMessage] = useState('');
   const [codeDisplay, setCodeDisplay] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
+
+  // ==================== ZOOM FUNCTIONS ====================
+  const zoomIn = useCallback(() => {
+    setZoomLevel(prev => {
+      const newZoom = Math.min(prev + 0.25, 2.5);
+      console.log('Zoom In:', newZoom);
+      return newZoom;
+    });
+  }, []);
+
+  const zoomOut = useCallback(() => {
+    setZoomLevel(prev => {
+      const newZoom = Math.max(prev - 0.25, 0.5);
+      console.log('Zoom Out:', newZoom);
+      return newZoom;
+    });
+  }, []);
+
+  const resetZoom = useCallback(() => {
+    setZoomLevel(1.0);
+    console.log('Zoom Reset: 1.0');
+  }, []);
 
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
     try {
@@ -98,8 +111,8 @@ export default function Home() {
       const newStream = await navigator.mediaDevices.getUserMedia({
         video: { 
           facingMode: facing,
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
         },
         audio: false
       });
@@ -120,7 +133,7 @@ export default function Home() {
       return true;
     } catch (err) {
       console.error('Camera error:', err);
-      throw new Error('Cannot access camera. Please allow camera permission.');
+      throw new Error('Cannot access camera.');
     }
   }, [stream]);
 
@@ -157,19 +170,15 @@ export default function Home() {
       try {
         setLoadingText('Starting camera...');
         await startCamera('environment');
-        
         const loadedModel = await loadModel();
         setModel(loadedModel);
-        
         setIsLoading(false);
       } catch (err: any) {
         setError(err.message);
         setIsLoading(false);
       }
     };
-
     init();
-
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
@@ -177,7 +186,6 @@ export default function Home() {
     };
   }, []);
 
-  // AUTO DETECTION
   useEffect(() => {
     if (!model || !videoRef.current || !canvasRef.current) return;
 
@@ -189,9 +197,8 @@ export default function Home() {
 
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
 
-      if (!ctx || video.readyState !== 4) {
+      if (video.readyState !== 4) {
         animationId = requestAnimationFrame(detect);
         return;
       }
@@ -201,15 +208,11 @@ export default function Home() {
 
       try {
         const predictions = await model.detect(video);
-        
-        const humans = predictions.filter(
-          (p: any) => p.class === 'person' && p.score > 0.5
-        );
+        const humans = predictions.filter((p: any) => p.class === 'person' && p.score > 0.5);
 
         if (humans.length > 0) {
           const person = humans[0];
           const [x, y, width, height] = person.bbox;
-          
           const scaleX = window.innerWidth / canvas.width;
           const scaleY = window.innerHeight / canvas.height;
           
@@ -248,441 +251,170 @@ export default function Home() {
 
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // ==================== ZOOM FUNCTIONS ====================
-  
-  const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 0.3, 3));
-  };
-
-  const handleZoomOut = () => {
-    setZoomLevel(prev => Math.max(prev - 0.3, 0.5));
-  };
-
-  const handleResetZoom = () => {
-    setZoomLevel(1);
-  };
-
-  // ==================== GROCERY SHELF OPERATIONS ====================
-  
+  // ==================== OPERATIONS ====================
   const groceryAccess = async () => {
     if (isAnimating) return;
     setIsAnimating(true);
-    setCurrentOperation('access');
-    
     const index = Math.floor(Math.random() * groceryItems.length);
-    
     setCodeDisplay(`shelf[${index}]`);
-    setOperationMessage(`Accessing item at index ${index}...`);
+    setOperationMessage(`Accessing index ${index}...`);
     await delay(500);
-    
     setHighlightIndex(index);
     setOperationMessage(`shelf[${index}] = "${groceryItems[index].name}"`);
-    setCodeDisplay(`// Direct access O(1)\nitem = shelf[${index}];\n// Returns: ${groceryItems[index].name}`);
-    
-    await delay(2500);
+    setCodeDisplay(`// O(1) Access\nitem = shelf[${index}]; // ${groceryItems[index].name}`);
+    await delay(2000);
     setHighlightIndex(null);
     setOperationMessage('');
     setCodeDisplay('');
-    setCurrentOperation('none');
     setIsAnimating(false);
   };
 
   const groceryInsert = async () => {
     if (isAnimating || groceryItems.length >= 6) return;
     setIsAnimating(true);
-    setCurrentOperation('insert');
-    
-    const newItems = ['Cheese', 'Butter', 'Yogurt', 'Ham', 'Bacon'];
-    const colors = ['#1abc9c', '#e91e63', '#00bcd4', '#ff5722', '#795548'];
-    const randomIdx = Math.floor(Math.random() * newItems.length);
+    const newItems = ['Cheese', 'Butter', 'Yogurt'];
+    const colors = ['#1abc9c', '#e91e63', '#00bcd4'];
+    const idx = Math.floor(Math.random() * newItems.length);
     const insertIndex = Math.floor(Math.random() * (groceryItems.length + 1));
     
-    setCodeDisplay(`// Insert at index ${insertIndex}\nshelf.insert(${insertIndex}, "${newItems[randomIdx]}");`);
-    setOperationMessage(`Inserting "${newItems[randomIdx]}" at index ${insertIndex}...`);
+    setOperationMessage(`Inserting "${newItems[idx]}" at index ${insertIndex}...`);
+    setCodeDisplay(`shelf.insert(${insertIndex}, "${newItems[idx]}");`);
     
-    // Show shifting animation
-    if (insertIndex < groceryItems.length) {
-      setOperationMessage(`Shifting elements ${insertIndex} to ${groceryItems.length - 1} right...`);
-      setCodeDisplay(`// Shift elements right O(n)\nfor(i=${groceryItems.length}; i>${insertIndex}; i--)\n  shelf[i] = shelf[i-1];`);
-      
-      for (let i = groceryItems.length - 1; i >= insertIndex; i--) {
-        setHighlightIndex(i);
-        await delay(400);
-      }
+    for (let i = groceryItems.length - 1; i >= insertIndex; i--) {
+      setHighlightIndex(i);
+      await delay(300);
     }
     
-    await delay(300);
-    setHighlightIndex(insertIndex);
-    
-    const newItem: GroceryItem = {
-      id: Date.now(),
-      name: newItems[randomIdx],
-      color: colors[randomIdx]
-    };
-    
     setGroceryItems(prev => {
-      const newArr = [...prev];
-      newArr.splice(insertIndex, 0, newItem);
-      return newArr;
+      const arr = [...prev];
+      arr.splice(insertIndex, 0, { id: Date.now(), name: newItems[idx], color: colors[idx] });
+      return arr;
     });
     
-    setOperationMessage(`Inserted "${newItems[randomIdx]}" at index ${insertIndex}!`);
-    setCodeDisplay(`// Insert complete\nshelf[${insertIndex}] = "${newItems[randomIdx]}";\n// Array length: ${groceryItems.length + 1}`);
-    
-    await delay(2000);
+    setHighlightIndex(insertIndex);
+    setOperationMessage(`Inserted at index ${insertIndex}!`);
+    await delay(1500);
     setHighlightIndex(null);
     setOperationMessage('');
     setCodeDisplay('');
-    setCurrentOperation('none');
     setIsAnimating(false);
   };
 
   const groceryDelete = async () => {
     if (isAnimating || groceryItems.length <= 2) return;
     setIsAnimating(true);
-    setCurrentOperation('delete');
-    
     const deleteIndex = Math.floor(Math.random() * groceryItems.length);
-    const deletedItem = groceryItems[deleteIndex];
+    const item = groceryItems[deleteIndex];
     
     setHighlightIndex(deleteIndex);
-    setCodeDisplay(`// Delete at index ${deleteIndex}\nshelf.delete(${deleteIndex});`);
-    setOperationMessage(`Deleting "${deletedItem.name}" at index ${deleteIndex}...`);
+    setOperationMessage(`Deleting "${item.name}"...`);
     await delay(800);
     
-    // Show shifting animation
-    if (deleteIndex < groceryItems.length - 1) {
-      setOperationMessage(`Shifting elements ${deleteIndex + 1} to ${groceryItems.length - 1} left...`);
-      setCodeDisplay(`// Shift elements left O(n)\nfor(i=${deleteIndex}; i<${groceryItems.length - 1}; i++)\n  shelf[i] = shelf[i+1];`);
-      
-      for (let i = deleteIndex; i < groceryItems.length - 1; i++) {
-        setHighlightIndex(i);
-        setHighlightIndex2(i + 1);
-        await delay(400);
-      }
-    }
-    
     setGroceryItems(prev => prev.filter((_, i) => i !== deleteIndex));
-    setOperationMessage(`Deleted "${deletedItem.name}"! Elements shifted left.`);
-    setCodeDisplay(`// Delete complete\n// Array length: ${groceryItems.length - 1}`);
-    
-    await delay(2000);
+    setOperationMessage(`Deleted "${item.name}"!`);
+    await delay(1500);
     setHighlightIndex(null);
-    setHighlightIndex2(null);
     setOperationMessage('');
-    setCodeDisplay('');
-    setCurrentOperation('none');
     setIsAnimating(false);
   };
 
-  // ==================== STUDENT SEATS OPERATIONS ====================
-  
   const studentAccess = async () => {
     if (isAnimating) return;
     setIsAnimating(true);
-    setCurrentOperation('access');
-    
-    const seatNumber = Math.floor(Math.random() * students.length);
-    
-    setCodeDisplay(`seats[${seatNumber}]`);
-    setOperationMessage(`Finding student at seat ${seatNumber}...`);
-    await delay(500);
-    
-    setHighlightIndex(seatNumber);
-    setOperationMessage(`Seat ${seatNumber}: ${students[seatNumber].avatar} ${students[seatNumber].name}`);
-    setCodeDisplay(`// Random access O(1)\nstudent = seats[${seatNumber}];\n// Returns: ${students[seatNumber].name}`);
-    
-    await delay(2500);
+    const index = Math.floor(Math.random() * students.length);
+    setHighlightIndex(index);
+    setOperationMessage(`Seat ${index}: ${students[index].avatar} ${students[index].name}`);
+    await delay(2000);
     setHighlightIndex(null);
     setOperationMessage('');
-    setCodeDisplay('');
-    setCurrentOperation('none');
     setIsAnimating(false);
   };
 
   const studentSwap = async () => {
-    if (isAnimating || students.length < 2) return;
+    if (isAnimating) return;
     setIsAnimating(true);
-    setCurrentOperation('update');
-    
     const idx1 = Math.floor(Math.random() * students.length);
     let idx2 = Math.floor(Math.random() * students.length);
-    while (idx2 === idx1) {
-      idx2 = Math.floor(Math.random() * students.length);
-    }
+    while (idx2 === idx1) idx2 = Math.floor(Math.random() * students.length);
     
     setHighlightIndex(idx1);
     setHighlightIndex2(idx2);
-    setCodeDisplay(`// Swap seats ${idx1} and ${idx2}\ntemp = seats[${idx1}];\nseats[${idx1}] = seats[${idx2}];\nseats[${idx2}] = temp;`);
-    setOperationMessage(`Swapping ${students[idx1].name} (seat ${idx1}) ↔ ${students[idx2].name} (seat ${idx2})`);
-    
+    setOperationMessage(`Swapping ${students[idx1].name} ↔ ${students[idx2].name}`);
     await delay(1500);
     
     setStudents(prev => {
-      const newArr = [...prev];
-      const temp = newArr[idx1];
-      newArr[idx1] = newArr[idx2];
-      newArr[idx2] = temp;
-      return newArr;
+      const arr = [...prev];
+      [arr[idx1], arr[idx2]] = [arr[idx2], arr[idx1]];
+      return arr;
     });
     
-    setOperationMessage(`Swapped! ${students[idx2].name} now at seat ${idx1}, ${students[idx1].name} at seat ${idx2}`);
-    setCodeDisplay(`// Swap complete O(1)\n// seats[${idx1}] = ${students[idx2].name}\n// seats[${idx2}] = ${students[idx1].name}`);
-    
-    await delay(2000);
+    await delay(1000);
     setHighlightIndex(null);
     setHighlightIndex2(null);
     setOperationMessage('');
-    setCodeDisplay('');
-    setCurrentOperation('none');
     setIsAnimating(false);
   };
 
-  const studentUpdate = async () => {
-    if (isAnimating) return;
-    setIsAnimating(true);
-    setCurrentOperation('update');
-    
-    const index = Math.floor(Math.random() * students.length);
-    const newNames = ['Fay', 'Gus', 'Ivy', 'Joe', 'Kim'];
-    const newAvatars = ['👱', '👴', '👶', '🧔', '👵'];
-    const randIdx = Math.floor(Math.random() * newNames.length);
-    
-    setHighlightIndex(index);
-    setCodeDisplay(`// Update seat ${index}\nseats[${index}] = new Student("${newNames[randIdx]}");`);
-    setOperationMessage(`Updating seat ${index}: ${students[index].name} → ${newNames[randIdx]}`);
-    
-    await delay(1000);
-    
-    setStudents(prev => {
-      const newArr = [...prev];
-      newArr[index] = {
-        id: Date.now(),
-        name: newNames[randIdx],
-        avatar: newAvatars[randIdx]
-      };
-      return newArr;
-    });
-    
-    setOperationMessage(`Updated! Seat ${index} now has ${newNames[randIdx]}`);
-    setCodeDisplay(`// Update complete O(1)\nseats[${index}].name = "${newNames[randIdx]}";`);
-    
-    await delay(2000);
-    setHighlightIndex(null);
-    setOperationMessage('');
-    setCodeDisplay('');
-    setCurrentOperation('none');
-    setIsAnimating(false);
-  };
-
-  // ==================== TO-DO LIST OPERATIONS ====================
-  
   const todoAppend = async () => {
     if (isAnimating || tasks.length >= 6) return;
     setIsAnimating(true);
-    setCurrentOperation('insert');
+    const newTasks = ['Email', 'Call', 'Clean'];
+    const task = newTasks[Math.floor(Math.random() * newTasks.length)];
     
-    const newTasks = ['Email', 'Call', 'Clean', 'Cook', 'Shop', 'Walk'];
-    const priorities: ('high' | 'medium' | 'low')[] = ['high', 'medium', 'low'];
-    const randomTask = newTasks[Math.floor(Math.random() * newTasks.length)];
-    const randomPriority = priorities[Math.floor(Math.random() * priorities.length)];
-    
-    setCodeDisplay(`// Append to end O(1)\ntasks.push("${randomTask}");`);
-    setOperationMessage(`Appending "${randomTask}" to end of list...`);
-    
-    await delay(500);
+    setOperationMessage(`Appending "${task}"...`);
+    setTasks(prev => [...prev, { id: Date.now(), text: task, priority: 'medium' }]);
     setHighlightIndex(tasks.length);
-    
-    setTasks(prev => [...prev, {
-      id: Date.now(),
-      text: randomTask,
-      priority: randomPriority
-    }]);
-    
-    setOperationMessage(`Appended "${randomTask}" at index ${tasks.length}!`);
-    setCodeDisplay(`// Append complete O(1)\ntasks[${tasks.length}] = "${randomTask}";\n// No shifting needed!`);
-    
-    await delay(2000);
+    await delay(1500);
     setHighlightIndex(null);
     setOperationMessage('');
-    setCodeDisplay('');
-    setCurrentOperation('none');
-    setIsAnimating(false);
-  };
-
-  const todoInsertAt = async () => {
-    if (isAnimating || tasks.length >= 6) return;
-    setIsAnimating(true);
-    setCurrentOperation('insert');
-    
-    const newTasks = ['Urgent', 'ASAP', 'Now'];
-    const randomTask = newTasks[Math.floor(Math.random() * newTasks.length)];
-    const insertIndex = Math.floor(Math.random() * tasks.length);
-    
-    setCodeDisplay(`// Insert at index ${insertIndex}\ntasks.insert(${insertIndex}, "${randomTask}");`);
-    setOperationMessage(`Inserting "${randomTask}" at index ${insertIndex}...`);
-    
-    // Show shifting
-    setOperationMessage(`Shifting tasks ${insertIndex} to ${tasks.length - 1} right...`);
-    setCodeDisplay(`// Must shift elements O(n)\nfor(i=${tasks.length}; i>${insertIndex}; i--)\n  tasks[i] = tasks[i-1];`);
-    
-    for (let i = tasks.length - 1; i >= insertIndex; i--) {
-      setHighlightIndex(i);
-      await delay(400);
-    }
-    
-    setHighlightIndex(insertIndex);
-    
-    setTasks(prev => {
-      const newArr = [...prev];
-      newArr.splice(insertIndex, 0, {
-        id: Date.now(),
-        text: randomTask,
-        priority: 'high'
-      });
-      return newArr;
-    });
-    
-    setOperationMessage(`Inserted "${randomTask}" at index ${insertIndex}! (Required shifting)`);
-    setCodeDisplay(`// Insert at index costs O(n)\n// Had to shift ${tasks.length - insertIndex} elements`);
-    
-    await delay(2500);
-    setHighlightIndex(null);
-    setOperationMessage('');
-    setCodeDisplay('');
-    setCurrentOperation('none');
     setIsAnimating(false);
   };
 
   const todoDelete = async () => {
     if (isAnimating || tasks.length <= 2) return;
     setIsAnimating(true);
-    setCurrentOperation('delete');
-    
-    const deleteIndex = Math.floor(Math.random() * tasks.length);
-    const deletedTask = tasks[deleteIndex];
-    
-    setHighlightIndex(deleteIndex);
-    setCodeDisplay(`// Delete at index ${deleteIndex}\ntasks.remove(${deleteIndex});`);
-    setOperationMessage(`Completing "${deletedTask.text}" at index ${deleteIndex}...`);
-    
-    await delay(800);
-    
-    if (deleteIndex < tasks.length - 1) {
-      setOperationMessage(`Shifting tasks ${deleteIndex + 1} to ${tasks.length - 1} left...`);
-      setCodeDisplay(`// Shift left O(n)\nfor(i=${deleteIndex}; i<${tasks.length - 1}; i++)\n  tasks[i] = tasks[i+1];`);
-      
-      for (let i = deleteIndex; i < tasks.length - 1; i++) {
-        setHighlightIndex(i);
-        setHighlightIndex2(i + 1);
-        await delay(400);
-      }
-    }
-    
-    setTasks(prev => prev.filter((_, i) => i !== deleteIndex));
-    setOperationMessage(`Completed "${deletedTask.text}"! Remaining tasks shifted.`);
-    setCodeDisplay(`// Delete complete\n// Shifted ${tasks.length - 1 - deleteIndex} elements`);
-    
-    await delay(2000);
+    const idx = Math.floor(Math.random() * tasks.length);
+    setHighlightIndex(idx);
+    setOperationMessage(`Completing "${tasks[idx].text}"...`);
+    await delay(1000);
+    setTasks(prev => prev.filter((_, i) => i !== idx));
+    await delay(1000);
     setHighlightIndex(null);
-    setHighlightIndex2(null);
     setOperationMessage('');
-    setCodeDisplay('');
-    setCurrentOperation('none');
     setIsAnimating(false);
   };
 
-  // Reset functions
-  const resetGrocery = () => {
-    if (isAnimating) return;
-    setGroceryItems([
-      { id: 1, name: 'Milk', color: '#3498db' },
-      { id: 2, name: 'Bread', color: '#e67e22' },
-      { id: 3, name: 'Eggs', color: '#f1c40f' },
-      { id: 4, name: 'Apple', color: '#e74c3c' },
-      { id: 5, name: 'Juice', color: '#9b59b6' },
-    ]);
-  };
-
-  const resetStudents = () => {
-    if (isAnimating) return;
-    setStudents([
-      { id: 1, name: 'Alex', avatar: '👦' },
-      { id: 2, name: 'Beth', avatar: '👧' },
-      { id: 3, name: 'Carl', avatar: '👨' },
-      { id: 4, name: 'Dana', avatar: '👩' },
-      { id: 5, name: 'Erik', avatar: '🧑' },
-    ]);
-  };
-
-  const resetTasks = () => {
-    if (isAnimating) return;
-    setTasks([
-      { id: 1, text: 'Study', priority: 'high' },
-      { id: 2, text: 'Code', priority: 'high' },
-      { id: 3, text: 'Read', priority: 'medium' },
-      { id: 4, text: 'Rest', priority: 'low' },
-    ]);
-  };
-
-  // Get current array data for visualization
   const getCurrentArrayData = () => {
     switch (currentEnv) {
       case 'grocery':
         return groceryItems.map(item => ({ label: item.name, color: item.color }));
       case 'classroom':
-        return students.map(student => ({ label: student.avatar, color: '#3498db', subLabel: student.name }));
+        return students.map(s => ({ label: s.avatar, color: '#3498db', subLabel: s.name }));
       case 'todo':
-        return tasks.map(task => ({
-          label: task.text,
-          color: task.priority === 'high' ? '#e74c3c' : task.priority === 'medium' ? '#f39c12' : '#2ecc71'
+        return tasks.map(t => ({
+          label: t.text,
+          color: t.priority === 'high' ? '#e74c3c' : t.priority === 'medium' ? '#f39c12' : '#2ecc71'
         }));
       default:
         return [];
     }
   };
 
-  const getEnvInfo = () => {
-    switch (currentEnv) {
-      case 'grocery':
-        return { icon: '🛒', title: 'Grocery Shelf', surface: 'Table Surface' };
-      case 'classroom':
-        return { icon: '🪑', title: 'Student Seats', surface: 'Floor Section' };
-      case 'todo':
-        return { icon: '📝', title: 'To-Do List', surface: 'Desk Surface' };
-    }
-  };
-
   if (error) {
     return (
       <div style={{
-        width: '100vw',
-        height: '100vh',
-        background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-        padding: 20,
-        textAlign: 'center'
+        width: '100vw', height: '100vh',
+        background: '#1a1a2e',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        color: 'white', padding: 20, textAlign: 'center'
       }}>
-        <div style={{ fontSize: 60, marginBottom: 20 }}>📷</div>
+        <div style={{ fontSize: 60 }}>📷</div>
         <h2>Camera Access Needed</h2>
-        <p style={{ opacity: 0.7, marginTop: 10 }}>{error}</p>
-        <button 
-          onClick={() => window.location.reload()}
-          style={{
-            marginTop: 30,
-            padding: '22px 50px',
-            background: 'linear-gradient(135deg, #667eea, #764ba2)',
-            border: 'none',
-            borderRadius: 50,
-            color: 'white',
-            fontSize: 18,
-            cursor: 'pointer'
-          }}
-        >
+        <p style={{ opacity: 0.7 }}>{error}</p>
+        <button onClick={() => window.location.reload()}
+          style={{ marginTop: 30, padding: '15px 40px', background: '#667eea',
+            border: 'none', borderRadius: 30, color: 'white', fontSize: 16 }}>
           Try Again
         </button>
       </div>
@@ -692,75 +424,39 @@ export default function Home() {
   if (isLoading) {
     return (
       <div style={{
-        width: '100vw',
-        height: '100vh',
-        background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
+        width: '100vw', height: '100vh',
+        background: '#1a1a2e',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
         color: 'white'
       }}>
         <div style={{
-          width: 70,
-          height: 70,
-          border: '5px solid rgba(255,255,255,0.2)',
+          width: 60, height: 60,
+          border: '4px solid rgba(255,255,255,0.2)',
           borderTopColor: '#667eea',
           borderRadius: '50%',
           animation: 'spin 1s linear infinite'
         }} />
-        <h2 style={{ marginTop: 30, fontSize: 24 }}>📊 Array Learning AR</h2>
-        <p style={{ marginTop: 10, opacity: 0.7, fontSize: 16 }}>{loadingText}</p>
-        <style>{`
-          @keyframes spin { to { transform: rotate(360deg); } }
-        `}</style>
+        <h2 style={{ marginTop: 20 }}>📊 Array Learning AR</h2>
+        <p style={{ opacity: 0.7 }}>{loadingText}</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
-  const envInfo = getEnvInfo();
+  const envInfo = {
+    grocery: { icon: '🛒', title: 'Grocery Shelf' },
+    classroom: { icon: '🪑', title: 'Student Seats' },
+    todo: { icon: '📝', title: 'To-Do List' }
+  }[currentEnv];
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100vw',
-      height: '100vh',
-      background: '#000',
-      overflow: 'hidden'
-    }}>
-      {/* Camera */}
-      <video
-        ref={videoRef}
-        playsInline
-        muted
-        autoPlay
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover'
-        }}
-      />
+    <div style={{ position: 'fixed', inset: 0, background: '#000', overflow: 'hidden' }}>
+      <video ref={videoRef} playsInline muted autoPlay
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-      {/* Hidden canvas */}
-      <canvas
-        ref={canvasRef}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'none',
-          opacity: 0
-        }}
-      />
-
-      {/* 3D Array Visualization */}
+      {/* 3D Visualization */}
       {personPosition && (
         <ArrayVisualization3D
           position={personPosition}
@@ -769,487 +465,191 @@ export default function Home() {
           highlightIndex2={highlightIndex2}
           environment={currentEnv}
           zoomLevel={zoomLevel}
-          onZoomChange={setZoomLevel}
+          setZoomLevel={setZoomLevel}
         />
       )}
 
       {/* TOP UI */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        paddingTop: 'env(safe-area-inset-top, 15px)',
-        zIndex: 100,
-        pointerEvents: 'none'
-      }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: 10, zIndex: 100 }}>
         {/* Camera Switch */}
-        <button
-          onClick={switchCamera}
+        <button onClick={switchCamera}
           style={{
-            position: 'absolute',
-            top: 'calc(env(safe-area-inset-top, 15px) + 8px)',
-            right: 10,
-            width: 45,
-            height: 45,
-            borderRadius: '50%',
-            border: 'none',
-            background: 'rgba(0,0,0,0.6)',
-            color: 'white',
-            fontSize: 18,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'auto',
-            zIndex: 200
-          }}
-        >
-          🔄
-        </button>
+            position: 'absolute', top: 10, right: 10,
+            width: 44, height: 44, borderRadius: '50%',
+            border: 'none', background: 'rgba(0,0,0,0.6)',
+            color: 'white', fontSize: 20, cursor: 'pointer'
+          }}>🔄</button>
 
-        {/* Zoom Controls - BIGGER and MORE VISIBLE */}
+        {/* ZOOM CONTROLS */}
         {detectedPerson && (
           <div style={{
-            position: 'absolute',
-            top: 'calc(env(safe-area-inset-top, 15px) + 8px)',
-            left: 10,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8,
-            pointerEvents: 'auto',
-            zIndex: 200
+            position: 'absolute', top: 10, left: 10,
+            display: 'flex', flexDirection: 'column', gap: 8, zIndex: 200
           }}>
             <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleZoomIn();
-              }}
+              onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); zoomIn(); }}
               style={{
-                width: 50,
-                height: 50,
-                borderRadius: '50%',
-                border: '2px solid #fff',
+                width: 56, height: 56, borderRadius: '50%',
+                border: '3px solid #fff',
                 background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                color: 'white',
-                fontSize: 28,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                WebkitTapHighlightColor: 'transparent',
-                userSelect: 'none'
-              }}
-            >
-              +
-            </button>
-            
+                color: 'white', fontSize: 32, fontWeight: 'bold',
+                cursor: 'pointer', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
+                touchAction: 'none'
+              }}>+</button>
+
             <div style={{
-              width: 50,
-              height: 50,
-              borderRadius: '50%',
-              background: 'rgba(0,0,0,0.85)',
-              color: '#00ff00',
-              fontSize: 11,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 'bold',
-              border: '2px solid #00ff00',
-              boxShadow: '0 0 10px rgba(0,255,0,0.3)'
-            }}>
-              {Math.round(zoomLevel * 100)}%
-            </div>
-            
+              width: 56, height: 56, borderRadius: '50%',
+              background: 'rgba(0,0,0,0.9)',
+              border: '3px solid #00ff00',
+              color: '#00ff00', fontSize: 14, fontWeight: 'bold',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 0 15px rgba(0,255,0,0.3)'
+            }}>{Math.round(zoomLevel * 100)}%</div>
+
             <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleZoomOut();
-              }}
+              onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); zoomOut(); }}
               style={{
-                width: 50,
-                height: 50,
-                borderRadius: '50%',
-                border: '2px solid #fff',
+                width: 56, height: 56, borderRadius: '50%',
+                border: '3px solid #fff',
                 background: 'linear-gradient(135deg, #f093fb, #f5576c)',
-                color: 'white',
-                fontSize: 32,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 'bold',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                WebkitTapHighlightColor: 'transparent',
-                userSelect: 'none'
-              }}
-            >
-              −
-            </button>
-            
+                color: 'white', fontSize: 36, fontWeight: 'bold',
+                cursor: 'pointer', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
+                touchAction: 'none'
+              }}>−</button>
+
             <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleResetZoom();
-              }}
+              onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); resetZoom(); }}
               style={{
-                width: 50,
-                height: 50,
-                borderRadius: '50%',
-                border: '2px solid #fff',
+                width: 56, height: 56, borderRadius: '50%',
+                border: '3px solid #fff',
                 background: 'linear-gradient(135deg, #4facfe, #00f2fe)',
-                color: 'white',
-                fontSize: 20,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                WebkitTapHighlightColor: 'transparent',
-                userSelect: 'none'
-              }}
-            >
-              ⟲
-            </button>
+                color: 'white', fontSize: 24,
+                cursor: 'pointer', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
+                touchAction: 'none'
+              }}>⟲</button>
           </div>
         )}
 
-        {/* Environment Title */}
+        {/* Title */}
         <div style={{
-          position: 'absolute',
-          top: 'calc(env(safe-area-inset-top, 15px) + 8px)',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: detectedPerson 
-            ? 'linear-gradient(135deg, #00b894, #00cec9)'
-            : 'linear-gradient(135deg, #667eea, #764ba2)',
-          color: 'white',
-          padding: '8px 16px',
-          borderRadius: 20,
-          fontSize: 13,
-          fontWeight: 'bold',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          pointerEvents: 'none'
-        }}>
-          {envInfo.icon} {envInfo.title}
-        </div>
-
-        {/* Surface Label */}
-        {detectedPerson && (
-          <div style={{
-            position: 'absolute',
-            top: 'calc(env(safe-area-inset-top, 15px) + 45px)',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(0,0,0,0.7)',
-            color: '#aaa',
-            padding: '5px 12px',
-            borderRadius: 10,
-            fontSize: 11,
-            pointerEvents: 'none'
-          }}>
-            {envInfo.surface}
-          </div>
-        )}
+          position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
+          background: detectedPerson ? '#00b894' : '#667eea',
+          color: 'white', padding: '8px 16px', borderRadius: 20,
+          fontSize: 14, fontWeight: 'bold'
+        }}>{envInfo.icon} {envInfo.title}</div>
 
         {/* Environment Tabs */}
         {detectedPerson && (
           <div style={{
-            position: 'absolute',
-            top: 'calc(env(safe-area-inset-top, 15px) + 75px)',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            display: 'flex',
-            gap: 6,
-            background: 'rgba(0,0,0,0.5)',
-            padding: 4,
-            borderRadius: 20,
-            pointerEvents: 'auto'
+            position: 'absolute', top: 50, left: '50%', transform: 'translateX(-50%)',
+            display: 'flex', gap: 5, background: 'rgba(0,0,0,0.5)',
+            padding: 4, borderRadius: 20
           }}>
-            <EnvTab 
-              active={currentEnv === 'grocery'}
-              onClick={() => !isAnimating && setCurrentEnv('grocery')}
-              icon="🛒"
-              label="Shelf"
-            />
-            <EnvTab 
-              active={currentEnv === 'classroom'}
-              onClick={() => !isAnimating && setCurrentEnv('classroom')}
-              icon="🪑"
-              label="Seats"
-            />
-            <EnvTab 
-              active={currentEnv === 'todo'}
-              onClick={() => !isAnimating && setCurrentEnv('todo')}
-              icon="📝"
-              label="Tasks"
-            />
+            {(['grocery', 'classroom', 'todo'] as Environment[]).map(env => (
+              <button key={env}
+                onClick={() => !isAnimating && setCurrentEnv(env)}
+                style={{
+                  padding: '6px 12px', fontSize: 12, fontWeight: 'bold',
+                  border: 'none', borderRadius: 15,
+                  background: currentEnv === env ? '#667eea' : 'transparent',
+                  color: 'white', cursor: 'pointer',
+                  opacity: currentEnv === env ? 1 : 0.6
+                }}>
+                {env === 'grocery' ? '🛒' : env === 'classroom' ? '🪑' : '📝'}
+              </button>
+            ))}
           </div>
         )}
 
-        {/* Operation Message */}
+        {/* Message */}
         {operationMessage && (
           <div style={{
-            position: 'absolute',
-            top: 'calc(env(safe-area-inset-top, 15px) + 115px)',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(0,0,0,0.85)',
-            color: '#00ff00',
-            padding: '8px 16px',
-            borderRadius: 10,
-            fontSize: 12,
-            fontWeight: 'bold',
-            maxWidth: '90%',
-            textAlign: 'center',
-            pointerEvents: 'none'
-          }}>
-            {operationMessage}
-          </div>
+            position: 'absolute', top: 90, left: '50%', transform: 'translateX(-50%)',
+            background: 'rgba(0,0,0,0.85)', color: '#00ff00',
+            padding: '8px 16px', borderRadius: 10, fontSize: 12, fontWeight: 'bold'
+          }}>{operationMessage}</div>
         )}
 
-        {/* Code Display */}
+        {/* Code */}
         {codeDisplay && (
           <div style={{
-            position: 'absolute',
-            top: 'calc(env(safe-area-inset-top, 15px) + 150px)',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(30, 30, 30, 0.95)',
-            color: '#00ff00',
-            padding: '10px 14px',
-            borderRadius: 8,
-            fontSize: 10,
-            fontFamily: 'monospace',
-            whiteSpace: 'pre-wrap',
-            maxWidth: '85%',
-            border: '1px solid #333',
-            pointerEvents: 'none'
-          }}>
-            {codeDisplay}
-          </div>
+            position: 'absolute', top: 125, left: '50%', transform: 'translateX(-50%)',
+            background: 'rgba(30,30,30,0.95)', color: '#00ff00',
+            padding: '8px 12px', borderRadius: 8, fontSize: 10,
+            fontFamily: 'monospace', whiteSpace: 'pre-wrap',
+            border: '1px solid #333'
+          }}>{codeDisplay}</div>
         )}
       </div>
 
       {/* BOTTOM CONTROLS */}
       {detectedPerson && (
         <div style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 15px) + 10px)',
-          paddingTop: 10,
-          background: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 70%, transparent 100%)',
-          zIndex: 100,
-          pointerEvents: 'none'
+          position: 'fixed', bottom: 0, left: 0, right: 0,
+          padding: '15px 10px', paddingBottom: 25,
+          background: 'linear-gradient(to top, rgba(0,0,0,0.95), transparent)',
+          zIndex: 100
         }}>
-          {/* Key Concepts */}
-          <div style={{
-            textAlign: 'center',
-            marginBottom: 8,
-            padding: '0 15px'
-          }}>
-            <div style={{
-              background: 'rgba(255,255,255,0.1)',
-              color: '#fff',
-              padding: '6px 12px',
-              borderRadius: 8,
-              fontSize: 10,
-              display: 'inline-block'
-            }}>
-              {currentEnv === 'grocery' && '📚 Key: Linear indexing, shifting on insert/delete'}
-              {currentEnv === 'classroom' && '📚 Key: Random access O(1), element swapping'}
-              {currentEnv === 'todo' && '📚 Key: Append O(1) vs Insert O(n), shifting logic'}
-            </div>
-          </div>
-
-          {/* Operation Buttons */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: 6,
-            flexWrap: 'wrap',
-            padding: '0 10px',
-            marginBottom: 8,
-            pointerEvents: 'auto'
-          }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
             {currentEnv === 'grocery' && (
               <>
-                <OpButton onClick={groceryAccess} disabled={isAnimating} color="#f39c12" label="📍 Access" />
-                <OpButton onClick={groceryInsert} disabled={isAnimating || groceryItems.length >= 6} color="#2ecc71" label="➕ Insert" />
-                <OpButton onClick={groceryDelete} disabled={isAnimating || groceryItems.length <= 2} color="#e74c3c" label="➖ Delete" />
-                <OpButton onClick={resetGrocery} disabled={isAnimating} color="#7f8c8d" label="🔄" />
+                <OpBtn onClick={groceryAccess} disabled={isAnimating} color="#f39c12" label="📍 Access" />
+                <OpBtn onClick={groceryInsert} disabled={isAnimating || groceryItems.length >= 6} color="#2ecc71" label="➕ Insert" />
+                <OpBtn onClick={groceryDelete} disabled={isAnimating || groceryItems.length <= 2} color="#e74c3c" label="➖ Delete" />
               </>
             )}
-            
             {currentEnv === 'classroom' && (
               <>
-                <OpButton onClick={studentAccess} disabled={isAnimating} color="#f39c12" label="📍 Access" />
-                <OpButton onClick={studentSwap} disabled={isAnimating} color="#9b59b6" label="🔀 Swap" />
-                <OpButton onClick={studentUpdate} disabled={isAnimating} color="#3498db" label="✏️ Update" />
-                <OpButton onClick={resetStudents} disabled={isAnimating} color="#7f8c8d" label="🔄" />
+                <OpBtn onClick={studentAccess} disabled={isAnimating} color="#f39c12" label="📍 Access" />
+                <OpBtn onClick={studentSwap} disabled={isAnimating} color="#9b59b6" label="🔀 Swap" />
               </>
             )}
-            
             {currentEnv === 'todo' && (
               <>
-                <OpButton onClick={todoAppend} disabled={isAnimating || tasks.length >= 6} color="#2ecc71" label="⏬ Append" />
-                <OpButton onClick={todoInsertAt} disabled={isAnimating || tasks.length >= 6} color="#f39c12" label="📍 Insert" />
-                <OpButton onClick={todoDelete} disabled={isAnimating || tasks.length <= 2} color="#e74c3c" label="✅ Done" />
-                <OpButton onClick={resetTasks} disabled={isAnimating} color="#7f8c8d" label="🔄" />
+                <OpBtn onClick={todoAppend} disabled={isAnimating || tasks.length >= 6} color="#2ecc71" label="⏬ Append" />
+                <OpBtn onClick={todoDelete} disabled={isAnimating || tasks.length <= 2} color="#e74c3c" label="✅ Done" />
               </>
             )}
-          </div>
-
-          {/* Array Display */}
-          <div style={{
-            textAlign: 'center',
-            fontFamily: 'monospace',
-            fontSize: 11,
-            color: '#00ff00',
-            background: 'rgba(0,0,0,0.5)',
-            padding: '6px 12px',
-            margin: '0 15px',
-            borderRadius: 8
-          }}>
-            {currentEnv === 'grocery' && `shelf[${groceryItems.length}] = [${groceryItems.map(i => `"${i.name}"`).join(', ')}]`}
-            {currentEnv === 'classroom' && `seats[${students.length}] = [${students.map(s => `"${s.name}"`).join(', ')}]`}
-            {currentEnv === 'todo' && `tasks[${tasks.length}] = [${tasks.map(t => `"${t.text}"`).join(', ')}]`}
           </div>
         </div>
       )}
 
-      {/* Scanning animation */}
+      {/* Scanning */}
       {!detectedPerson && (
-        <>
-          <div style={{
-            position: 'absolute',
-            left: 0,
-            width: '100%',
-            height: 3,
-            background: 'linear-gradient(90deg, transparent, #667eea, transparent)',
-            boxShadow: '0 0 20px #667eea',
-            animation: 'scanMove 2s ease-in-out infinite'
-          }} />
-          <style>{`
-            @keyframes scanMove {
-              0%, 100% { top: 20%; }
-              50% { top: 80%; }
-            }
-          `}</style>
-          
-          <div style={{
-            position: 'absolute',
-            bottom: 80,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(0,0,0,0.8)',
-            color: 'white',
-            padding: '15px 25px',
-            borderRadius: 15,
-            fontSize: 14,
-            textAlign: 'center'
-          }}>
-            📱 Point camera at a person to start learning!
-          </div>
-        </>
+        <div style={{
+          position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)',
+          background: 'rgba(0,0,0,0.8)', color: 'white',
+          padding: '15px 25px', borderRadius: 15, fontSize: 14
+        }}>📱 Point camera at a person</div>
       )}
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
-        * {
-          -webkit-tap-highlight-color: transparent;
-        }
-        button {
-          -webkit-user-select: none;
-          user-select: none;
-        }
-      `}</style>
     </div>
   );
 }
 
-// Environment Tab Component
-function EnvTab({ active, onClick, icon, label }: { 
-  active: boolean;
-  onClick: () => void;
-  icon: string;
-  label: string;
+function OpBtn({ onClick, disabled, color, label }: {
+  onClick: () => void; disabled: boolean; color: string; label: string;
 }) {
   return (
-    <button
-      onClick={(e) => { e.stopPropagation(); onClick(); }}
+    <button onClick={onClick} disabled={disabled}
       style={{
-        padding: '6px 12px',
-        fontSize: 11,
-        fontWeight: 'bold',
-        border: 'none',
-        borderRadius: 15,
-        background: active ? '#667eea' : 'transparent',
-        color: 'white',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 4,
-        opacity: active ? 1 : 0.7,
-        WebkitTapHighlightColor: 'transparent'
-      }}
-    >
-      {icon} {label}
-    </button>
-  );
-}
-
-// Operation Button Component
-function OpButton({ onClick, disabled, color, label }: {
-  onClick: () => void;
-  disabled: boolean;
-  color: string;
-  label: string;
-}) {
-  return (
-    <button
-      onClick={(e) => { e.stopPropagation(); onClick(); }}
-      disabled={disabled}
-      style={{
-        padding: '10px 14px',
-        fontSize: 12,
-        fontWeight: 'bold',
-        border: 'none',
-        borderRadius: 20,
+        padding: '12px 18px', fontSize: 13, fontWeight: 'bold',
+        border: 'none', borderRadius: 25,
         background: disabled ? '#444' : color,
-        color: 'white',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.5 : 1,
-        touchAction: 'manipulation',
-        WebkitTapHighlightColor: 'transparent'
-      }}
-    >
-      {label}
-    </button>
+        color: 'white', cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.5 : 1, touchAction: 'manipulation'
+      }}>{label}</button>
   );
 }
 
-// 3D Array Visualization Component
+// ==================== 3D VISUALIZATION ====================
 function ArrayVisualization3D({
-  position,
-  arrayData,
-  highlightIndex,
-  highlightIndex2,
-  environment,
-  zoomLevel,
-  onZoomChange
+  position, arrayData, highlightIndex, highlightIndex2, environment, zoomLevel, setZoomLevel
 }: {
   position: Position;
   arrayData: { label: string; color: string; subLabel?: string }[];
@@ -1257,78 +657,56 @@ function ArrayVisualization3D({
   highlightIndex2: number | null;
   environment: Environment;
   zoomLevel: number;
-  onZoomChange: (zoom: number) => void;
+  setZoomLevel: (z: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const groupRef = useRef<THREE.Group | null>(null);
-  const rotationRef = useRef({ x: 0.25, y: 0 });
-  const isDragging = useRef(false);
-  const lastTouch = useRef({ x: 0, y: 0 });
-  const initialPinchDistance = useRef<number | null>(null);
-  const initialZoom = useRef<number>(1);
+  const rotationRef = useRef({ x: 0.3, y: 0 });
+  const zoomRef = useRef(zoomLevel);
+  
+  // Keep zoomRef in sync
+  useEffect(() => {
+    zoomRef.current = zoomLevel;
+  }, [zoomLevel]);
 
   const size = {
-    width: Math.min(window.innerWidth - 20, 360),
-    height: 160,
-    x: position.x + position.width / 2 - Math.min(window.innerWidth - 20, 360) / 2,
-    y: position.y + position.height / 2 - 80
+    width: Math.min(window.innerWidth - 20, 340),
+    height: 150,
+    x: position.x + position.width / 2 - Math.min(window.innerWidth - 20, 340) / 2,
+    y: position.y + position.height / 2 - 75
   };
 
-  const createBoxTexture = (label: string, bgColor: string, isHighlighted: boolean, isHighlighted2: boolean, subLabel?: string) => {
+  const createTexture = (label: string, bgColor: string, hl1: boolean, hl2: boolean, sub?: string) => {
     const canvas = document.createElement('canvas');
-    canvas.width = 128;
-    canvas.height = 128;
+    canvas.width = canvas.height = 128;
     const ctx = canvas.getContext('2d')!;
-
-    // Background
-    if (isHighlighted) {
-      ctx.fillStyle = '#ffff00';
-    } else if (isHighlighted2) {
-      ctx.fillStyle = '#ff00ff';
-    } else {
-      ctx.fillStyle = bgColor;
-    }
+    
+    ctx.fillStyle = hl1 ? '#ffff00' : hl2 ? '#ff00ff' : bgColor;
     ctx.fillRect(0, 0, 128, 128);
-
-    // Border
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 3;
-    ctx.strokeRect(3, 3, 122, 122);
-
-    // Text
-    ctx.fillStyle = isHighlighted || isHighlighted2 ? '#000' : '#fff';
+    ctx.strokeRect(2, 2, 124, 124);
+    
+    ctx.fillStyle = hl1 || hl2 ? '#000' : '#fff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-
-    if (label.length <= 2) {
-      ctx.font = 'bold 50px Arial';
-      ctx.fillText(label, 64, subLabel ? 50 : 64);
-    } else {
-      ctx.font = 'bold 28px Arial';
-      ctx.fillText(label, 64, subLabel ? 50 : 64);
+    ctx.font = label.length <= 2 ? 'bold 48px Arial' : 'bold 26px Arial';
+    ctx.fillText(label, 64, sub ? 50 : 64);
+    
+    if (sub) {
+      ctx.font = '16px Arial';
+      ctx.fillText(sub, 64, 95);
     }
-
-    if (subLabel) {
-      ctx.font = '18px Arial';
-      ctx.fillText(subLabel, 64, 95);
-    }
-
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.needsUpdate = true;
-    return texture;
+    
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.needsUpdate = true;
+    return tex;
   };
 
-  // Calculate distance between two touch points
-  const getTouchDistance = (touches: TouchList) => {
-    if (touches.length < 2) return null;
-    const dx = touches[0].clientX - touches[1].clientX;
-    const dy = touches[0].clientY - touches[1].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  };
-
+  // Initialize Three.js
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
@@ -1348,187 +726,138 @@ function ArrayVisualization3D({
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-    dirLight.position.set(5, 5, 5);
-    scene.add(dirLight);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.5);
+    dir.position.set(5, 5, 5);
+    scene.add(dir);
 
-    const arrayGroup = new THREE.Group();
-    groupRef.current = arrayGroup;
-    scene.add(arrayGroup);
+    const group = new THREE.Group();
+    groupRef.current = group;
+    scene.add(group);
+
+    let isDragging = false;
+    let lastX = 0, lastY = 0;
+    let pinchDist: number | null = null;
+    let pinchZoom = 1;
+
+    const getDistance = (t: TouchList) => {
+      if (t.length < 2) return null;
+      const dx = t[0].clientX - t[1].clientX;
+      const dy = t[0].clientY - t[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length === 2) {
+        pinchDist = getDistance(e.touches);
+        pinchZoom = zoomRef.current;
+      } else if (e.touches.length === 1) {
+        isDragging = true;
+        lastX = e.touches[0].clientX;
+        lastY = e.touches[0].clientY;
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length === 2 && pinchDist !== null) {
+        const dist = getDistance(e.touches);
+        if (dist) {
+          const scale = dist / pinchDist;
+          const newZoom = Math.max(0.5, Math.min(2.5, pinchZoom * scale));
+          setZoomLevel(newZoom);
+        }
+      } else if (e.touches.length === 1 && isDragging) {
+        const dx = e.touches[0].clientX - lastX;
+        const dy = e.touches[0].clientY - lastY;
+        rotationRef.current.y += dx * 0.01;
+        rotationRef.current.x = Math.max(-0.5, Math.min(0.5, rotationRef.current.x + dy * 0.01));
+        lastX = e.touches[0].clientX;
+        lastY = e.touches[0].clientY;
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches.length < 2) pinchDist = null;
+      if (e.touches.length === 0) isDragging = false;
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.15 : 0.15;
+      setZoomLevel(Math.max(0.5, Math.min(2.5, zoomRef.current + delta)));
+    };
+
+    container.addEventListener('touchstart', onTouchStart, { passive: false });
+    container.addEventListener('touchmove', onTouchMove, { passive: false });
+    container.addEventListener('touchend', onTouchEnd, { passive: false });
+    container.addEventListener('wheel', onWheel, { passive: false });
 
     const animate = () => {
       if (groupRef.current) {
         groupRef.current.rotation.x = rotationRef.current.x;
         groupRef.current.rotation.y = rotationRef.current.y;
-        groupRef.current.scale.set(zoomLevel, zoomLevel, zoomLevel);
+        groupRef.current.scale.setScalar(zoomRef.current);
       }
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     };
     animate();
 
-    // Mouse wheel zoom
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.1 : 0.1;
-      const newZoom = Math.max(0.5, Math.min(3, zoomLevel + delta));
-      onZoomChange(newZoom);
-    };
-
-    container.addEventListener('wheel', handleWheel, { passive: false });
-
     return () => {
+      container.removeEventListener('touchstart', onTouchStart);
+      container.removeEventListener('touchmove', onTouchMove);
+      container.removeEventListener('touchend', onTouchEnd);
+      container.removeEventListener('wheel', onWheel);
       renderer.dispose();
-      container.removeEventListener('wheel', handleWheel);
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
     };
   }, []);
 
-  // Update zoom
-  useEffect(() => {
-    if (groupRef.current) {
-      groupRef.current.scale.set(zoomLevel, zoomLevel, zoomLevel);
-    }
-  }, [zoomLevel]);
-
-  // Update when array changes
+  // Update boxes
   useEffect(() => {
     if (!groupRef.current) return;
-
     groupRef.current.clear();
 
-    const boxSize = environment === 'classroom' ? 0.85 : 0.8;
-    const spacing = environment === 'classroom' ? 1.0 : 0.95;
+    const boxSize = 0.8;
+    const spacing = 0.95;
     const startX = -((arrayData.length - 1) * spacing) / 2;
 
-    arrayData.forEach((item, index) => {
-      const isHighlighted = highlightIndex === index;
-      const isHighlighted2 = highlightIndex2 === index;
-      const texture = createBoxTexture(item.label, item.color, isHighlighted, isHighlighted2, item.subLabel);
-
-      const material = new THREE.MeshStandardMaterial({
-        map: texture,
-        metalness: 0.1,
-        roughness: 0.5
-      });
-
-      const geometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
-      const cube = new THREE.Mesh(geometry, material);
-
-      cube.position.x = startX + index * spacing;
-      cube.position.y = isHighlighted || isHighlighted2 ? 0.25 : 0;
-
+    arrayData.forEach((item, i) => {
+      const hl1 = highlightIndex === i;
+      const hl2 = highlightIndex2 === i;
+      const tex = createTexture(item.label, item.color, hl1, hl2, item.subLabel);
+      const mat = new THREE.MeshStandardMaterial({ map: tex, metalness: 0.1, roughness: 0.5 });
+      const geo = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
+      const cube = new THREE.Mesh(geo, mat);
+      cube.position.x = startX + i * spacing;
+      cube.position.y = hl1 || hl2 ? 0.3 : 0;
       groupRef.current!.add(cube);
 
       // Index label
-      const indexCanvas = document.createElement('canvas');
-      indexCanvas.width = 64;
-      indexCanvas.height = 32;
-      const indexCtx = indexCanvas.getContext('2d')!;
-      indexCtx.fillStyle = isHighlighted ? '#ffff00' : '#fff';
-      indexCtx.font = 'bold 20px Arial';
-      indexCtx.textAlign = 'center';
-      indexCtx.textBaseline = 'middle';
-      indexCtx.fillText(`[${index}]`, 32, 16);
-
-      const indexTexture = new THREE.CanvasTexture(indexCanvas);
-      const indexMaterial = new THREE.SpriteMaterial({ map: indexTexture, transparent: true });
-      const indexSprite = new THREE.Sprite(indexMaterial);
-      indexSprite.position.set(startX + index * spacing, -0.75, 0);
-      indexSprite.scale.set(0.5, 0.25, 1);
-      groupRef.current!.add(indexSprite);
+      const c = document.createElement('canvas');
+      c.width = 64; c.height = 32;
+      const ctx = c.getContext('2d')!;
+      ctx.fillStyle = hl1 ? '#ffff00' : '#fff';
+      ctx.font = 'bold 18px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`[${i}]`, 32, 16);
+      const t = new THREE.CanvasTexture(c);
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true }));
+      s.position.set(startX + i * spacing, -0.7, 0);
+      s.scale.set(0.5, 0.25, 1);
+      groupRef.current!.add(s);
     });
-  }, [arrayData, highlightIndex, highlightIndex2, environment]);
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (e.touches.length === 2) {
-      // Pinch to zoom
-      const distance = getTouchDistance(e.touches);
-      if (distance) {
-        initialPinchDistance.current = distance;
-        initialZoom.current = zoomLevel;
-      }
-      isDragging.current = false;
-    } else if (e.touches.length === 1) {
-      // Single touch to rotate
-      isDragging.current = true;
-      lastTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    }
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (e.touches.length === 2 && initialPinchDistance.current !== null) {
-      // Pinch zoom
-      const currentDistance = getTouchDistance(e.touches);
-      if (currentDistance) {
-        const scale = currentDistance / initialPinchDistance.current;
-        const newZoom = Math.max(0.5, Math.min(3, initialZoom.current * scale));
-        onZoomChange(newZoom);
-      }
-    } else if (e.touches.length === 1 && isDragging.current) {
-      // Rotate
-      const deltaX = e.touches[0].clientX - lastTouch.current.x;
-      const deltaY = e.touches[0].clientY - lastTouch.current.y;
-
-      rotationRef.current.y += deltaX * 0.01;
-      rotationRef.current.x += deltaY * 0.01;
-      rotationRef.current.x = Math.max(-0.5, Math.min(0.5, rotationRef.current.x));
-
-      lastTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    }
-  };
-
-  const onTouchEnd = (e: React.TouchEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (e.touches.length < 2) {
-      initialPinchDistance.current = null;
-    }
-    if (e.touches.length === 0) {
-      isDragging.current = false;
-    }
-  };
-
-  const onMouseDown = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    isDragging.current = true;
-    lastTouch.current = { x: e.clientX, y: e.clientY };
-  };
-
-  const onMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging.current) return;
-    const deltaX = e.clientX - lastTouch.current.x;
-    const deltaY = e.clientY - lastTouch.current.y;
-    rotationRef.current.y += deltaX * 0.01;
-    rotationRef.current.x += deltaY * 0.01;
-    rotationRef.current.x = Math.max(-0.5, Math.min(0.5, rotationRef.current.x));
-    lastTouch.current = { x: e.clientX, y: e.clientY };
-  };
-
-  const onMouseUp = () => {
-    isDragging.current = false;
-  };
+  }, [arrayData, highlightIndex, highlightIndex2]);
 
   return (
     <div
       ref={containerRef}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-      onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
-      onMouseLeave={onMouseUp}
       style={{
         position: 'absolute',
         left: size.x,
@@ -1536,9 +865,7 @@ function ArrayVisualization3D({
         width: size.width,
         height: size.height,
         zIndex: 50,
-        cursor: isDragging.current ? 'grabbing' : 'grab',
-        touchAction: 'none',
-        transition: 'left 0.15s, top 0.15s'
+        touchAction: 'none'
       }}
     />
   );
