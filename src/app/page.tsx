@@ -1,779 +1,4 @@
-'use client';
-
-import { useState, useRef, useEffect, useCallback } from 'react';
-import * as THREE from 'three';
-
-// ==================== INTERFACES ====================
-
-interface Detection {
-  bbox: [number, number, number, number];
-  class: string;
-  score: number;
-}
-
-interface Position {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-type DataStructure = 'array' | 'linkedlist' | 'stack' | 'queue';
-type ArrayEnvironment = 'grocery' | 'classroom' | 'todo';
-type LinkedListEnvironment = 'train' | 'people' | 'domino';
-type StackEnvironment = 'books' | 'plates' | 'boxes';
-type QueueEnvironment = 'tollgate' | 'tickets' | 'students';
-type AppMode = 'person' | 'surface'; // ← NEW
-
-interface HumanAppearance {
-  skinTone: string;
-  shirtColor: string;
-  pantsColor: string;
-  hairColor: string;
-  hairStyle: 'short' | 'long' | 'bald';
-  gender: 'male' | 'female';
-}
-
-interface DataItem {
-  id: number;
-  label: string;
-  color: string;
-  appearance?: HumanAppearance;
-}
-
-// ==================== MAIN COMPONENT ====================
-
-export default function Home() {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadingText, setLoadingText] = useState('Starting...');
-  const [model, setModel] = useState<any>(null);
-  const [detectedPerson, setDetectedPerson] = useState<Detection | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const [personPosition, setPersonPosition] = useState<Position | null>(null);
-  const [zoomLevel, setZoomLevel] = useState(1.0);
-  
-  const [currentStructure, setCurrentStructure] = useState<DataStructure>('array');
-  const [arrayEnv, setArrayEnv] = useState<ArrayEnvironment>('grocery');
-  const [linkedListEnv, setLinkedListEnv] = useState<LinkedListEnvironment>('train');
-  const [stackEnv, setStackEnv] = useState<StackEnvironment>('books');
-  const [queueEnv, setQueueEnv] = useState<QueueEnvironment>('tollgate');
-  
-  const [highlightIndex, setHighlightIndex] = useState<number | null>(null);
-  const [highlightIndex2, setHighlightIndex2] = useState<number | null>(null);
-  const [operationMessage, setOperationMessage] = useState('');
-  const [codeDisplay, setCodeDisplay] = useState('');
-  const [isAnimating, setIsAnimating] = useState(false);
-
-  // ==================== NEW: SURFACE MODE STATE ====================
-  const [appMode, setAppMode] = useState<AppMode>('person');
-  const [surfacePosition, setSurfacePosition] = useState<Position | null>(null);
-  const [surfacePlaced, setSurfacePlaced] = useState(false);
-  const [isDraggingSurface, setIsDraggingSurface] = useState(false);
-  const dragOffsetRef = useRef({ x: 0, y: 0 });
-
-  // ==================== ALL DATA ====================
-  
-  const [groceryItems, setGroceryItems] = useState<DataItem[]>([
-    { id: 1, label: 'Milk', color: '#3498db' },
-    { id: 2, label: 'Bread', color: '#e67e22' },
-    { id: 3, label: 'Eggs', color: '#f1c40f' },
-    { id: 4, label: 'Apple', color: '#e74c3c' },
-    { id: 5, label: 'Juice', color: '#9b59b6' },
-  ]);
-  
-  const [students, setStudents] = useState<DataItem[]>([
-    { id: 1, label: 'Alex', color: '#3498db', appearance: { skinTone: '#ffdbac', shirtColor: '#3498db', pantsColor: '#2c3e50', hairColor: '#4a3728', hairStyle: 'short', gender: 'male' }},
-    { id: 2, label: 'Beth', color: '#e91e63', appearance: { skinTone: '#f5d0c5', shirtColor: '#e91e63', pantsColor: '#8e44ad', hairColor: '#2c1810', hairStyle: 'long', gender: 'female' }},
-    { id: 3, label: 'Carl', color: '#27ae60', appearance: { skinTone: '#8d5524', shirtColor: '#27ae60', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' }},
-    { id: 4, label: 'Dana', color: '#f39c12', appearance: { skinTone: '#ffcd94', shirtColor: '#f39c12', pantsColor: '#3498db', hairColor: '#d4a574', hairStyle: 'long', gender: 'female' }},
-  ]);
-  
-  const [tasks, setTasks] = useState<DataItem[]>([
-    { id: 1, label: 'Study', color: '#e74c3c' },
-    { id: 2, label: 'Code', color: '#e74c3c' },
-    { id: 3, label: 'Read', color: '#f39c12' },
-    { id: 4, label: 'Rest', color: '#2ecc71' },
-  ]);
-
-  const [trainCars, setTrainCars] = useState<DataItem[]>([
-    { id: 1, label: 'Engine', color: '#e74c3c' },
-    { id: 2, label: 'Coal', color: '#3498db' },
-    { id: 3, label: 'Cargo', color: '#2ecc71' },
-    { id: 4, label: 'Pass', color: '#9b59b6' },
-  ]);
-
-  const [peopleLine, setPeopleLine] = useState<DataItem[]>([
-    { id: 1, label: 'Alice', color: '#e74c3c', appearance: { skinTone: '#ffdbac', shirtColor: '#e74c3c', pantsColor: '#2c3e50', hairColor: '#2c1810', hairStyle: 'long', gender: 'female' }},
-    { id: 2, label: 'Bob', color: '#3498db', appearance: { skinTone: '#8d5524', shirtColor: '#3498db', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' }},
-    { id: 3, label: 'Carol', color: '#2ecc71', appearance: { skinTone: '#f5d0c5', shirtColor: '#2ecc71', pantsColor: '#8e44ad', hairColor: '#d4a574', hairStyle: 'long', gender: 'female' }},
-  ]);
-
-  const [dominoNodes, setDominoNodes] = useState<DataItem[]>([
-    { id: 1, label: '1', color: '#ecf0f1' },
-    { id: 2, label: '2', color: '#ecf0f1' },
-    { id: 3, label: '3', color: '#ecf0f1' },
-    { id: 4, label: '4', color: '#ecf0f1' },
-  ]);
-
-  const [bookStack, setBookStack] = useState<DataItem[]>([
-    { id: 1, label: 'Math', color: '#3498db' },
-    { id: 2, label: 'Science', color: '#2ecc71' },
-    { id: 3, label: 'History', color: '#e67e22' },
-  ]);
-
-  const [plateStack, setPlateStack] = useState<DataItem[]>([
-    { id: 1, label: 'Plate 1', color: '#ecf0f1' },
-    { id: 2, label: 'Plate 2', color: '#bdc3c7' },
-    { id: 3, label: 'Plate 3', color: '#95a5a6' },
-  ]);
-
-  const [boxStack, setBoxStack] = useState<DataItem[]>([
-    { id: 1, label: 'Box A', color: '#e67e22' },
-    { id: 2, label: 'Box B', color: '#d35400' },
-    { id: 3, label: 'Box C', color: '#e74c3c' },
-  ]);
-
-  const [tollGate, setTollGate] = useState<DataItem[]>([
-    { id: 1, label: 'Red', color: '#e74c3c' },
-    { id: 2, label: 'Blue', color: '#3498db' },
-    { id: 3, label: 'Green', color: '#2ecc71' },
-  ]);
-
-  const [ticketQueue, setTicketQueue] = useState<DataItem[]>([
-    { id: 1, label: 'T-001', color: '#f39c12' },
-    { id: 2, label: 'T-002', color: '#e74c3c' },
-    { id: 3, label: 'T-003', color: '#9b59b6' },
-  ]);
-
-  const [studentQueue, setStudentQueue] = useState<DataItem[]>([
-    { id: 1, label: 'Stu 1', color: '#3498db', appearance: { skinTone: '#ffdbac', shirtColor: '#3498db', pantsColor: '#2c3e50', hairColor: '#4a3728', hairStyle: 'short', gender: 'male' }},
-    { id: 2, label: 'Stu 2', color: '#2ecc71', appearance: { skinTone: '#f5d0c5', shirtColor: '#2ecc71', pantsColor: '#8e44ad', hairColor: '#2c1810', hairStyle: 'long', gender: 'female' }},
-    { id: 3, label: 'Stu 3', color: '#9b59b6', appearance: { skinTone: '#8d5524', shirtColor: '#9b59b6', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' }},
-  ]);
-
-  // ==================== HELPERS ====================
-  
-  const zoomIn = useCallback(() => setZoomLevel(prev => Math.min(prev + 0.25, 2.5)), []);
-  const zoomOut = useCallback(() => setZoomLevel(prev => Math.max(prev - 0.25, 0.5)), []);
-  const resetZoom = useCallback(() => setZoomLevel(1.0), []);
-  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-  const getArrayData = () => arrayEnv === 'grocery' ? groceryItems : arrayEnv === 'classroom' ? students : tasks;
-  const setArrayData = arrayEnv === 'grocery' ? setGroceryItems : arrayEnv === 'classroom' ? setStudents : setTasks;
-  const getLinkedListData = () => linkedListEnv === 'train' ? trainCars : linkedListEnv === 'people' ? peopleLine : dominoNodes;
-  const setLinkedListData = linkedListEnv === 'train' ? setTrainCars : linkedListEnv === 'people' ? setPeopleLine : setDominoNodes;
-  const getStackData = () => stackEnv === 'books' ? bookStack : stackEnv === 'plates' ? plateStack : boxStack;
-  const setStackData = stackEnv === 'books' ? setBookStack : stackEnv === 'plates' ? setPlateStack : setBoxStack;
-  const getQueueData = () => queueEnv === 'tollgate' ? tollGate : queueEnv === 'tickets' ? ticketQueue : studentQueue;
-  const setQueueData = queueEnv === 'tollgate' ? setTollGate : queueEnv === 'tickets' ? setTicketQueue : setStudentQueue;
-  const getCurrentData = () => currentStructure === 'array' ? getArrayData() : currentStructure === 'linkedlist' ? getLinkedListData() : currentStructure === 'stack' ? getStackData() : getQueueData();
-
-  // ==================== CAMERA ====================
-
-  const startCamera = useCallback(async (facing: 'environment' | 'user') => {
-    try {
-      if (stream) stream.getTracks().forEach(track => track.stop());
-      const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
-      if (videoRef.current) {
-        videoRef.current.srcObject = newStream;
-        await new Promise<void>((resolve) => { if (videoRef.current) { videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); resolve(); }; } });
-      }
-      setStream(newStream);
-    } catch (err) { throw new Error('Cannot access camera.'); }
-  }, [stream]);
-
-  const switchCamera = async () => {
-    const newFacing = cameraFacing === 'environment' ? 'user' : 'environment';
-    setCameraFacing(newFacing);
-    try { await startCamera(newFacing); } catch (err) { console.error(err); }
-  };
-
-  const loadModel = async () => {
-    setLoadingText('Loading AI...');
-    const tf = await import('@tensorflow/tfjs');
-    await tf.ready();
-    await tf.setBackend('webgl');
-    setLoadingText('Loading detector...');
-    const cocoSsd = await import('@tensorflow-models/coco-ssd');
-    return await cocoSsd.load({ base: 'lite_mobilenet_v2' });
-  };
-
-  useEffect(() => {
-    const init = async () => {
-      try {
-        setLoadingText('Starting camera...');
-        await startCamera('environment');
-        const loadedModel = await loadModel();
-        setModel(loadedModel);
-        setIsLoading(false);
-      } catch (err: any) { setError(err.message); setIsLoading(false); }
-    };
-    init();
-    return () => { if (stream) stream.getTracks().forEach(track => track.stop()); };
-  }, []);
-
-  // ==================== PERSON DETECTION (only in person mode) ====================
-
-  useEffect(() => {
-    if (!model || !videoRef.current || !canvasRef.current) return;
-    if (appMode !== 'person') return; // ← NEW: Skip detection in surface mode
-    
-    let animationId: number, running = true, lastDetection = 0;
-    const detect = async () => {
-      if (!running || !videoRef.current || !canvasRef.current) return;
-      const now = Date.now();
-      if (now - lastDetection < 100) { animationId = requestAnimationFrame(detect); return; }
-      lastDetection = now;
-      const video = videoRef.current, canvas = canvasRef.current;
-      if (video.readyState !== 4) { animationId = requestAnimationFrame(detect); return; }
-      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-      try {
-        const predictions = await model.detect(video);
-        const humans = predictions.filter((p: any) => p.class === 'person' && p.score > 0.5);
-        if (humans.length > 0) {
-          const [x, y, width, height] = humans[0].bbox;
-          const scaleX = window.innerWidth / canvas.width, scaleY = window.innerHeight / canvas.height;
-          setDetectedPerson({ bbox: humans[0].bbox, class: humans[0].class, score: humans[0].score });
-          setPersonPosition({ x: x * scaleX, y: y * scaleY, width: width * scaleX, height: height * scaleY });
-        } else { setDetectedPerson(null); setPersonPosition(null); }
-      } catch (e) { console.error(e); }
-      if (running) animationId = requestAnimationFrame(detect);
-    };
-    detect();
-    return () => { running = false; if (animationId) cancelAnimationFrame(animationId); };
-  }, [model, appMode]); // ← NEW: Added appMode dependency
-
-  // ==================== NEW: MODE SWITCHING ====================
-
-  const switchToMode = useCallback((mode: AppMode) => {
-    setAppMode(mode);
-    if (mode === 'surface') {
-      // Clear person detection
-      setDetectedPerson(null);
-      setPersonPosition(null);
-      // Reset surface placement
-      setSurfacePlaced(false);
-      setSurfacePosition(null);
-    } else {
-      // Clear surface placement
-      setSurfacePlaced(false);
-      setSurfacePosition(null);
-    }
-  }, []);
-
-  // ==================== NEW: SURFACE TAP HANDLER ====================
-
-  const handleSurfaceTap = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    if (appMode !== 'surface') return;
-    if (surfacePlaced && !isDraggingSurface) return; // Already placed, ignore taps
-
-    let clientX: number, clientY: number;
-    if ('touches' in e) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
-
-    // Don't place if tapping on UI elements (top 160px or bottom 180px)
-    if (clientY < 160 || clientY > window.innerHeight - 180) return;
-
-    const vizWidth = Math.min(window.innerWidth - 20, 380);
-    const vizHeight = currentStructure === 'stack' ? 300 : 220;
-
-    setSurfacePosition({
-      x: clientX - vizWidth / 2,
-      y: clientY - vizHeight / 2,
-      width: vizWidth,
-      height: vizHeight,
-    });
-    setSurfacePlaced(true);
-  }, [appMode, surfacePlaced, isDraggingSurface, currentStructure]);
-
-  // ==================== NEW: SURFACE DRAG HANDLERS ====================
-
-  const handleDragStart = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    if (appMode !== 'surface' || !surfacePlaced || !surfacePosition) return;
-
-    let clientX: number, clientY: number;
-    if ('touches' in e) {
-      if (e.touches.length !== 1) return;
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
-
-    // Check if tap is within the visualization area
-    const vizRect = {
-      left: surfacePosition.x,
-      top: surfacePosition.y,
-      right: surfacePosition.x + surfacePosition.width,
-      bottom: surfacePosition.y + surfacePosition.height,
-    };
-
-    if (clientX >= vizRect.left && clientX <= vizRect.right &&
-        clientY >= vizRect.top && clientY <= vizRect.bottom) {
-      setIsDraggingSurface(true);
-      dragOffsetRef.current = {
-        x: clientX - surfacePosition.x,
-        y: clientY - surfacePosition.y,
-      };
-    }
-  }, [appMode, surfacePlaced, surfacePosition]);
-
-  const handleDragMove = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    if (!isDraggingSurface || !surfacePosition) return;
-
-    let clientX: number, clientY: number;
-    if ('touches' in e) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
-
-    const newX = clientX - dragOffsetRef.current.x;
-    const newY = clientY - dragOffsetRef.current.y;
-
-    setSurfacePosition(prev => prev ? {
-      ...prev,
-      x: Math.max(0, Math.min(newX, window.innerWidth - prev.width)),
-      y: Math.max(100, Math.min(newY, window.innerHeight - 200)),
-    } : null);
-  }, [isDraggingSurface, surfacePosition]);
-
-  const handleDragEnd = useCallback(() => {
-    setIsDraggingSurface(false);
-  }, []);
-
-  // ==================== NEW: RESET SURFACE PLACEMENT ====================
-
-  const resetSurfacePlacement = useCallback(() => {
-    setSurfacePlaced(false);
-    setSurfacePosition(null);
-  }, []);
-
-  // ==================== DETERMINE ACTIVE POSITION ====================
-
-  const activePosition = appMode === 'person' ? personPosition : surfacePosition;
-  const showVisualization = appMode === 'person' ? !!detectedPerson : surfacePlaced;
-
-  // ==================== OPERATIONS (EXACTLY THE SAME) ====================
-
-  const arrayAccess = async () => {
-    if (isAnimating) return; setIsAnimating(true);
-    const data = getArrayData(), index = Math.floor(Math.random() * data.length);
-    setHighlightIndex(index);
-    setOperationMessage(`Accessing [${index}]: "${data[index].label}"`);
-    setCodeDisplay(`// O(1) Access\narray[${index}] → "${data[index].label}"`);
-    await delay(2000);
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const arrayInsert = async () => {
-    if (isAnimating || getArrayData().length >= 6) return; setIsAnimating(true);
-    const data = getArrayData(), insertIndex = Math.floor(Math.random() * (data.length + 1));
-    setOperationMessage(`Inserting at [${insertIndex}]...`);
-    setCodeDisplay(`// O(n) Insert\narray.splice(${insertIndex}, 0, item)`);
-    for (let i = data.length - 1; i >= insertIndex; i--) { setHighlightIndex(i); await delay(300); }
-    (setArrayData as any)((prev: DataItem[]) => { const arr = [...prev]; arr.splice(insertIndex, 0, { id: Date.now(), label: 'New', color: '#1abc9c' }); return arr; });
-    setHighlightIndex(insertIndex); setOperationMessage(`Inserted!`); await delay(1500);
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const arrayDelete = async () => {
-    if (isAnimating || getArrayData().length <= 2) return; setIsAnimating(true);
-    const data = getArrayData(), deleteIndex = Math.floor(Math.random() * data.length);
-    setHighlightIndex(deleteIndex);
-    setOperationMessage(`Deleting [${deleteIndex}]...`);
-    setCodeDisplay(`// O(n) Delete\narray.splice(${deleteIndex}, 1)`);
-    await delay(1000);
-    (setArrayData as any)((prev: DataItem[]) => prev.filter((_, i) => i !== deleteIndex));
-    await delay(1500);
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const arraySwap = async () => {
-    if (isAnimating) return; setIsAnimating(true);
-    const data = getArrayData();
-    const idx1 = Math.floor(Math.random() * data.length);
-    let idx2 = Math.floor(Math.random() * data.length);
-    while (idx2 === idx1) idx2 = Math.floor(Math.random() * data.length);
-    setHighlightIndex(idx1); setHighlightIndex2(idx2);
-    setOperationMessage(`Swapping [${idx1}] ↔ [${idx2}]`);
-    setCodeDisplay(`// O(1) Swap`);
-    await delay(1500);
-    (setArrayData as any)((prev: DataItem[]) => { const arr = [...prev]; [arr[idx1], arr[idx2]] = [arr[idx2], arr[idx1]]; return arr; });
-    await delay(1000);
-    setHighlightIndex(null); setHighlightIndex2(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const linkedListInsertHead = async () => {
-    if (isAnimating || getLinkedListData().length >= 5) return; setIsAnimating(true);
-    setOperationMessage('Inserting at HEAD...');
-    setCodeDisplay(`// O(1)\nnewNode.next = head\nhead = newNode`);
-    await delay(1000);
-    const newItem: DataItem = linkedListEnv === 'people' 
-      ? { id: Date.now(), label: 'New', color: '#1abc9c', appearance: { skinTone: '#ffdbac', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#4a3728', hairStyle: 'short', gender: 'male' }}
-      : { id: Date.now(), label: 'New', color: '#1abc9c' };
-    (setLinkedListData as any)((prev: DataItem[]) => [newItem, ...prev]);
-    setHighlightIndex(0); setOperationMessage('Inserted at HEAD!'); await delay(1500);
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const linkedListInsertTail = async () => {
-    if (isAnimating || getLinkedListData().length >= 5) return; setIsAnimating(true);
-    const data = getLinkedListData();
-    setOperationMessage('Traversing to TAIL...');
-    setCodeDisplay(`// O(n) Traverse`);
-    for (let i = 0; i < data.length; i++) { setHighlightIndex(i); await delay(400); }
-    const newItem: DataItem = linkedListEnv === 'people'
-      ? { id: Date.now(), label: 'Last', color: '#e74c3c', appearance: { skinTone: '#8d5524', shirtColor: '#e74c3c', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' }}
-      : { id: Date.now(), label: 'New', color: '#e74c3c' };
-    (setLinkedListData as any)((prev: DataItem[]) => [...prev, newItem]);
-    setHighlightIndex(data.length); setOperationMessage('Inserted at TAIL!'); await delay(1500);
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const linkedListDeleteHead = async () => {
-    if (isAnimating || getLinkedListData().length <= 2) return; setIsAnimating(true);
-    setHighlightIndex(0);
-    setOperationMessage('Deleting HEAD...');
-    setCodeDisplay(`// O(1)\nhead = head.next`);
-    await delay(1500);
-    (setLinkedListData as any)((prev: DataItem[]) => prev.slice(1));
-    await delay(1000);
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const linkedListTraverse = async () => {
-    if (isAnimating) return; setIsAnimating(true);
-    const data = getLinkedListData();
-    for (let i = 0; i < data.length; i++) {
-      setHighlightIndex(i);
-      setOperationMessage(`Visiting: ${data[i].label}`);
-      setCodeDisplay(`// Node ${i}\ncurr = curr.next`);
-      await delay(600);
-    }
-    setOperationMessage(`Done! ${data.length} nodes`); await delay(1500);
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const stackPush = async () => {
-    if (isAnimating || getStackData().length >= 5) return; setIsAnimating(true);
-    const data = getStackData();
-    const labels = stackEnv === 'books' ? ['Physics', 'English', 'Art'] : stackEnv === 'plates' ? [`Plate ${data.length + 1}`] : [`Box ${String.fromCharCode(65 + data.length)}`];
-    const colors = stackEnv === 'books' ? ['#9b59b6', '#e74c3c', '#1abc9c'] : ['#7f8c8d'];
-    const newItem = { id: Date.now(), label: labels[Math.floor(Math.random() * labels.length)], color: colors[Math.floor(Math.random() * colors.length)] };
-    setOperationMessage(`Pushing "${newItem.label}"...`);
-    setCodeDisplay(`// O(1) LIFO\nstack.push("${newItem.label}")`);
-    await delay(500);
-    (setStackData as any)((prev: DataItem[]) => [...prev, newItem]);
-    setHighlightIndex(data.length); await delay(1500);
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const stackPop = async () => {
-    if (isAnimating || getStackData().length <= 1) return; setIsAnimating(true);
-    const data = getStackData(), topItem = data[data.length - 1];
-    setHighlightIndex(data.length - 1);
-    setOperationMessage(`Popping "${topItem.label}"...`);
-    setCodeDisplay(`// O(1) LIFO\nstack.pop() → "${topItem.label}"`);
-    await delay(1500);
-    (setStackData as any)((prev: DataItem[]) => prev.slice(0, -1));
-    await delay(1000);
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const stackPeek = async () => {
-    if (isAnimating || getStackData().length === 0) return; setIsAnimating(true);
-    const data = getStackData(), topItem = data[data.length - 1];
-    setHighlightIndex(data.length - 1);
-    setOperationMessage(`TOP: "${topItem.label}"`);
-    setCodeDisplay(`// O(1)\nstack.peek() → "${topItem.label}"`);
-    await delay(2000);
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const queueEnqueue = async () => {
-    if (isAnimating || getQueueData().length >= 5) return; setIsAnimating(true);
-    const data = getQueueData();
-    const newItem: DataItem = queueEnv === 'students'
-      ? { id: Date.now(), label: `Stu ${data.length + 1}`, color: '#1abc9c', appearance: { skinTone: '#ffdbac', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#4a3728', hairStyle: 'short', gender: 'male' }}
-      : { id: Date.now(), label: queueEnv === 'tollgate' ? 'New Car' : `T-00${data.length + 1}`, color: '#1abc9c' };
-    setOperationMessage(`Enqueue: "${newItem.label}"...`);
-    setCodeDisplay(`// O(1) FIFO\nqueue.enqueue("${newItem.label}")`);
-    await delay(500);
-    (setQueueData as any)((prev: DataItem[]) => [...prev, newItem]);
-    setHighlightIndex(data.length); await delay(1500);
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const queueDequeue = async () => {
-    if (isAnimating || getQueueData().length <= 1) return; setIsAnimating(true);
-    const frontItem = getQueueData()[0];
-    setHighlightIndex(0);
-    setOperationMessage(`Dequeue: "${frontItem.label}"...`);
-    setCodeDisplay(`// O(1) FIFO\nqueue.dequeue() → "${frontItem.label}"`);
-    await delay(1500);
-    (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
-    await delay(1000);
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const queueFront = async () => {
-    if (isAnimating || getQueueData().length === 0) return; setIsAnimating(true);
-    const frontItem = getQueueData()[0];
-    setHighlightIndex(0);
-    setOperationMessage(`FRONT: "${frontItem.label}"`);
-    setCodeDisplay(`// O(1)\nqueue.front() → "${frontItem.label}"`);
-    await delay(2000);
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  // ==================== RENDER ====================
-
-  if (error) return <div style={{ width: '100vw', height: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white' }}><div style={{ fontSize: 80 }}>📷</div><h2>Camera Access Needed</h2><button onClick={() => window.location.reload()} style={{ marginTop: 30, padding: '15px 40px', background: '#667eea', border: 'none', borderRadius: 30, color: 'white' }}>🔄 Try Again</button></div>;
-
-  if (isLoading) return <div style={{ width: '100vw', height: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white' }}><div style={{ width: 70, height: 70, border: '4px solid rgba(255,255,255,0.2)', borderTopColor: '#667eea', borderRadius: '50%', animation: 'spin 1s linear infinite' }} /><h2 style={{ marginTop: 25 }}>📊 Data Structure AR</h2><p>{loadingText}</p><style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style></div>;
-
-  const currentEnvId = currentStructure === 'array' ? arrayEnv : currentStructure === 'linkedlist' ? linkedListEnv : currentStructure === 'stack' ? stackEnv : queueEnv;
-  const setCurrentEnv = currentStructure === 'array' ? setArrayEnv : currentStructure === 'linkedlist' ? setLinkedListEnv : currentStructure === 'stack' ? setStackEnv : setQueueEnv;
-  const envTabs = currentStructure === 'array' ? [{ id: 'grocery', icon: '🛒', label: 'Shelf' }, { id: 'classroom', icon: '🧑‍🤝‍🧑', label: 'Seats' }, { id: 'todo', icon: '📝', label: 'Tasks' }]
-    : currentStructure === 'linkedlist' ? [{ id: 'train', icon: '🚂', label: 'Train' }, { id: 'people', icon: '👥', label: 'Line' }, { id: 'domino', icon: '🁡', label: 'Domino' }]
-    : currentStructure === 'stack' ? [{ id: 'books', icon: '📚', label: 'Books' }, { id: 'plates', icon: '🍽️', label: 'Plates' }, { id: 'boxes', icon: '📦', label: 'Boxes' }]
-    : [{ id: 'tollgate', icon: '🚗', label: 'Toll' }, { id: 'tickets', icon: '🎫', label: 'Tickets' }, { id: 'students', icon: '🧑‍🎓', label: 'Students' }];
-
-  return (
-    <div
-      style={{ position: 'fixed', inset: 0, background: '#000', overflow: 'hidden' }}
-      // NEW: Surface mode tap/drag handlers on main container
-      onClick={appMode === 'surface' && !surfacePlaced ? handleSurfaceTap : undefined}
-      onTouchStart={appMode === 'surface' && surfacePlaced ? handleDragStart : undefined}
-      onTouchMove={appMode === 'surface' && isDraggingSurface ? handleDragMove : undefined}
-      onTouchEnd={appMode === 'surface' ? handleDragEnd : undefined}
-      onMouseDown={appMode === 'surface' && surfacePlaced ? handleDragStart : undefined}
-      onMouseMove={appMode === 'surface' && isDraggingSurface ? handleDragMove : undefined}
-      onMouseUp={appMode === 'surface' ? handleDragEnd : undefined}
-    >
-      <video ref={videoRef} playsInline muted autoPlay style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
-
-      {/* ==================== 3D VISUALIZATION ==================== */}
-      {showVisualization && activePosition && (
-        <Visualization3D
-          position={activePosition}
-          data={getCurrentData()}
-          highlightIndex={highlightIndex}
-          highlightIndex2={highlightIndex2}
-          structure={currentStructure}
-          environment={currentEnvId}
-          zoomLevel={zoomLevel}
-          setZoomLevel={setZoomLevel}
-          isSurfaceMode={appMode === 'surface'}
-        />
-      )}
-
-      {/* ==================== NEW: SURFACE MODE SHADOW ==================== */}
-      {appMode === 'surface' && surfacePlaced && surfacePosition && (
-        <div style={{
-          position: 'absolute',
-          left: surfacePosition.x + 20,
-          top: surfacePosition.y + surfacePosition.height - 10,
-          width: surfacePosition.width - 40,
-          height: 20,
-          background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.1) 60%, transparent 100%)',
-          borderRadius: '50%',
-          zIndex: 49,
-          pointerEvents: 'none',
-        }} />
-      )}
-
-      {/* ==================== TOP BAR ==================== */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: 10, zIndex: 100 }}>
-        
-        {/* Camera Switch Button */}
-        <button onClick={switchCamera} style={{ position: 'absolute', top: 10, right: 10, width: 50, height: 50, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 24 }}>🔄</button>
-
-        {/* NEW: Mode Toggle - Person / Surface */}
-        <div style={{
-          position: 'absolute',
-          top: 10,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          display: 'flex',
-          background: 'rgba(0,0,0,0.8)',
-          borderRadius: 25,
-          padding: 3,
-          border: '1px solid rgba(255,255,255,0.2)',
-          zIndex: 200,
-        }}>
-          <button
-            onClick={() => switchToMode('person')}
-            style={{
-              padding: '8px 14px',
-              fontSize: 11,
-              fontWeight: 'bold',
-              border: 'none',
-              borderRadius: 20,
-              background: appMode === 'person' ? '#667eea' : 'transparent',
-              color: 'white',
-              opacity: appMode === 'person' ? 1 : 0.5,
-              cursor: 'pointer',
-              transition: 'all 0.3s',
-            }}
-          >
-            🧑 Person
-          </button>
-          <button
-            onClick={() => switchToMode('surface')}
-            style={{
-              padding: '8px 14px',
-              fontSize: 11,
-              fontWeight: 'bold',
-              border: 'none',
-              borderRadius: 20,
-              background: appMode === 'surface' ? '#00b894' : 'transparent',
-              color: 'white',
-              opacity: appMode === 'surface' ? 1 : 0.5,
-              cursor: 'pointer',
-              transition: 'all 0.3s',
-            }}
-          >
-            📱 Surface
-          </button>
-        </div>
-
-        {/* Zoom Controls (shown when visualization is visible) */}
-        {showVisualization && (
-          <div style={{ position: 'absolute', top: 50, left: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <button onPointerDown={() => zoomIn()} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#667eea', color: 'white', fontSize: 28, fontWeight: 'bold' }}>+</button>
-            <div style={{ width: 50, height: 50, borderRadius: '50%', background: '#000', border: '3px solid #0f0', color: '#0f0', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{Math.round(zoomLevel * 100)}%</div>
-            <button onPointerDown={() => zoomOut()} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#f5576c', color: 'white', fontSize: 32, fontWeight: 'bold' }}>−</button>
-            <button onPointerDown={() => resetZoom()} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#4facfe', color: 'white', fontSize: 20 }}>⟲</button>
-          </div>
-        )}
-
-        {/* Data Structure Tabs (moved down to make room for mode toggle) */}
-        <div style={{ position: 'absolute', top: 48, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 4, background: 'rgba(0,0,0,0.8)', padding: 4, borderRadius: 25 }}>
-          {(['array', 'linkedlist', 'stack', 'queue'] as DataStructure[]).map(s => (
-            <button key={s} onClick={() => { if (!isAnimating) { setCurrentStructure(s); if (appMode === 'surface') { setSurfacePlaced(false); setSurfacePosition(null); } } }} style={{ padding: '8px 12px', fontSize: 11, border: 'none', borderRadius: 20, background: currentStructure === s ? '#667eea' : 'transparent', color: 'white', opacity: currentStructure === s ? 1 : 0.6 }}>
-              {{ array: '📊', linkedlist: '🔗', stack: '📚', queue: '🚗' }[s]} {currentStructure === s && { array: 'Array', linkedlist: 'List', stack: 'Stack', queue: 'Queue' }[s]}
-            </button>
-          ))}
-        </div>
-
-        {/* Environment Tabs */}
-        {showVisualization && (
-          <div style={{ position: 'absolute', top: 90, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 4, background: 'rgba(0,0,0,0.7)', padding: 4, borderRadius: 20 }}>
-            {envTabs.map(e => (
-              <button key={e.id} onClick={() => !isAnimating && (setCurrentEnv as any)(e.id)} style={{ padding: '6px 12px', fontSize: 11, border: 'none', borderRadius: 15, background: currentEnvId === e.id ? '#00b894' : 'transparent', color: 'white', opacity: currentEnvId === e.id ? 1 : 0.6 }}>
-                {e.icon} {e.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Operation Messages */}
-        {operationMessage && <div style={{ position: 'absolute', top: 128, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.9)', color: '#0f0', padding: '10px 20px', borderRadius: 15, fontSize: 14, border: '1px solid #0f0', whiteSpace: 'nowrap' }}>⚡ {operationMessage}</div>}
-        {codeDisplay && <div style={{ position: 'absolute', top: 168, left: '50%', transform: 'translateX(-50%)', background: '#1e1e1e', color: '#0f0', padding: '10px 15px', borderRadius: 10, fontSize: 10, fontFamily: 'monospace', whiteSpace: 'pre-wrap', border: '1px solid #444' }}>{codeDisplay}</div>}
-      </div>
-
-      {/* ==================== BOTTOM PANEL ==================== */}
-      {showVisualization && (
-        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '20px 10px 30px', background: 'linear-gradient(to top, rgba(0,0,0,0.95), transparent)', zIndex: 100 }}>
-          
-          {/* NEW: Reposition button in surface mode */}
-          {appMode === 'surface' && surfacePlaced && (
-            <div style={{ textAlign: 'center', marginBottom: 10 }}>
-              <button
-                onClick={resetSurfacePlacement}
-                style={{
-                  padding: '8px 20px',
-                  fontSize: 12,
-                  fontWeight: 'bold',
-                  border: '1px solid rgba(255,255,255,0.3)',
-                  borderRadius: 20,
-                  background: 'rgba(255,255,255,0.1)',
-                  color: 'white',
-                  cursor: 'pointer',
-                }}
-              >
-                📍 Reposition
-              </button>
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginLeft: 10 }}>
-                or drag to move
-              </span>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-            {currentStructure === 'array' && (<><OpBtn onClick={arrayAccess} disabled={isAnimating} color="#f39c12" label="📍 Access" /><OpBtn onClick={arrayInsert} disabled={isAnimating || getArrayData().length >= 6} color="#2ecc71" label="➕ Insert" /><OpBtn onClick={arrayDelete} disabled={isAnimating || getArrayData().length <= 2} color="#e74c3c" label="➖ Delete" /><OpBtn onClick={arraySwap} disabled={isAnimating} color="#9b59b6" label="🔀 Swap" /></>)}
-            {currentStructure === 'linkedlist' && (<><OpBtn onClick={linkedListInsertHead} disabled={isAnimating || getLinkedListData().length >= 5} color="#2ecc71" label="⬅️ +Head" /><OpBtn onClick={linkedListInsertTail} disabled={isAnimating || getLinkedListData().length >= 5} color="#3498db" label="➡️ +Tail" /><OpBtn onClick={linkedListDeleteHead} disabled={isAnimating || getLinkedListData().length <= 2} color="#e74c3c" label="🗑️ -Head" /><OpBtn onClick={linkedListTraverse} disabled={isAnimating} color="#9b59b6" label="🔍 Traverse" /></>)}
-            {currentStructure === 'stack' && (<><OpBtn onClick={stackPush} disabled={isAnimating || getStackData().length >= 5} color="#2ecc71" label="⬆️ Push" /><OpBtn onClick={stackPop} disabled={isAnimating || getStackData().length <= 1} color="#e74c3c" label="⬇️ Pop" /><OpBtn onClick={stackPeek} disabled={isAnimating} color="#f39c12" label="👁️ Peek" /></>)}
-            {currentStructure === 'queue' && (<><OpBtn onClick={queueEnqueue} disabled={isAnimating || getQueueData().length >= 5} color="#2ecc71" label="➕ Enqueue" /><OpBtn onClick={queueDequeue} disabled={isAnimating || getQueueData().length <= 1} color="#e74c3c" label="➖ Dequeue" /><OpBtn onClick={queueFront} disabled={isAnimating} color="#f39c12" label="👁️ Front" /></>)}
-          </div>
-          <div style={{ textAlign: 'center', marginTop: 10, color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>
-            Size: {getCurrentData().length}
-            {appMode === 'surface' && <span style={{ marginLeft: 10, color: '#00b894' }}>📱 Surface Mode</span>}
-          </div>
-        </div>
-      )}
-
-      {/* ==================== PROMPT MESSAGES ==================== */}
-      
-      {/* Person mode: no person detected */}
-      {appMode === 'person' && !detectedPerson && (
-        <div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}>
-          <div style={{ fontSize: 40 }}>🧑</div>
-          <div style={{ marginTop: 8 }}>Point camera at a person</div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 5 }}>or switch to Surface mode →</div>
-        </div>
-      )}
-
-      {/* NEW: Surface mode: not yet placed */}
-      {appMode === 'surface' && !surfacePlaced && (
-        <div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}>
-          <div style={{ fontSize: 40, animation: 'tapBounce 1.5s ease infinite' }}>👆</div>
-          <div style={{ marginTop: 8, fontWeight: 'bold' }}>Tap to Place</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 5 }}>
-            Tap anywhere on screen to place<br />your data structure
-          </div>
-          <style>{`
-            @keyframes tapBounce {
-              0%, 100% { transform: translateY(0); }
-              50% { transform: translateY(-10px); }
-            }
-          `}</style>
-        </div>
-      )}
-
-      {/* NEW: Tap ripple effect */}
-      <style>{`
-        @keyframes ripple {
-          0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
-          100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
-        }
-      `}</style>
-    </div>
-  );
-}
-
-function OpBtn({ onClick, disabled, color, label }: { onClick: () => void; disabled: boolean; color: string; label: string }) {
-  return <button onClick={onClick} disabled={disabled} style={{ padding: '12px 18px', fontSize: 13, fontWeight: 'bold', border: 'none', borderRadius: 25, background: disabled ? '#555' : color, color: 'white', opacity: disabled ? 0.5 : 1 }}>{label}</button>;
-}
-
 // ==================== 3D VISUALIZATION COMPONENT ====================
-// EXACTLY THE SAME AS YOUR ORIGINAL - only added isSurfaceMode prop
 
 function Visualization3D({ position, data, highlightIndex, highlightIndex2, structure, environment, zoomLevel, setZoomLevel, isSurfaceMode }: {
   position: Position;
@@ -784,7 +9,7 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
   environment: string;
   zoomLevel: number;
   setZoomLevel: (z: number) => void;
-  isSurfaceMode: boolean; // ← NEW prop
+  isSurfaceMode: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -794,15 +19,15 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
 
   useEffect(() => { zoomRef.current = zoomLevel; }, [zoomLevel]);
 
-  const size = {
-    width: Math.min(window.innerWidth - 20, 380),
-    height: structure === 'stack' ? 300 : 220,
-    x: position.x + position.width / 2 - Math.min(window.innerWidth - 20, 380) / 2,
-    y: position.y + position.height / 2 - (structure === 'stack' ? 150 : 110)
-  };
+  // ==================== CHANGED: Full screen size, no box limits ====================
+  const renderWidth = window.innerWidth;
+  const renderHeight = window.innerHeight;
 
-  // ==================== ALL YOUR ORIGINAL 3D MODEL CREATORS ====================
-  // (EXACTLY THE SAME - NOT CHANGED)
+  // Anchor point (where 3D centers around)
+  const anchorX = position.x + position.width / 2;
+  const anchorY = position.y + position.height / 2;
+
+  // ==================== ALL YOUR 3D MODEL CREATORS (EXACTLY THE SAME) ====================
 
   const createGroceryBox = useCallback((color: string, label: string, isHighlighted: boolean): THREE.Group => {
     const box = new THREE.Group();
@@ -1179,7 +404,7 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
     return arrow;
   }, []);
 
-  // ==================== THREE.JS SETUP (SAME + shadow for surface mode) ====================
+  // ==================== CHANGED: THREE.JS SETUP - Full screen renderer ====================
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -1188,14 +413,16 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
-    const camera = new THREE.PerspectiveCamera(50, size.width / size.height, 0.1, 1000);
+    // CHANGED: Use full screen dimensions
+    const camera = new THREE.PerspectiveCamera(50, renderWidth / renderHeight, 0.1, 1000);
     camera.position.set(0, structure === 'stack' ? 1.2 : 0.5, structure === 'stack' ? 5 : 4.5);
     camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(size.width, size.height);
+    // CHANGED: Full screen size
+    renderer.setSize(renderWidth, renderHeight);
     renderer.shadowMap.enabled = true;
     container.appendChild(renderer.domElement);
 
@@ -1216,7 +443,7 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
     groupRef.current = group;
     scene.add(group);
 
-    // Touch/Mouse controls (EXACTLY THE SAME)
+    // CHANGED: Removed zoom limits - now unlimited
     let isDragging = false, lastX = 0, lastY = 0;
     let pinchDist: number | null = null, pinchZoom = 1;
 
@@ -1235,11 +462,12 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
       e.preventDefault();
       if (e.touches.length === 2 && pinchDist !== null) {
         const dist = getDistance(e.touches);
-        if (dist) { const scale = dist / pinchDist; setZoomLevel(Math.max(0.5, Math.min(2.5, pinchZoom * scale))); }
+        // CHANGED: No max limit on zoom
+        if (dist) { const scale = dist / pinchDist; setZoomLevel(Math.max(0.1, pinchZoom * scale)); }
       } else if (e.touches.length === 1 && isDragging) {
         const dx = e.touches[0].clientX - lastX, dy = e.touches[0].clientY - lastY;
         rotationRef.current.y += dx * 0.01;
-        rotationRef.current.x = Math.max(-0.6, Math.min(0.6, rotationRef.current.x + dy * 0.008));
+        rotationRef.current.x = Math.max(-1.5, Math.min(1.5, rotationRef.current.x + dy * 0.008));
         lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
       }
     };
@@ -1252,13 +480,14 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
     const onMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
       rotationRef.current.y += (e.clientX - lastX) * 0.01;
-      rotationRef.current.x = Math.max(-0.6, Math.min(0.6, rotationRef.current.x + (e.clientY - lastY) * 0.008));
+      rotationRef.current.x = Math.max(-1.5, Math.min(1.5, rotationRef.current.x + (e.clientY - lastY) * 0.008));
       lastX = e.clientX; lastY = e.clientY;
     };
     const onMouseUp = () => { isDragging = false; };
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      setZoomLevel(Math.max(0.5, Math.min(2.5, zoomRef.current + (e.deltaY > 0 ? -0.12 : 0.12))));
+      // CHANGED: No max limit on zoom
+      setZoomLevel(Math.max(0.1, zoomRef.current + (e.deltaY > 0 ? -0.15 : 0.15)));
     };
 
     container.addEventListener('touchstart', onTouchStart, { passive: false });
@@ -1295,7 +524,7 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
       renderer.dispose();
       if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
     };
-  }, [structure, size.width, size.height]);
+  }, [structure, renderWidth, renderHeight]);
 
   // ==================== UPDATE SCENE (EXACTLY THE SAME) ====================
 
@@ -1539,7 +768,7 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
         const lineGeo = new THREE.PlaneGeometry(0.15, 0.03);
         const lineMat = new THREE.MeshStandardMaterial({ color: '#ffffff', side: THREE.DoubleSide });
         for (let x = startX - 0.8; x <= startX + data.length * spacing + 0.5; x += 0.3) {
-          const line = new THREE.Mesh(lineGeo, lineMat); line.rotation.x = -Math.PI / 2; line.position.set(x, -0.075, 0); groupRef.current!.add(line);
+          const dashLine = new THREE.Mesh(lineGeo, lineMat); dashLine.rotation.x = -Math.PI / 2; dashLine.position.set(x, -0.075, 0); groupRef.current!.add(dashLine);
         }
         const exitCanvas = document.createElement('canvas'); exitCanvas.width = 80; exitCanvas.height = 48;
         const ectx = exitCanvas.getContext('2d')!; ectx.fillStyle = '#00ff00'; ectx.font = 'bold 36px Arial'; ectx.textAlign = 'center'; ectx.fillText('→', 40, 38);
@@ -1598,29 +827,23 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
     }
   }, [data, highlightIndex, highlightIndex2, structure, environment, createGroceryBox, createHuman3D, createClipboard, createTrainCar, createDomino, createBook, createPlate, createCardboardBox, createCar, createTicket, createChair, createArrow]);
 
-  // ==================== RENDER CONTAINER ====================
+  // ==================== CHANGED: Container is now full screen, no box ====================
 
   return (
     <div
       ref={containerRef}
       style={{
         position: 'absolute',
-        left: isSurfaceMode
-          ? Math.max(10, Math.min(position.x, window.innerWidth - size.width - 10))
-          : Math.max(10, Math.min(size.x, window.innerWidth - size.width - 10)),
-        top: isSurfaceMode
-          ? Math.max(100, Math.min(position.y, window.innerHeight - size.height - 150))
-          : Math.max(100, Math.min(size.y, window.innerHeight - size.height - 150)),
-        width: size.width,
-        height: size.height,
+        // CHANGED: Full screen overlay, no box
+        left: 0,
+        top: 0,
+        width: '100vw',
+        height: '100vh',
         zIndex: 50,
         touchAction: 'none',
-        // NEW: Visual indicator for surface mode
-        ...(isSurfaceMode ? {
-          borderRadius: 16,
-          border: '2px solid rgba(0, 184, 148, 0.3)',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.5), 0 0 30px rgba(0, 184, 148, 0.1)',
-        } : {})
+        pointerEvents: 'auto',
+        // CHANGED: No border, no background, no clipping
+        overflow: 'visible',
       }}
     />
   );
