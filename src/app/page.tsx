@@ -2004,9 +2004,6 @@ export default function Home() {
   const showVisualization = appMode === 'person' ? !!detectedPerson : appMode === 'surface' ? surfacePlaced : false;
   const showControls = showVisualization || (appMode === 'webxr' && webxrPlaced);
 
-   // ==================== PART 8: All Operations ====================
-  // This continues INSIDE the Home() function, right after Part 7
-
   // ==================== ARRAY OPERATIONS ====================
 
   const arrayAccess = async () => {
@@ -2210,8 +2207,6 @@ export default function Home() {
     setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
-  // ==================== PART 9: Render + OpBtn + Visualization3D ====================
-  // This continues INSIDE the Home() function, right after Part 8
 
   // ==================== ERROR SCREEN ====================
 
@@ -2739,5 +2734,4 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
   );
 }
 
-// ==================== END OF PART 9 ====================
-// ==================== END OF FILE ====================
+
