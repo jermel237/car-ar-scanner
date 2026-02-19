@@ -1418,6 +1418,10 @@ function buildSceneContent(
 
 
 
+// ==================== PARTS 6-9 COMBINED ====================
+// Delete your old Home(), OpBtn, and Visualization3D
+// Paste this entire block after buildSceneContent()
+
 export default function Home() {
   // ==================== REFS ====================
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -1434,28 +1438,25 @@ export default function Home() {
   const [personPosition, setPersonPosition] = useState<Position | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1.0);
 
-  // ==================== STRUCTURE & ENVIRONMENT ====================
   const [currentStructure, setCurrentStructure] = useState<DataStructure>('array');
   const [arrayEnv, setArrayEnv] = useState<ArrayEnvironment>('grocery');
   const [linkedListEnv, setLinkedListEnv] = useState<LinkedListEnvironment>('train');
   const [stackEnv, setStackEnv] = useState<StackEnvironment>('books');
   const [queueEnv, setQueueEnv] = useState<QueueEnvironment>('tollgate');
 
-  // ==================== ANIMATION STATE ====================
   const [highlightIndex, setHighlightIndex] = useState<number | null>(null);
   const [highlightIndex2, setHighlightIndex2] = useState<number | null>(null);
   const [operationMessage, setOperationMessage] = useState('');
   const [codeDisplay, setCodeDisplay] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // ==================== MODE STATE ====================
   const [appMode, setAppMode] = useState<AppMode>('person');
   const [surfacePosition, setSurfacePosition] = useState<Position | null>(null);
   const [surfacePlaced, setSurfacePlaced] = useState(false);
   const [isDraggingSurface, setIsDraggingSurface] = useState(false);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
 
-  // ==================== NEW: WEBXR STATE ====================
+  // ==================== WEBXR STATE ====================
   const [webxrSupported, setWebxrSupported] = useState(false);
   const [webxrActive, setWebxrActive] = useState(false);
   const [webxrPlaced, setWebxrPlaced] = useState(false);
@@ -1468,7 +1469,7 @@ export default function Home() {
   const xrHitTestSourceRef = useRef<any>(null);
   const xrContainerRef = useRef<HTMLDivElement>(null);
 
-  // ==================== ALL DATA ARRAYS ====================
+  // ==================== ALL DATA ====================
 
   const [groceryItems, setGroceryItems] = useState<DataItem[]>([
     { id: 1, label: 'Milk', color: '#3498db' },
@@ -1548,7 +1549,7 @@ export default function Home() {
     { id: 3, label: 'Stu 3', color: '#9b59b6', appearance: { skinTone: '#8d5524', shirtColor: '#9b59b6', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } },
   ]);
 
-  // ==================== HELPER FUNCTIONS ====================
+  // ==================== HELPERS ====================
 
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -1562,20 +1563,9 @@ export default function Home() {
   const setQueueData = queueEnv === 'tollgate' ? setTollGate : queueEnv === 'tickets' ? setTicketQueue : setStudentQueue;
   const getCurrentData = () => currentStructure === 'array' ? getArrayData() : currentStructure === 'linkedlist' ? getLinkedListData() : currentStructure === 'stack' ? getStackData() : getQueueData();
 
-  // ==================== COMPUTED VALUES ====================
-
-  const currentEnvId = currentStructure === 'array' ? arrayEnv
-    : currentStructure === 'linkedlist' ? linkedListEnv
-    : currentStructure === 'stack' ? stackEnv
-    : queueEnv;
-
-  const setCurrentEnv = currentStructure === 'array' ? setArrayEnv
-    : currentStructure === 'linkedlist' ? setLinkedListEnv
-    : currentStructure === 'stack' ? setStackEnv
-    : setQueueEnv;
-
+  const currentEnvId = currentStructure === 'array' ? arrayEnv : currentStructure === 'linkedlist' ? linkedListEnv : currentStructure === 'stack' ? stackEnv : queueEnv;
+  const setCurrentEnv = currentStructure === 'array' ? setArrayEnv : currentStructure === 'linkedlist' ? setLinkedListEnv : currentStructure === 'stack' ? setStackEnv : setQueueEnv;
   const currentData = getCurrentData();
-
 
   // ==================== ZOOM ====================
 
@@ -1643,7 +1633,7 @@ export default function Home() {
     };
   }, []);
 
-  // ==================== PERSON DETECTION (person mode only) ====================
+  // ==================== PERSON DETECTION ====================
 
   useEffect(() => {
     if (!model || !videoRef.current || !canvasRef.current) return;
@@ -1679,7 +1669,7 @@ export default function Home() {
     return () => { running = false; if (animationId) cancelAnimationFrame(animationId); };
   }, [model, appMode]);
 
-  // ==================== NEW: WEBXR SUPPORT CHECK ====================
+  // ==================== WEBXR SUPPORT CHECK ====================
 
   useEffect(() => {
     const checkXR = async () => {
@@ -1695,7 +1685,37 @@ export default function Home() {
     checkXR();
   }, []);
 
-  // ==================== NEW: START WEBXR ====================
+  // ==================== CLEANUP WEBXR ====================
+
+  const cleanupWebXR = useCallback(() => {
+    if (xrRendererRef.current) {
+      xrRendererRef.current.setAnimationLoop(null);
+      xrRendererRef.current.dispose();
+      if (xrContainerRef.current && xrRendererRef.current.domElement.parentNode === xrContainerRef.current) {
+        xrContainerRef.current.removeChild(xrRendererRef.current.domElement);
+      }
+    }
+    xrSessionRef.current = null;
+    xrRendererRef.current = null;
+    xrSceneRef.current = null;
+    xrCameraRef.current = null;
+    xrGroupRef.current = null;
+    xrReticleRef.current = null;
+    xrHitTestSourceRef.current = null;
+    setWebxrActive(false);
+    setWebxrPlaced(false);
+    setAppMode('surface');
+  }, []);
+
+  const stopWebXR = useCallback(() => {
+    if (xrSessionRef.current) {
+      try { xrSessionRef.current.end(); } catch (e) { cleanupWebXR(); }
+    } else {
+      cleanupWebXR();
+    }
+  }, [cleanupWebXR]);
+
+  // ==================== START WEBXR ====================
 
   const startWebXR = async () => {
     const xr = (navigator as any).xr;
@@ -1704,9 +1724,7 @@ export default function Home() {
       setAppMode('surface');
       return;
     }
-
     try {
-      // Build session options
       const sessionInit: any = {
         requiredFeatures: ['hit-test'],
         optionalFeatures: ['dom-overlay'],
@@ -1715,12 +1733,9 @@ export default function Home() {
       if (overlayEl) {
         sessionInit.domOverlay = { root: overlayEl };
       }
-
-      // Request immersive AR session
       const session = await xr.requestSession('immersive-ar', sessionInit);
       xrSessionRef.current = session;
 
-      // Create Three.js renderer for XR
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setPixelRatio(window.devicePixelRatio);
       renderer.setSize(window.innerWidth, window.innerHeight);
@@ -1728,19 +1743,13 @@ export default function Home() {
       renderer.xr.setReferenceSpaceType('local');
       xrRendererRef.current = renderer;
 
-      // Append canvas to container
       if (xrContainerRef.current) {
         xrContainerRef.current.appendChild(renderer.domElement);
       }
-
-      // Bind session to renderer
       await renderer.xr.setSession(session);
 
-      // Create scene
       const scene = new THREE.Scene();
       xrSceneRef.current = scene;
-
-      // Lighting (same as Visualization3D)
       scene.add(new THREE.AmbientLight(0xffffff, 0.7));
       const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
       dirLight.position.set(5, 10, 7);
@@ -1750,17 +1759,14 @@ export default function Home() {
       backLight.position.set(-5, 5, -5);
       scene.add(backLight);
 
-      // Camera (Three.js updates it from XR pose automatically)
       const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 100);
       xrCameraRef.current = camera;
 
-      // Content group (placed on real surface)
       const group = new THREE.Group();
       group.visible = false;
       scene.add(group);
       xrGroupRef.current = group;
 
-      // Reticle (green ring showing where to place)
       const reticleGeo = new THREE.RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2);
       const reticleMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
       const reticle = new THREE.Mesh(reticleGeo, reticleMat);
@@ -1769,48 +1775,37 @@ export default function Home() {
       scene.add(reticle);
       xrReticleRef.current = reticle;
 
-      // Center dot on reticle
       const dotGeo = new THREE.CircleGeometry(0.02, 16).rotateX(-Math.PI / 2);
       const dotMesh = new THREE.Mesh(dotGeo, new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
       dotMesh.position.y = 0.001;
       reticle.add(dotMesh);
 
-      // Pulsing outer ring on reticle
       const pulseGeo = new THREE.RingGeometry(0.11, 0.12, 32).rotateX(-Math.PI / 2);
       const pulseMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.4 });
       const pulseRing = new THREE.Mesh(pulseGeo, pulseMat);
       pulseRing.position.y = 0.001;
       reticle.add(pulseRing);
 
-      // Request hit-test source
       const viewerSpace = await session.requestReferenceSpace('viewer');
       const hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
       xrHitTestSourceRef.current = hitTestSource;
 
-      // SELECT event → tap to place content on detected surface
       session.addEventListener('select', () => {
         if (xrReticleRef.current?.visible && xrGroupRef.current && !xrGroupRef.current.visible) {
-          // Place group at reticle position
           xrGroupRef.current.position.setFromMatrixPosition(xrReticleRef.current.matrix);
           xrGroupRef.current.visible = true;
           xrGroupRef.current.scale.setScalar(0.3 * zoomLevel);
-
-          // Hide reticle
           xrReticleRef.current.visible = false;
-
           setWebxrPlaced(true);
         }
       });
 
-      // SESSION END event → cleanup
       session.addEventListener('end', () => {
         cleanupWebXR();
       });
 
-      // Animation loop (Three.js XR mode)
       renderer.setAnimationLoop((_timestamp: number, frame: any) => {
         if (frame && xrHitTestSourceRef.current && xrGroupRef.current && !xrGroupRef.current.visible) {
-          // Hit-test: find real surfaces
           const refSpace = renderer.xr.getReferenceSpace();
           if (refSpace) {
             const results = frame.getHitTestResults(xrHitTestSourceRef.current);
@@ -1829,11 +1824,9 @@ export default function Home() {
         renderer.render(scene, camera);
       });
 
-      // Update state
       setWebxrActive(true);
       setWebxrPlaced(false);
       setAppMode('webxr');
-
     } catch (err: any) {
       console.error('WebXR error:', err);
       alert('WebXR failed: ' + (err.message || 'Unknown error') + '\nUsing Surface mode.');
@@ -1841,63 +1834,18 @@ export default function Home() {
     }
   };
 
-  // ==================== NEW: CLEANUP WEBXR ====================
-
-  const cleanupWebXR = useCallback(() => {
-    // Stop animation loop
-    if (xrRendererRef.current) {
-      xrRendererRef.current.setAnimationLoop(null);
-      xrRendererRef.current.dispose();
-      // Remove canvas from container
-      if (xrContainerRef.current && xrRendererRef.current.domElement.parentNode === xrContainerRef.current) {
-        xrContainerRef.current.removeChild(xrRendererRef.current.domElement);
-      }
-    }
-
-    // Clear all refs
-    xrSessionRef.current = null;
-    xrRendererRef.current = null;
-    xrSceneRef.current = null;
-    xrCameraRef.current = null;
-    xrGroupRef.current = null;
-    xrReticleRef.current = null;
-    xrHitTestSourceRef.current = null;
-
-    // Reset state
-    setWebxrActive(false);
-    setWebxrPlaced(false);
-    setAppMode('surface');
-  }, []);
-
-  const stopWebXR = useCallback(() => {
-    if (xrSessionRef.current) {
-      try {
-        xrSessionRef.current.end(); // triggers 'end' event → cleanupWebXR
-      } catch (e) {
-        cleanupWebXR(); // fallback if .end() fails
-      }
-    } else {
-      cleanupWebXR();
-    }
-  }, [cleanupWebXR]);
-
-  // ==================== NEW: WEBXR SCENE UPDATE ====================
-  // When data/highlights change during WebXR, rebuild 3D content
+  // ==================== WEBXR SCENE UPDATE ====================
 
   useEffect(() => {
     if (appMode !== 'webxr' || !webxrPlaced || !xrGroupRef.current) return;
     buildSceneContent(xrGroupRef.current, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId);
   }, [appMode, webxrPlaced, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId]);
 
-  // ==================== NEW: WEBXR ZOOM UPDATE ====================
-
   useEffect(() => {
     if (xrGroupRef.current && webxrActive && webxrPlaced) {
       xrGroupRef.current.scale.setScalar(0.3 * zoomLevel);
     }
   }, [zoomLevel, webxrActive, webxrPlaced]);
-
-  // ==================== NEW: WEBXR REPOSITION ====================
 
   const resetWebXRPlacement = useCallback(() => {
     if (xrGroupRef.current) {
@@ -1909,22 +1857,18 @@ export default function Home() {
   // ==================== MODE SWITCHING ====================
 
   const switchToMode = useCallback((mode: AppMode) => {
-    // If leaving WebXR, stop it
     if (appMode === 'webxr' && mode !== 'webxr') {
       stopWebXR();
-      // stopWebXR sets appMode to 'surface', we override below
     }
-
     if (mode === 'webxr') {
       if (!webxrSupported) {
         alert('WebXR AR is not supported on this device.\nUsing Surface mode instead.');
         mode = 'surface';
       } else {
         startWebXR();
-        return; // startWebXR sets appMode internally
+        return;
       }
     }
-
     setAppMode(mode);
     if (mode === 'surface') {
       setDetectedPerson(null);
@@ -1937,7 +1881,7 @@ export default function Home() {
     }
   }, [appMode, webxrSupported, stopWebXR]);
 
-  // ==================== SURFACE HANDLERS (same as before) ====================
+  // ==================== SURFACE HANDLERS ====================
 
   const handleSurfaceTap = useCallback((e: React.MouseEvent) => {
     if (appMode !== 'surface' || surfacePlaced) return;
@@ -1966,8 +1910,7 @@ export default function Home() {
       clientY = e.clientY;
     }
     const viz = surfacePosition;
-    if (clientX >= viz.x && clientX <= viz.x + viz.width &&
-      clientY >= viz.y && clientY <= viz.y + viz.height) {
+    if (clientX >= viz.x && clientX <= viz.x + viz.width && clientY >= viz.y && clientY <= viz.y + viz.height) {
       setIsDraggingSurface(true);
       dragOffsetRef.current = { x: clientX - viz.x, y: clientY - viz.y };
     }
@@ -1999,13 +1942,13 @@ export default function Home() {
     setSurfacePosition(null);
   }, []);
 
-  // ==================== ACTIVE POSITION & VISIBILITY ====================
+  // ==================== ACTIVE POSITION ====================
 
   const activePosition = appMode === 'person' ? personPosition : surfacePosition;
   const showVisualization = appMode === 'person' ? !!detectedPerson : appMode === 'surface' ? surfacePlaced : false;
   const showControls = showVisualization || (appMode === 'webxr' && webxrPlaced);
 
-  // ==================== ARRAY OPERATIONS ====================
+  // ==================== ALL OPERATIONS ====================
 
   const arrayAccess = async () => {
     if (isAnimating) return; setIsAnimating(true);
@@ -2029,7 +1972,7 @@ export default function Home() {
       return arr;
     });
     setHighlightIndex(insertIndex);
-    setOperationMessage(`Inserted!`);
+    setOperationMessage('Inserted!');
     await delay(1500);
     setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
@@ -2054,7 +1997,7 @@ export default function Home() {
     while (idx2 === idx1) idx2 = Math.floor(Math.random() * data.length);
     setHighlightIndex(idx1); setHighlightIndex2(idx2);
     setOperationMessage(`Swapping [${idx1}] ↔ [${idx2}]`);
-    setCodeDisplay(`// O(1) Swap`);
+    setCodeDisplay('// O(1) Swap');
     await delay(1500);
     (setArrayData as any)((prev: DataItem[]) => {
       const arr = [...prev];
@@ -2066,12 +2009,10 @@ export default function Home() {
     setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
-  // ==================== LINKED LIST OPERATIONS ====================
-
   const linkedListInsertHead = async () => {
     if (isAnimating || getLinkedListData().length >= 5) return; setIsAnimating(true);
     setOperationMessage('Inserting at HEAD...');
-    setCodeDisplay(`// O(1)\nnewNode.next = head\nhead = newNode`);
+    setCodeDisplay('// O(1)\nnewNode.next = head\nhead = newNode');
     await delay(1000);
     const newItem: DataItem = linkedListEnv === 'people'
       ? { id: Date.now(), label: 'New', color: '#1abc9c', appearance: { skinTone: '#ffdbac', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#4a3728', hairStyle: 'short', gender: 'male' } }
@@ -2087,7 +2028,7 @@ export default function Home() {
     if (isAnimating || getLinkedListData().length >= 5) return; setIsAnimating(true);
     const data = getLinkedListData();
     setOperationMessage('Traversing to TAIL...');
-    setCodeDisplay(`// O(n) Traverse`);
+    setCodeDisplay('// O(n) Traverse');
     for (let i = 0; i < data.length; i++) { setHighlightIndex(i); await delay(400); }
     const newItem: DataItem = linkedListEnv === 'people'
       ? { id: Date.now(), label: 'Last', color: '#e74c3c', appearance: { skinTone: '#8d5524', shirtColor: '#e74c3c', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } }
@@ -2103,7 +2044,7 @@ export default function Home() {
     if (isAnimating || getLinkedListData().length <= 2) return; setIsAnimating(true);
     setHighlightIndex(0);
     setOperationMessage('Deleting HEAD...');
-    setCodeDisplay(`// O(1)\nhead = head.next`);
+    setCodeDisplay('// O(1)\nhead = head.next');
     await delay(1500);
     (setLinkedListData as any)((prev: DataItem[]) => prev.slice(1));
     await delay(1000);
@@ -2124,14 +2065,10 @@ export default function Home() {
     setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
-  // ==================== STACK OPERATIONS ====================
-
   const stackPush = async () => {
     if (isAnimating || getStackData().length >= 5) return; setIsAnimating(true);
     const data = getStackData();
-    const labels = stackEnv === 'books' ? ['Physics', 'English', 'Art']
-      : stackEnv === 'plates' ? [`Plate ${data.length + 1}`]
-      : [`Box ${String.fromCharCode(65 + data.length)}`];
+    const labels = stackEnv === 'books' ? ['Physics', 'English', 'Art'] : stackEnv === 'plates' ? [`Plate ${data.length + 1}`] : [`Box ${String.fromCharCode(65 + data.length)}`];
     const colors = stackEnv === 'books' ? ['#9b59b6', '#e74c3c', '#1abc9c'] : ['#7f8c8d'];
     const newItem = {
       id: Date.now(),
@@ -2168,8 +2105,6 @@ export default function Home() {
     await delay(2000);
     setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
-
-  // ==================== QUEUE OPERATIONS ====================
 
   const queueEnqueue = async () => {
     if (isAnimating || getQueueData().length >= 5) return; setIsAnimating(true);
@@ -2208,8 +2143,7 @@ export default function Home() {
     setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
-
-  // ==================== ERROR SCREEN ====================
+  // ==================== RENDER ====================
 
   if (error) return (
     <div style={{ width: '100vw', height: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
@@ -2218,8 +2152,6 @@ export default function Home() {
       <button onClick={() => window.location.reload()} style={{ marginTop: 30, padding: '15px 40px', background: '#667eea', border: 'none', borderRadius: 30, color: 'white' }}>🔄 Try Again</button>
     </div>
   );
-
-  // ==================== LOADING SCREEN ====================
 
   if (isLoading) return (
     <div style={{ width: '100vw', height: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
@@ -2230,8 +2162,6 @@ export default function Home() {
     </div>
   );
 
-  // ==================== ENVIRONMENT TABS DATA ====================
-
   const envTabs = currentStructure === 'array'
     ? [{ id: 'grocery', icon: '🛒', label: 'Shelf' }, { id: 'classroom', icon: '🧑‍🤝‍🧑', label: 'Seats' }, { id: 'todo', icon: '📝', label: 'Tasks' }]
     : currentStructure === 'linkedlist'
@@ -2239,8 +2169,6 @@ export default function Home() {
       : currentStructure === 'stack'
         ? [{ id: 'books', icon: '📚', label: 'Books' }, { id: 'plates', icon: '🍽️', label: 'Plates' }, { id: 'boxes', icon: '📦', label: 'Boxes' }]
         : [{ id: 'tollgate', icon: '🚗', label: 'Toll' }, { id: 'tickets', icon: '🎫', label: 'Tickets' }, { id: 'students', icon: '🧑‍🎓', label: 'Students' }];
-
-  // ==================== MAIN RENDER ====================
 
   return (
     <div
@@ -2254,7 +2182,6 @@ export default function Home() {
       onMouseMove={appMode === 'surface' && isDraggingSurface ? handleDragMove : undefined}
       onMouseUp={appMode === 'surface' ? handleDragEnd : undefined}
     >
-      {/* ===== VIDEO (hidden during WebXR) ===== */}
       {!webxrActive && (
         <video ref={videoRef} playsInline muted autoPlay style={{
           position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'
@@ -2262,14 +2189,12 @@ export default function Home() {
       )}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-      {/* ===== WEBXR RENDERER CONTAINER ===== */}
       <div ref={xrContainerRef} style={{
         position: 'fixed', inset: 0,
         zIndex: webxrActive ? 1 : -1,
         pointerEvents: 'none',
       }} />
 
-      {/* ===== 3D VISUALIZATION (person/surface modes only) ===== */}
       {!webxrActive && showVisualization && activePosition && (
         <Visualization3D
           position={activePosition}
@@ -2284,7 +2209,6 @@ export default function Home() {
         />
       )}
 
-      {/* ===== SURFACE MODE SHADOW ===== */}
       {!webxrActive && appMode === 'surface' && surfacePlaced && surfacePosition && (
         <div style={{
           position: 'absolute',
@@ -2299,10 +2223,8 @@ export default function Home() {
         }} />
       )}
 
-      {/* ===== TOP BAR ===== */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: 10, zIndex: 100 }}>
 
-        {/* Camera Switch (hidden in WebXR) */}
         {!webxrActive && (
           <button onClick={switchCamera} style={{
             position: 'absolute', top: 10, right: 10, width: 50, height: 50,
@@ -2311,7 +2233,6 @@ export default function Home() {
           }}>🔄</button>
         )}
 
-        {/* ===== MODE TOGGLE (3 buttons now) ===== */}
         <div style={{
           position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
           display: 'flex', background: 'rgba(0,0,0,0.8)', borderRadius: 25, padding: 3,
@@ -2339,7 +2260,6 @@ export default function Home() {
           }}>🌐 WebXR{!webxrSupported && ' ✗'}</button>
         </div>
 
-        {/* ===== ZOOM CONTROLS ===== */}
         {showControls && (
           <div style={{ position: 'absolute', top: 50, left: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <button onPointerDown={zoomIn} style={{
@@ -2362,7 +2282,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* ===== DATA STRUCTURE TABS ===== */}
         <div style={{
           position: 'absolute', top: 48, left: '50%', transform: 'translateX(-50%)',
           display: 'flex', gap: 4, background: 'rgba(0,0,0,0.8)', padding: 4, borderRadius: 25,
@@ -2371,8 +2290,10 @@ export default function Home() {
             <button key={s} onClick={() => {
               if (!isAnimating) {
                 setCurrentStructure(s);
-                if (appMode === 'surface') { setSurfacePlaced(false); setSurfacePosition(null); }
-                // WebXR: content rebuilds automatically via useEffect
+                if (appMode === 'surface') {
+                  setSurfacePlaced(false);
+                  setSurfacePosition(null);
+                }
               }
             }} style={{
               padding: '8px 12px', fontSize: 11, border: 'none', borderRadius: 20,
@@ -2385,7 +2306,6 @@ export default function Home() {
           ))}
         </div>
 
-        {/* ===== ENVIRONMENT TABS ===== */}
         {showControls && (
           <div style={{
             position: 'absolute', top: 90, left: '50%', transform: 'translateX(-50%)',
@@ -2401,7 +2321,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* ===== OPERATION MESSAGES ===== */}
         {operationMessage && (
           <div style={{
             position: 'absolute', top: 128, left: '50%', transform: 'translateX(-50%)',
@@ -2417,7 +2336,6 @@ export default function Home() {
           }}>{codeDisplay}</div>
         )}
 
-        {/* ===== WEBXR EXIT BUTTON ===== */}
         {webxrActive && (
           <button onClick={stopWebXR} style={{
             position: 'absolute', top: 10, right: 10, padding: '10px 18px',
@@ -2427,7 +2345,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* ===== BOTTOM PANEL (operations) ===== */}
       {showControls && (
         <div style={{
           position: 'fixed', bottom: 0, left: 0, right: 0,
@@ -2435,8 +2352,6 @@ export default function Home() {
           background: 'linear-gradient(to top, rgba(0,0,0,0.95), transparent)',
           zIndex: 100,
         }}>
-
-          {/* Reposition buttons */}
           {appMode === 'surface' && surfacePlaced && (
             <div style={{ textAlign: 'center', marginBottom: 10 }}>
               <button onClick={resetSurfacePlacement} style={{
@@ -2444,9 +2359,7 @@ export default function Home() {
                 border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20,
                 background: 'rgba(255,255,255,0.1)', color: 'white',
               }}>📍 Reposition</button>
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginLeft: 10 }}>
-                or drag to move
-              </span>
+              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginLeft: 10 }}>or drag to move</span>
             </div>
           )}
           {appMode === 'webxr' && webxrPlaced && (
@@ -2459,7 +2372,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Operation Buttons */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
             {currentStructure === 'array' && (
               <>
@@ -2493,7 +2405,6 @@ export default function Home() {
             )}
           </div>
 
-          {/* Status bar */}
           <div style={{ textAlign: 'center', marginTop: 10, color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>
             Size: {currentData.length}
             {appMode === 'surface' && <span style={{ marginLeft: 10, color: '#00b894' }}>📱 Surface</span>}
@@ -2502,9 +2413,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* ===== PROMPT MESSAGES ===== */}
-
-      {/* Person mode: no person detected */}
       {appMode === 'person' && !detectedPerson && !webxrActive && (
         <div style={{
           position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)',
@@ -2513,13 +2421,10 @@ export default function Home() {
         }}>
           <div style={{ fontSize: 40 }}>🧑</div>
           <div style={{ marginTop: 8 }}>Point camera at a person</div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 5 }}>
-            or switch to Surface / WebXR →
-          </div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 5 }}>or switch to Surface / WebXR →</div>
         </div>
       )}
 
-      {/* Surface mode: not placed */}
       {appMode === 'surface' && !surfacePlaced && !webxrActive && (
         <div style={{
           position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)',
@@ -2535,7 +2440,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* WebXR mode: looking for surface */}
       {appMode === 'webxr' && webxrActive && !webxrPlaced && (
         <div style={{
           position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)',
@@ -2543,22 +2447,18 @@ export default function Home() {
           borderRadius: 20, textAlign: 'center',
         }}>
           <div style={{ fontSize: 40, animation: 'xrPulse 2s ease infinite' }}>🌐</div>
-          <div style={{ marginTop: 8, fontWeight: 'bold', color: '#00ff00' }}>
-            Scanning for surfaces...
-          </div>
+          <div style={{ marginTop: 8, fontWeight: 'bold', color: '#00ff00' }}>Scanning for surfaces...</div>
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 5 }}>
-            Point at a floor or table<br />
-            Tap the green ring to place
+            Point at a floor or table<br />Tap the green ring to place
           </div>
           <style>{`@keyframes xrPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } }`}</style>
         </div>
       )}
-
     </div>
   );
-}
+} // ← THIS closes Home()
 
-// ==================== OPERATION BUTTON COMPONENT ====================
+// ==================== OPERATION BUTTON ====================
 
 function OpBtn({ onClick, disabled, color, label }: {
   onClick: () => void;
@@ -2574,8 +2474,7 @@ function OpBtn({ onClick, disabled, color, label }: {
   );
 }
 
-// ==================== VISUALIZATION3D COMPONENT (SIMPLIFIED) ====================
-// Now uses buildSceneContent() instead of inline scene building
+// ==================== VISUALIZATION 3D ====================
 
 function Visualization3D({ position, data, highlightIndex, highlightIndex2, structure, environment, zoomLevel, setZoomLevel, isSurfaceMode }: {
   position: Position;
@@ -2599,7 +2498,6 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
   const renderWidth = window.innerWidth;
   const renderHeight = window.innerHeight;
 
-  // ===== THREE.JS SETUP (renderer, camera, controls, animation) =====
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
@@ -2618,25 +2516,32 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
     renderer.shadowMap.enabled = true;
     container.appendChild(renderer.domElement);
 
-    // Lighting
     scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
     dirLight.position.set(5, 10, 7);
     dirLight.castShadow = true;
     scene.add(dirLight);
-    scene.add(new THREE.DirectionalLight(0xffffff, 0.3)).position.set(-5, 5, -5);
-    scene.add(new THREE.PointLight(0xffffff, 0.3)).position.set(0, -3, 3);
+
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.3);
+    backLight.position.set(-5, 5, -5);
+    scene.add(backLight);
+
+    const fillLight = new THREE.PointLight(0xffffff, 0.3);
+    fillLight.position.set(0, -3, 3);
+    scene.add(fillLight);
 
     const group = new THREE.Group();
     groupRef.current = group;
     scene.add(group);
 
-    // Touch/Mouse controls
     let isDragging = false, lastX = 0, lastY = 0;
     let pinchDist: number | null = null, pinchZoom = 1;
+
     const getDist = (t: TouchList): number | null => {
       if (t.length < 2) return null;
-      const dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+      const dx = t[0].clientX - t[1].clientX;
+      const dy = t[0].clientY - t[1].clientY;
       return Math.sqrt(dx * dx + dy * dy);
     };
 
@@ -2710,576 +2615,11 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
     };
   }, [structure, renderWidth, renderHeight]);
 
-  // ===== SCENE CONTENT UPDATE (uses shared buildSceneContent) =====
   useEffect(() => {
     if (!groupRef.current) return;
     buildSceneContent(groupRef.current, data, highlightIndex, highlightIndex2, structure, environment);
   }, [data, highlightIndex, highlightIndex2, structure, environment]);
 
-  // ===== RENDER =====
-  return (
-    <div
-      ref={containerRef}
-      style={{
-        position: 'absolute',
-        left: 0,
-        top: 0,
-        width: '100vw',
-        height: '100vh',
-        zIndex: 50,
-        touchAction: 'none',
-        pointerEvents: 'auto',
-        overflow: 'visible',
-      }}
-    />
-  );
-}  // ==================== PART 9: Render + OpBtn + Visualization3D ====================
-  // This continues INSIDE the Home() function, right after Part 8
-
-  // ==================== ERROR SCREEN ====================
-
-  if (error) return (
-    <div style={{ width: '100vw', height: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-      <div style={{ fontSize: 80 }}>📷</div>
-      <h2>Camera Access Needed</h2>
-      <button onClick={() => window.location.reload()} style={{ marginTop: 30, padding: '15px 40px', background: '#667eea', border: 'none', borderRadius: 30, color: 'white' }}>🔄 Try Again</button>
-    </div>
-  );
-
-  // ==================== LOADING SCREEN ====================
-
-  if (isLoading) return (
-    <div style={{ width: '100vw', height: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-      <div style={{ width: 70, height: 70, border: '4px solid rgba(255,255,255,0.2)', borderTopColor: '#667eea', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-      <h2 style={{ marginTop: 25 }}>📊 Data Structure AR</h2>
-      <p>{loadingText}</p>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
-
-  // ==================== ENVIRONMENT TABS DATA ====================
-
-  const envTabs = currentStructure === 'array'
-    ? [{ id: 'grocery', icon: '🛒', label: 'Shelf' }, { id: 'classroom', icon: '🧑‍🤝‍🧑', label: 'Seats' }, { id: 'todo', icon: '📝', label: 'Tasks' }]
-    : currentStructure === 'linkedlist'
-      ? [{ id: 'train', icon: '🚂', label: 'Train' }, { id: 'people', icon: '👥', label: 'Line' }, { id: 'domino', icon: '🁡', label: 'Domino' }]
-      : currentStructure === 'stack'
-        ? [{ id: 'books', icon: '📚', label: 'Books' }, { id: 'plates', icon: '🍽️', label: 'Plates' }, { id: 'boxes', icon: '📦', label: 'Boxes' }]
-        : [{ id: 'tollgate', icon: '🚗', label: 'Toll' }, { id: 'tickets', icon: '🎫', label: 'Tickets' }, { id: 'students', icon: '🧑‍🎓', label: 'Students' }];
-
-  // ==================== MAIN RENDER ====================
-
-  return (
-    <div
-      id="ar-overlay"
-      style={{ position: 'fixed', inset: 0, background: '#000', overflow: 'hidden' }}
-      onClick={appMode === 'surface' && !surfacePlaced ? handleSurfaceTap : undefined}
-      onTouchStart={appMode === 'surface' && surfacePlaced ? handleDragStart : undefined}
-      onTouchMove={appMode === 'surface' && isDraggingSurface ? handleDragMove : undefined}
-      onTouchEnd={appMode === 'surface' ? handleDragEnd : undefined}
-      onMouseDown={appMode === 'surface' && surfacePlaced ? handleDragStart : undefined}
-      onMouseMove={appMode === 'surface' && isDraggingSurface ? handleDragMove : undefined}
-      onMouseUp={appMode === 'surface' ? handleDragEnd : undefined}
-    >
-      {/* ===== VIDEO (hidden during WebXR) ===== */}
-      {!webxrActive && (
-        <video ref={videoRef} playsInline muted autoPlay style={{
-          position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'
-        }} />
-      )}
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
-
-      {/* ===== WEBXR RENDERER CONTAINER ===== */}
-      <div ref={xrContainerRef} style={{
-        position: 'fixed', inset: 0,
-        zIndex: webxrActive ? 1 : -1,
-        pointerEvents: 'none',
-      }} />
-
-      {/* ===== 3D VISUALIZATION (person/surface modes only) ===== */}
-      {!webxrActive && showVisualization && activePosition && (
-        <Visualization3D
-          position={activePosition}
-          data={currentData}
-          highlightIndex={highlightIndex}
-          highlightIndex2={highlightIndex2}
-          structure={currentStructure}
-          environment={currentEnvId}
-          zoomLevel={zoomLevel}
-          setZoomLevel={setZoomLevel}
-          isSurfaceMode={appMode === 'surface'}
-        />
-      )}
-
-      {/* ===== SURFACE MODE SHADOW ===== */}
-      {!webxrActive && appMode === 'surface' && surfacePlaced && surfacePosition && (
-        <div style={{
-          position: 'absolute',
-          left: surfacePosition.x + 40,
-          top: surfacePosition.y + surfacePosition.height,
-          width: surfacePosition.width - 80,
-          height: 25,
-          background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.1) 60%, transparent 100%)',
-          borderRadius: '50%',
-          zIndex: 49,
-          pointerEvents: 'none',
-        }} />
-      )}
-
-      {/* ===== TOP BAR ===== */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: 10, zIndex: 100 }}>
-
-        {/* Camera Switch (hidden in WebXR) */}
-        {!webxrActive && (
-          <button onClick={switchCamera} style={{
-            position: 'absolute', top: 10, right: 10, width: 50, height: 50,
-            borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)',
-            background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 24, zIndex: 200,
-          }}>🔄</button>
-        )}
-
-        {/* ===== MODE TOGGLE (3 buttons) ===== */}
-        <div style={{
-          position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
-          display: 'flex', background: 'rgba(0,0,0,0.8)', borderRadius: 25, padding: 3,
-          border: '1px solid rgba(255,255,255,0.2)', zIndex: 200,
-        }}>
-          <button onClick={() => switchToMode('person')} style={{
-            padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20,
-            background: appMode === 'person' ? '#667eea' : 'transparent',
-            color: 'white', opacity: appMode === 'person' ? 1 : 0.5, cursor: 'pointer',
-            transition: 'all 0.3s',
-          }}>🧑 Person</button>
-          <button onClick={() => switchToMode('surface')} style={{
-            padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20,
-            background: appMode === 'surface' ? '#00b894' : 'transparent',
-            color: 'white', opacity: appMode === 'surface' ? 1 : 0.5, cursor: 'pointer',
-            transition: 'all 0.3s',
-          }}>📱 Surface</button>
-          <button onClick={() => switchToMode('webxr')} style={{
-            padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20,
-            background: appMode === 'webxr' ? '#e17055' : 'transparent',
-            color: 'white',
-            opacity: appMode === 'webxr' ? 1 : webxrSupported ? 0.5 : 0.25,
-            cursor: webxrSupported ? 'pointer' : 'not-allowed',
-            transition: 'all 0.3s',
-          }}>🌐 WebXR{!webxrSupported && ' ✗'}</button>
-        </div>
-
-        {/* ===== ZOOM CONTROLS ===== */}
-        {showControls && (
-          <div style={{ position: 'absolute', top: 50, left: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <button onPointerDown={zoomIn} style={{
-              width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff',
-              background: '#667eea', color: 'white', fontSize: 28, fontWeight: 'bold',
-            }}>+</button>
-            <div style={{
-              width: 50, height: 50, borderRadius: '50%', background: '#000',
-              border: '3px solid #0f0', color: '#0f0', fontSize: 12,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>{Math.round(zoomLevel * 100)}%</div>
-            <button onPointerDown={zoomOut} style={{
-              width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff',
-              background: '#f5576c', color: 'white', fontSize: 32, fontWeight: 'bold',
-            }}>−</button>
-            <button onPointerDown={resetZoom} style={{
-              width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff',
-              background: '#4facfe', color: 'white', fontSize: 20,
-            }}>⟲</button>
-          </div>
-        )}
-
-        {/* ===== DATA STRUCTURE TABS ===== */}
-        <div style={{
-          position: 'absolute', top: 48, left: '50%', transform: 'translateX(-50%)',
-          display: 'flex', gap: 4, background: 'rgba(0,0,0,0.8)', padding: 4, borderRadius: 25,
-        }}>
-          {(['array', 'linkedlist', 'stack', 'queue'] as DataStructure[]).map(s => (
-            <button key={s} onClick={() => {
-              if (!isAnimating) {
-                setCurrentStructure(s);
-                if (appMode === 'surface') {
-                  setSurfacePlaced(false);
-                  setSurfacePosition(null);
-                }
-              }
-            }} style={{
-              padding: '8px 12px', fontSize: 11, border: 'none', borderRadius: 20,
-              background: currentStructure === s ? '#667eea' : 'transparent',
-              color: 'white', opacity: currentStructure === s ? 1 : 0.6,
-            }}>
-              {{ array: '📊', linkedlist: '🔗', stack: '📚', queue: '🚗' }[s]}
-              {currentStructure === s && ' ' + { array: 'Array', linkedlist: 'List', stack: 'Stack', queue: 'Queue' }[s]}
-            </button>
-          ))}
-        </div>
-
-        {/* ===== ENVIRONMENT TABS ===== */}
-        {showControls && (
-          <div style={{
-            position: 'absolute', top: 90, left: '50%', transform: 'translateX(-50%)',
-            display: 'flex', gap: 4, background: 'rgba(0,0,0,0.7)', padding: 4, borderRadius: 20,
-          }}>
-            {envTabs.map(e => (
-              <button key={e.id} onClick={() => !isAnimating && (setCurrentEnv as any)(e.id)} style={{
-                padding: '6px 12px', fontSize: 11, border: 'none', borderRadius: 15,
-                background: currentEnvId === e.id ? '#00b894' : 'transparent',
-                color: 'white', opacity: currentEnvId === e.id ? 1 : 0.6,
-              }}>{e.icon} {e.label}</button>
-            ))}
-          </div>
-        )}
-
-        {/* ===== OPERATION MESSAGES ===== */}
-        {operationMessage && (
-          <div style={{
-            position: 'absolute', top: 128, left: '50%', transform: 'translateX(-50%)',
-            background: 'rgba(0,0,0,0.9)', color: '#0f0', padding: '10px 20px',
-            borderRadius: 15, fontSize: 14, border: '1px solid #0f0', whiteSpace: 'nowrap',
-          }}>⚡ {operationMessage}</div>
-        )}
-        {codeDisplay && (
-          <div style={{
-            position: 'absolute', top: 168, left: '50%', transform: 'translateX(-50%)',
-            background: '#1e1e1e', color: '#0f0', padding: '10px 15px', borderRadius: 10,
-            fontSize: 10, fontFamily: 'monospace', whiteSpace: 'pre-wrap', border: '1px solid #444',
-          }}>{codeDisplay}</div>
-        )}
-
-        {/* ===== WEBXR EXIT BUTTON ===== */}
-        {webxrActive && (
-          <button onClick={stopWebXR} style={{
-            position: 'absolute', top: 10, right: 10, padding: '10px 18px',
-            background: '#e74c3c', color: 'white', border: 'none', borderRadius: 20,
-            fontSize: 13, fontWeight: 'bold', zIndex: 300,
-          }}>✕ Exit AR</button>
-        )}
-      </div>
-
-      {/* ===== BOTTOM PANEL ===== */}
-      {showControls && (
-        <div style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0,
-          padding: '20px 10px 30px',
-          background: 'linear-gradient(to top, rgba(0,0,0,0.95), transparent)',
-          zIndex: 100,
-        }}>
-
-          {/* Reposition buttons */}
-          {appMode === 'surface' && surfacePlaced && (
-            <div style={{ textAlign: 'center', marginBottom: 10 }}>
-              <button onClick={resetSurfacePlacement} style={{
-                padding: '8px 20px', fontSize: 12, fontWeight: 'bold',
-                border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20,
-                background: 'rgba(255,255,255,0.1)', color: 'white',
-              }}>📍 Reposition</button>
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginLeft: 10 }}>
-                or drag to move
-              </span>
-            </div>
-          )}
-          {appMode === 'webxr' && webxrPlaced && (
-            <div style={{ textAlign: 'center', marginBottom: 10 }}>
-              <button onClick={resetWebXRPlacement} style={{
-                padding: '8px 20px', fontSize: 12, fontWeight: 'bold',
-                border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20,
-                background: 'rgba(255,255,255,0.1)', color: 'white',
-              }}>📍 Reposition on Floor</button>
-            </div>
-          )}
-
-          {/* Operation Buttons */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-            {currentStructure === 'array' && (
-              <>
-                <OpBtn onClick={arrayAccess} disabled={isAnimating} color="#f39c12" label="📍 Access" />
-                <OpBtn onClick={arrayInsert} disabled={isAnimating || getArrayData().length >= 6} color="#2ecc71" label="➕ Insert" />
-                <OpBtn onClick={arrayDelete} disabled={isAnimating || getArrayData().length <= 2} color="#e74c3c" label="➖ Delete" />
-                <OpBtn onClick={arraySwap} disabled={isAnimating} color="#9b59b6" label="🔀 Swap" />
-              </>
-            )}
-            {currentStructure === 'linkedlist' && (
-              <>
-                <OpBtn onClick={linkedListInsertHead} disabled={isAnimating || getLinkedListData().length >= 5} color="#2ecc71" label="⬅️ +Head" />
-                <OpBtn onClick={linkedListInsertTail} disabled={isAnimating || getLinkedListData().length >= 5} color="#3498db" label="➡️ +Tail" />
-                <OpBtn onClick={linkedListDeleteHead} disabled={isAnimating || getLinkedListData().length <= 2} color="#e74c3c" label="🗑️ -Head" />
-                <OpBtn onClick={linkedListTraverse} disabled={isAnimating} color="#9b59b6" label="🔍 Traverse" />
-              </>
-            )}
-            {currentStructure === 'stack' && (
-              <>
-                <OpBtn onClick={stackPush} disabled={isAnimating || getStackData().length >= 5} color="#2ecc71" label="⬆️ Push" />
-                <OpBtn onClick={stackPop} disabled={isAnimating || getStackData().length <= 1} color="#e74c3c" label="⬇️ Pop" />
-                <OpBtn onClick={stackPeek} disabled={isAnimating} color="#f39c12" label="👁️ Peek" />
-              </>
-            )}
-            {currentStructure === 'queue' && (
-              <>
-                <OpBtn onClick={queueEnqueue} disabled={isAnimating || getQueueData().length >= 5} color="#2ecc71" label="➕ Enqueue" />
-                <OpBtn onClick={queueDequeue} disabled={isAnimating || getQueueData().length <= 1} color="#e74c3c" label="➖ Dequeue" />
-                <OpBtn onClick={queueFront} disabled={isAnimating} color="#f39c12" label="👁️ Front" />
-              </>
-            )}
-          </div>
-
-          {/* Status bar */}
-          <div style={{ textAlign: 'center', marginTop: 10, color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>
-            Size: {currentData.length}
-            {appMode === 'surface' && <span style={{ marginLeft: 10, color: '#00b894' }}>📱 Surface</span>}
-            {appMode === 'webxr' && <span style={{ marginLeft: 10, color: '#e17055' }}>🌐 WebXR AR</span>}
-          </div>
-        </div>
-      )}
-
-      {/* ===== PROMPT MESSAGES ===== */}
-
-      {/* Person mode: no person */}
-      {appMode === 'person' && !detectedPerson && !webxrActive && (
-        <div style={{
-          position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px',
-          borderRadius: 20, textAlign: 'center',
-        }}>
-          <div style={{ fontSize: 40 }}>🧑</div>
-          <div style={{ marginTop: 8 }}>Point camera at a person</div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 5 }}>
-            or switch to Surface / WebXR →
-          </div>
-        </div>
-      )}
-
-      {/* Surface mode: not placed */}
-      {appMode === 'surface' && !surfacePlaced && !webxrActive && (
-        <div style={{
-          position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px',
-          borderRadius: 20, textAlign: 'center',
-        }}>
-          <div style={{ fontSize: 40, animation: 'tapBounce 1.5s ease infinite' }}>👆</div>
-          <div style={{ marginTop: 8, fontWeight: 'bold' }}>Tap to Place</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 5 }}>
-            Tap anywhere on screen to place<br />your data structure
-          </div>
-          <style>{`@keyframes tapBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }`}</style>
-        </div>
-      )}
-
-      {/* WebXR mode: scanning */}
-      {appMode === 'webxr' && webxrActive && !webxrPlaced && (
-        <div style={{
-          position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px',
-          borderRadius: 20, textAlign: 'center',
-        }}>
-          <div style={{ fontSize: 40, animation: 'xrPulse 2s ease infinite' }}>🌐</div>
-          <div style={{ marginTop: 8, fontWeight: 'bold', color: '#00ff00' }}>
-            Scanning for surfaces...
-          </div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 5 }}>
-            Point at a floor or table<br />
-            Tap the green ring to place
-          </div>
-          <style>{`@keyframes xrPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } }`}</style>
-        </div>
-      )}
-
-    </div>
-  );
-}
-
-// ==================== OPERATION BUTTON ====================
-
-function OpBtn({ onClick, disabled, color, label }: {
-  onClick: () => void;
-  disabled: boolean;
-  color: string;
-  label: string;
-}) {
-  return (
-    <button onClick={onClick} disabled={disabled} style={{
-      padding: '12px 18px', fontSize: 13, fontWeight: 'bold', border: 'none', borderRadius: 25,
-      background: disabled ? '#555' : color, color: 'white', opacity: disabled ? 0.5 : 1,
-    }}>{label}</button>
-  );
-}
-
-// ==================== VISUALIZATION 3D COMPONENT ====================
-
-function Visualization3D({ position, data, highlightIndex, highlightIndex2, structure, environment, zoomLevel, setZoomLevel, isSurfaceMode }: {
-  position: Position;
-  data: DataItem[];
-  highlightIndex: number | null;
-  highlightIndex2: number | null;
-  structure: DataStructure;
-  environment: string;
-  zoomLevel: number;
-  setZoomLevel: (z: number) => void;
-  isSurfaceMode: boolean;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
-  const groupRef = useRef<THREE.Group | null>(null);
-  const rotationRef = useRef({ x: 0.15, y: 0 });
-  const zoomRef = useRef(zoomLevel);
-
-  useEffect(() => { zoomRef.current = zoomLevel; }, [zoomLevel]);
-
-  const renderWidth = window.innerWidth;
-  const renderHeight = window.innerHeight;
-
-  // ===== THREE.JS SETUP =====
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const container = containerRef.current;
-
-    const scene = new THREE.Scene();
-    sceneRef.current = scene;
-
-    const camera = new THREE.PerspectiveCamera(50, renderWidth / renderHeight, 0.1, 1000);
-    camera.position.set(0, structure === 'stack' ? 1.2 : 0.5, structure === 'stack' ? 5 : 4.5);
-    camera.lookAt(0, 0, 0);
-
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    renderer.setClearColor(0x000000, 0);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(renderWidth, renderHeight);
-    renderer.shadowMap.enabled = true;
-    container.appendChild(renderer.domElement);
-
-    // ✅ FIXED LIGHTING — each light created separately
-    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    dirLight.position.set(5, 10, 7);
-    dirLight.castShadow = true;
-    scene.add(dirLight);
-
-    const backLight = new THREE.DirectionalLight(0xffffff, 0.3);
-    backLight.position.set(-5, 5, -5);
-    scene.add(backLight);
-
-    const fillLight = new THREE.PointLight(0xffffff, 0.3);
-    fillLight.position.set(0, -3, 3);
-    scene.add(fillLight);
-
-    const group = new THREE.Group();
-    groupRef.current = group;
-    scene.add(group);
-
-    // Touch/Mouse controls
-    let isDragging = false, lastX = 0, lastY = 0;
-    let pinchDist: number | null = null, pinchZoom = 1;
-
-    const getDist = (t: TouchList): number | null => {
-      if (t.length < 2) return null;
-      const dx = t[0].clientX - t[1].clientX;
-      const dy = t[0].clientY - t[1].clientY;
-      return Math.sqrt(dx * dx + dy * dy);
-    };
-
-    const onTS = (e: TouchEvent) => {
-      e.preventDefault();
-      if (e.touches.length === 2) {
-        pinchDist = getDist(e.touches);
-        pinchZoom = zoomRef.current;
-      } else if (e.touches.length === 1) {
-        isDragging = true;
-        lastX = e.touches[0].clientX;
-        lastY = e.touches[0].clientY;
-      }
-    };
-
-    const onTM = (e: TouchEvent) => {
-      e.preventDefault();
-      if (e.touches.length === 2 && pinchDist !== null) {
-        const d = getDist(e.touches);
-        if (d) setZoomLevel(Math.max(0.1, pinchZoom * (d / pinchDist)));
-      } else if (e.touches.length === 1 && isDragging) {
-        rotationRef.current.y += (e.touches[0].clientX - lastX) * 0.01;
-        rotationRef.current.x += (e.touches[0].clientY - lastY) * 0.008;
-        lastX = e.touches[0].clientX;
-        lastY = e.touches[0].clientY;
-      }
-    };
-
-    const onTE = (e: TouchEvent) => {
-      e.preventDefault();
-      if (e.touches.length < 2) pinchDist = null;
-      if (e.touches.length === 0) isDragging = false;
-    };
-
-    const onMD = (e: MouseEvent) => {
-      isDragging = true;
-      lastX = e.clientX;
-      lastY = e.clientY;
-    };
-
-    const onMM = (e: MouseEvent) => {
-      if (!isDragging) return;
-      rotationRef.current.y += (e.clientX - lastX) * 0.01;
-      rotationRef.current.x += (e.clientY - lastY) * 0.008;
-      lastX = e.clientX;
-      lastY = e.clientY;
-    };
-
-    const onMU = () => { isDragging = false; };
-
-    const onWH = (e: WheelEvent) => {
-      e.preventDefault();
-      setZoomLevel(Math.max(0.1, zoomRef.current + (e.deltaY > 0 ? -0.15 : 0.15)));
-    };
-
-    container.addEventListener('touchstart', onTS, { passive: false });
-    container.addEventListener('touchmove', onTM, { passive: false });
-    container.addEventListener('touchend', onTE, { passive: false });
-    container.addEventListener('mousedown', onMD);
-    container.addEventListener('mousemove', onMM);
-    container.addEventListener('mouseup', onMU);
-    container.addEventListener('mouseleave', onMU);
-    container.addEventListener('wheel', onWH, { passive: false });
-
-    let animationId: number;
-    const animate = () => {
-      if (groupRef.current) {
-        groupRef.current.rotation.x = rotationRef.current.x;
-        groupRef.current.rotation.y = rotationRef.current.y;
-        groupRef.current.scale.setScalar(zoomRef.current);
-      }
-      renderer.render(scene, camera);
-      animationId = requestAnimationFrame(animate);
-    };
-    animate();
-
-    return () => {
-      cancelAnimationFrame(animationId);
-      container.removeEventListener('touchstart', onTS);
-      container.removeEventListener('touchmove', onTM);
-      container.removeEventListener('touchend', onTE);
-      container.removeEventListener('mousedown', onMD);
-      container.removeEventListener('mousemove', onMM);
-      container.removeEventListener('mouseup', onMU);
-      container.removeEventListener('mouseleave', onMU);
-      container.removeEventListener('wheel', onWH);
-      renderer.dispose();
-      if (container.contains(renderer.domElement)) {
-        container.removeChild(renderer.domElement);
-      }
-    };
-  }, [structure, renderWidth, renderHeight]);
-
-  // ===== SCENE CONTENT (uses shared buildSceneContent) =====
-  useEffect(() => {
-    if (!groupRef.current) return;
-    buildSceneContent(
-      groupRef.current,
-      data,
-      highlightIndex,
-      highlightIndex2,
-      structure,
-      environment
-    );
-  }, [data, highlightIndex, highlightIndex2, structure, environment]);
-
   return (
     <div
       ref={containerRef}
@@ -3297,6 +2637,3 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
     />
   );
 }
-
-// ==================== END OF PART 9 ====================
-// ==================== END OF FILE ====================
