@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -24,7 +23,7 @@ type ArrayEnvironment = 'grocery' | 'classroom' | 'todo';
 type LinkedListEnvironment = 'train' | 'people' | 'domino';
 type StackEnvironment = 'books' | 'plates' | 'boxes';
 type QueueEnvironment = 'tollgate' | 'tickets' | 'students';
-type AppMode = 'person' | 'surface' | 'webxr'; // ← NEW: added webxr
+type AppMode = 'person' | 'surface' | 'webxr';
 
 interface HumanAppearance {
   skinTone: string;
@@ -42,98 +41,382 @@ interface DataItem {
   appearance?: HumanAppearance;
 }
 
-// ==================== STANDALONE 3D MODEL CREATORS ====================
-// Extracted so both Visualization3D AND WebXR can reuse them
+// ==================== TEXT SPRITE ====================
 
 function createTextSprite(text: string, color: string, fontSize: number = 20): THREE.Sprite {
   const canvas = document.createElement('canvas');
-  canvas.width = 128; canvas.height = 48;
+  canvas.width = 256; canvas.height = 64;
   const ctx = canvas.getContext('2d')!;
   ctx.fillStyle = color;
   ctx.font = `bold ${fontSize}px Arial`;
   ctx.textAlign = 'center';
-  ctx.fillText(text, 64, 32);
+  ctx.fillText(text, 128, 45);
   const tex = new THREE.CanvasTexture(canvas);
   return new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
 }
 
+// ==================== ARROW ====================
+
 function createArrow(fromX: number, toX: number, isHighlighted: boolean): THREE.Group {
   const arrow = new THREE.Group();
   const color = isHighlighted ? 0xffff00 : 0x00ff00;
-  const points = [new THREE.Vector3(fromX + 0.35, 0, 0), new THREE.Vector3(toX - 0.35, 0, 0)];
+  const midY = 0;
+  const points = [new THREE.Vector3(fromX + 0.35, midY, 0), new THREE.Vector3(toX - 0.35, midY, 0)];
   const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
-  arrow.add(new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color })));
+  const lineMat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+  arrow.add(new THREE.Line(lineGeo, lineMat));
+
   const coneGeo = new THREE.ConeGeometry(0.06, 0.12, 8);
   const cone = new THREE.Mesh(coneGeo, new THREE.MeshBasicMaterial({ color }));
-  cone.position.set(toX - 0.4, 0, 0);
+  cone.position.set(toX - 0.4, midY, 0);
   cone.rotation.z = -Math.PI / 2;
   arrow.add(cone);
+
+  // Glow line
+  const glowPoints = [new THREE.Vector3(fromX + 0.35, midY, 0), new THREE.Vector3(toX - 0.35, midY, 0)];
+  const glowGeo = new THREE.BufferGeometry().setFromPoints(glowPoints);
+  const glowLine = new THREE.Line(glowGeo, new THREE.LineBasicMaterial({
+    color: isHighlighted ? 0xffff00 : 0x00ff00,
+    transparent: true,
+    opacity: 0.3,
+  }));
+  glowLine.position.y = 0.01;
+  arrow.add(glowLine);
+
   return arrow;
 }
+
+// ==================== CHAIR ====================
 
 function createChair(x: number): THREE.Group {
   const chair = new THREE.Group();
   const woodMat = new THREE.MeshStandardMaterial({ color: '#8b4513', roughness: 0.7 });
+
+  // Seat
   const seat = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.025, 0.22), woodMat);
-  seat.position.y = -0.18; chair.add(seat);
+  seat.position.y = -0.18;
+  chair.add(seat);
+
+  // Back rest
   const back = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.18, 0.02), woodMat);
-  back.position.set(0, -0.08, -0.1); chair.add(back);
+  back.position.set(0, -0.08, -0.1);
+  chair.add(back);
+
+  // Back rest bars
+  const barGeo = new THREE.CylinderGeometry(0.006, 0.006, 0.16, 6);
+  [-0.06, 0, 0.06].forEach(bx => {
+    const bar = new THREE.Mesh(barGeo, woodMat);
+    bar.position.set(bx, -0.09, -0.1);
+    chair.add(bar);
+  });
+
+  // Legs
   const legGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.12, 8);
   [[-0.08, -0.25, 0.08], [0.08, -0.25, 0.08], [-0.08, -0.25, -0.08], [0.08, -0.25, -0.08]].forEach(([lx, ly, lz]) => {
     const leg = new THREE.Mesh(legGeo, woodMat);
     leg.position.set(lx, ly, lz);
     chair.add(leg);
   });
+
+  // Leg supports (cross bars)
+  const supportGeo = new THREE.CylinderGeometry(0.005, 0.005, 0.14, 6);
+  const support1 = new THREE.Mesh(supportGeo, woodMat);
+  support1.rotation.z = Math.PI / 2;
+  support1.position.set(0, -0.28, 0.08);
+  chair.add(support1);
+  const support2 = new THREE.Mesh(supportGeo, woodMat);
+  support2.rotation.z = Math.PI / 2;
+  support2.position.set(0, -0.28, -0.08);
+  chair.add(support2);
+
   chair.position.x = x;
   return chair;
 }
 
-// ==================== GROCERY BOX ====================
+// ==================== 7-ELEVEN GROCERY PRODUCT ====================
 
 function createGroceryBox(color: string, label: string, isHighlighted: boolean): THREE.Group {
-  const box = new THREE.Group();
-  const bodyGeo = new THREE.BoxGeometry(0.45, 0.55, 0.32);
+  const product = new THREE.Group();
+  const boxWidth = 0.3;
+  const boxHeight = 0.48;
+  const boxDepth = 0.18;
+
+  // Main box body
+  const bodyGeo = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
   const bodyMat = new THREE.MeshStandardMaterial({
-    color, roughness: 0.8,
+    color,
+    roughness: 0.5,
+    metalness: 0.05,
     emissive: isHighlighted ? '#ffff00' : '#000000',
-    emissiveIntensity: isHighlighted ? 0.4 : 0
+    emissiveIntensity: isHighlighted ? 0.4 : 0,
   });
-  box.add(new THREE.Mesh(bodyGeo, bodyMat));
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.position.y = boxHeight / 2;
+  body.castShadow = true;
+  product.add(body);
 
-  const flapGeo = new THREE.BoxGeometry(0.22, 0.02, 0.32);
-  const flapMat = new THREE.MeshStandardMaterial({ color });
-  const leftFlap = new THREE.Mesh(flapGeo, flapMat);
-  leftFlap.position.set(-0.12, 0.28, 0);
-  leftFlap.rotation.z = -0.4;
-  box.add(leftFlap);
-  const rightFlap = new THREE.Mesh(flapGeo, flapMat);
-  rightFlap.position.set(0.12, 0.28, 0);
-  rightFlap.rotation.z = 0.4;
-  box.add(rightFlap);
+  // Front label
+  const frontCanvas = document.createElement('canvas');
+  frontCanvas.width = 128;
+  frontCanvas.height = 200;
+  const fctx = frontCanvas.getContext('2d')!;
 
-  const canvas = document.createElement('canvas');
-  canvas.width = 128; canvas.height = 80;
-  const ctx = canvas.getContext('2d')!;
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(5, 5, 118, 70);
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.strokeRect(5, 5, 118, 70);
-  ctx.fillStyle = '#000'; ctx.font = 'bold 28px Arial'; ctx.textAlign = 'center';
-  ctx.fillText(label, 64, 50);
-  const labelTex = new THREE.CanvasTexture(canvas);
-  const labelMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.35, 0.22),
-    new THREE.MeshBasicMaterial({ map: labelTex, transparent: true })
-  );
-  labelMesh.position.z = 0.165;
-  box.add(labelMesh);
+  const grad = fctx.createLinearGradient(0, 0, 0, 200);
+  grad.addColorStop(0, '#ffffff');
+  grad.addColorStop(0.3, '#f8f8f8');
+  grad.addColorStop(1, '#e8e8e8');
+  fctx.fillStyle = grad;
+  fctx.fillRect(4, 4, 120, 192);
+  fctx.strokeStyle = '#cccccc';
+  fctx.lineWidth = 2;
+  fctx.strokeRect(4, 4, 120, 192);
 
-  if (isHighlighted) {
-    const glowGeo = new THREE.BoxGeometry(0.5, 0.6, 0.37);
-    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.2 });
-    box.add(new THREE.Mesh(glowGeo, glowMat));
+  fctx.fillStyle = color;
+  fctx.fillRect(4, 4, 120, 45);
+
+  const icons: Record<string, string> = {
+    'Milk': '🥛', 'Bread': '🍞', 'Eggs': '🥚',
+    'Apple': '🍎', 'Juice': '🧃', 'New': '🆕'
+  };
+  fctx.font = '42px Arial';
+  fctx.textAlign = 'center';
+  fctx.fillText(icons[label] || '📦', 64, 110);
+
+  fctx.fillStyle = '#2c3e50';
+  fctx.font = 'bold 20px Arial';
+  fctx.fillText(label, 64, 150);
+
+  fctx.fillStyle = '#000';
+  for (let i = 20; i < 108; i += 3) {
+    fctx.fillRect(i, 175, 1.5, 12 + Math.random() * 6);
   }
-  return box;
+  fctx.fillStyle = '#666';
+  fctx.font = '10px Arial';
+  fctx.fillText('NET WT 500g', 64, 172);
+
+  const frontTex = new THREE.CanvasTexture(frontCanvas);
+  const frontLabel = new THREE.Mesh(
+    new THREE.PlaneGeometry(boxWidth - 0.02, boxHeight - 0.02),
+    new THREE.MeshBasicMaterial({ map: frontTex, transparent: true })
+  );
+  frontLabel.position.set(0, boxHeight / 2, boxDepth / 2 + 0.001);
+  product.add(frontLabel);
+
+  // Side label
+  const sideCanvas = document.createElement('canvas');
+  sideCanvas.width = 80;
+  sideCanvas.height = 200;
+  const sctx = sideCanvas.getContext('2d')!;
+  sctx.fillStyle = '#f5f5f5';
+  sctx.fillRect(0, 0, 80, 200);
+  sctx.fillStyle = color;
+  sctx.fillRect(0, 0, 80, 30);
+  sctx.fillStyle = '#333';
+  sctx.font = '9px Arial';
+  sctx.textAlign = 'center';
+  sctx.fillText('Nutrition', 40, 50);
+  sctx.fillText('Facts', 40, 62);
+  sctx.strokeStyle = '#ddd';
+  sctx.lineWidth = 0.5;
+  for (let y = 75; y < 180; y += 12) {
+    sctx.beginPath(); sctx.moveTo(5, y); sctx.lineTo(75, y); sctx.stroke();
+  }
+
+  const sideTex = new THREE.CanvasTexture(sideCanvas);
+  const sideLabel = new THREE.Mesh(
+    new THREE.PlaneGeometry(boxDepth - 0.02, boxHeight - 0.02),
+    new THREE.MeshBasicMaterial({ map: sideTex, transparent: true })
+  );
+  sideLabel.position.set(boxWidth / 2 + 0.001, boxHeight / 2, 0);
+  sideLabel.rotation.y = Math.PI / 2;
+  product.add(sideLabel);
+
+  // Top
+  const topGeo = new THREE.PlaneGeometry(boxWidth, boxDepth);
+  const topMat = new THREE.MeshStandardMaterial({ color, side: THREE.DoubleSide, roughness: 0.6 });
+  const top = new THREE.Mesh(topGeo, topMat);
+  top.position.set(0, boxHeight + 0.001, 0);
+  top.rotation.x = -Math.PI / 2;
+  product.add(top);
+
+  // Price tag
+  const tagCanvas = document.createElement('canvas');
+  tagCanvas.width = 64;
+  tagCanvas.height = 32;
+  const tctx = tagCanvas.getContext('2d')!;
+  tctx.fillStyle = '#ffeb3b';
+  tctx.fillRect(0, 0, 64, 32);
+  tctx.strokeStyle = '#f57f17';
+  tctx.lineWidth = 2;
+  tctx.strokeRect(1, 1, 62, 30);
+  tctx.fillStyle = '#c62828';
+  tctx.font = 'bold 14px Arial';
+  tctx.textAlign = 'center';
+  const prices: Record<string, string> = {
+    'Milk': '$3.99', 'Bread': '$2.49', 'Eggs': '$4.99',
+    'Apple': '$1.29', 'Juice': '$5.49', 'New': '$0.99'
+  };
+  tctx.fillText(prices[label] || '$2.99', 32, 22);
+
+  const tagTex = new THREE.CanvasTexture(tagCanvas);
+  const priceTag = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.14, 0.07),
+    new THREE.MeshBasicMaterial({ map: tagTex, transparent: true })
+  );
+  priceTag.position.set(0, 0.02, boxDepth / 2 + 0.03);
+  product.add(priceTag);
+
+  // Highlight
+  if (isHighlighted) {
+    const glowGeo = new THREE.BoxGeometry(boxWidth + 0.06, boxHeight + 0.06, boxDepth + 0.06);
+    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.15 });
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    glow.position.y = boxHeight / 2;
+    product.add(glow);
+
+    const arrowGeo = new THREE.ConeGeometry(0.06, 0.1, 8);
+    const arrowMesh = new THREE.Mesh(arrowGeo, new THREE.MeshBasicMaterial({ color: '#ffff00' }));
+    arrowMesh.position.y = boxHeight + 0.15;
+    arrowMesh.rotation.z = Math.PI;
+    product.add(arrowMesh);
+  }
+
+  return product;
 }
 
+// ==================== ANIMATION HELPER ====================
+
+function applyItemAnimation(
+  obj: THREE.Object3D,
+  itemIndex: number,
+  animPhase: string,
+  animData: Record<string, any>,
+  structure: DataStructure
+): void {
+  if (!animPhase) return;
+
+  const isTarget = animData.index === itemIndex;
+  const isTarget1 = animData.index1 === itemIndex;
+  const isTarget2 = animData.index2 === itemIndex;
+
+  if (structure === 'array') {
+    if (animPhase === 'access-lift' && isTarget) {
+      obj.position.y += 0.4;
+      obj.rotation.z = 0.15;
+    } else if (animPhase === 'access-bounce' && isTarget) {
+      obj.position.y += 0.28;
+      obj.scale.multiplyScalar(1.2);
+      obj.rotation.z = -0.1;
+    } else if (animPhase === 'access-settle' && isTarget) {
+      obj.position.y += 0.08;
+    } else if (animPhase === 'insert-shift' && animData.insertIndex !== undefined && itemIndex >= animData.insertIndex) {
+      obj.position.y += 0.06;
+    } else if (animPhase === 'insert-drop' && isTarget) {
+      obj.position.y += 0.7;
+      obj.scale.multiplyScalar(0.5);
+      obj.rotation.z = 0.3;
+    } else if (animPhase === 'insert-settle' && isTarget) {
+      obj.position.y += 0.15;
+      obj.scale.multiplyScalar(1.1);
+    } else if (animPhase === 'delete-lift' && isTarget) {
+      obj.position.y += 0.45;
+      obj.rotation.z = 0.4;
+      obj.scale.multiplyScalar(1.2);
+    } else if (animPhase === 'delete-shrink' && isTarget) {
+      obj.position.y += 0.8;
+      obj.scale.multiplyScalar(0.01);
+      obj.rotation.z = 3.0;
+    } else if (animPhase === 'delete-close' && animData.deleteIndex !== undefined && itemIndex >= animData.deleteIndex) {
+      obj.position.y += 0.06;
+    } else if (animPhase === 'swap-lift' && (isTarget1 || isTarget2)) {
+      obj.position.y += 0.45;
+      obj.rotation.z = isTarget1 ? 0.15 : -0.15;
+    } else if (animPhase === 'swap-cross' && (isTarget1 || isTarget2)) {
+      obj.position.y += 0.5;
+      obj.rotation.z = isTarget1 ? -0.2 : 0.2;
+    } else if (animPhase === 'swap-drop' && (isTarget1 || isTarget2)) {
+      obj.position.y += 0.12;
+      obj.scale.multiplyScalar(1.12);
+    }
+  }
+
+  if (structure === 'linkedlist') {
+    if (animPhase === 'll-insert-head' && isTarget) {
+      obj.position.y += 0.5;
+      obj.scale.multiplyScalar(0.6);
+      obj.rotation.z = 0.2;
+    } else if (animPhase === 'll-insert-head-settle' && isTarget) {
+      obj.position.y += 0.1;
+      obj.scale.multiplyScalar(1.05);
+    } else if (animPhase === 'll-insert-tail' && isTarget) {
+      obj.position.y += 0.5;
+      obj.scale.multiplyScalar(0.6);
+    } else if (animPhase === 'll-insert-tail-settle' && isTarget) {
+      obj.position.y += 0.1;
+      obj.scale.multiplyScalar(1.05);
+    } else if (animPhase === 'll-delete-lift' && isTarget) {
+      obj.position.y += 0.5;
+      obj.rotation.z = 0.3;
+    } else if (animPhase === 'll-delete-shrink' && isTarget) {
+      obj.position.y += 0.8;
+      obj.scale.multiplyScalar(0.01);
+      obj.rotation.z = 2.5;
+    } else if (animPhase === 'll-traverse' && isTarget) {
+      obj.position.y += 0.2;
+      obj.scale.multiplyScalar(1.15);
+    }
+  }
+
+  if (structure === 'stack') {
+    if (animPhase === 'stack-push-drop' && isTarget) {
+      obj.position.y += 0.6;
+      obj.scale.multiplyScalar(0.7);
+      obj.rotation.z = 0.2;
+    } else if (animPhase === 'stack-push-settle' && isTarget) {
+      obj.position.y += 0.1;
+      obj.scale.multiplyScalar(1.08);
+    } else if (animPhase === 'stack-pop-lift' && isTarget) {
+      obj.position.y += 0.4;
+      obj.rotation.z = -0.3;
+    } else if (animPhase === 'stack-pop-fly' && isTarget) {
+      obj.position.y += 0.9;
+      obj.scale.multiplyScalar(0.01);
+      obj.rotation.z = 3.0;
+    } else if (animPhase === 'stack-peek-lift' && isTarget) {
+      obj.position.y += 0.25;
+      obj.rotation.z = 0.1;
+    } else if (animPhase === 'stack-peek-open' && isTarget) {
+      obj.position.y += 0.3;
+      obj.scale.multiplyScalar(1.15);
+    } else if (animPhase === 'stack-peek-settle' && isTarget) {
+      obj.position.y += 0.08;
+    }
+  }
+
+  if (structure === 'queue') {
+    if (animPhase === 'queue-enqueue-enter' && isTarget) {
+      obj.position.x += 1.0;
+      obj.scale.multiplyScalar(0.6);
+    } else if (animPhase === 'queue-enqueue-settle' && isTarget) {
+      obj.position.x += 0.2;
+      obj.scale.multiplyScalar(1.05);
+    } else if (animPhase === 'queue-dequeue-exit' && isTarget) {
+      obj.position.x -= 0.8;
+      obj.scale.multiplyScalar(0.8);
+      obj.rotation.y = 0.3;
+    } else if (animPhase === 'queue-dequeue-gone' && isTarget) {
+      obj.position.x -= 1.5;
+      obj.scale.multiplyScalar(0.01);
+    } else if (animPhase === 'queue-front-peek' && isTarget) {
+      obj.position.y += 0.2;
+      obj.scale.multiplyScalar(1.15);
+    }
+  }
+}
+
+// ==================== END OF PART 1 ====================
+// ==================== PART 2: createHuman3D (IMPROVED) ====================
+// Place right after Part 1
 
 function createHuman3D(appearance: HumanAppearance, name: string, isHighlighted: boolean): THREE.Group {
   const human = new THREE.Group();
@@ -141,474 +424,1152 @@ function createHuman3D(appearance: HumanAppearance, name: string, isHighlighted:
 
   // ===== HEAD =====
   const headGroup = new THREE.Group();
+
+  // Head shape (slightly oval)
   const headGeo = new THREE.SphereGeometry(0.09, 32, 32);
   const headMat = new THREE.MeshStandardMaterial({
     color: appearance.skinTone,
+    roughness: 0.7,
     emissive: isHighlighted ? '#ffff00' : '#000',
-    emissiveIntensity: hlEmit * 0.3
+    emissiveIntensity: hlEmit * 0.3,
   });
-  headGroup.add(new THREE.Mesh(headGeo, headMat));
+  const head = new THREE.Mesh(headGeo, headMat);
+  head.scale.set(1, 1.08, 0.95);
+  headGroup.add(head);
 
   // ===== HAIR =====
   if (appearance.hairStyle !== 'bald') {
-    const hairGeo = appearance.hairStyle === 'long'
-      ? new THREE.SphereGeometry(0.095, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.55)
-      : new THREE.SphereGeometry(0.093, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.4);
-    const hairMat = new THREE.MeshStandardMaterial({ color: appearance.hairColor });
-    const hair = new THREE.Mesh(hairGeo, hairMat);
-    hair.position.y = 0.015;
-    headGroup.add(hair);
+    const hairMat = new THREE.MeshStandardMaterial({
+      color: appearance.hairColor,
+      roughness: 0.8,
+    });
+
     if (appearance.hairStyle === 'long') {
-      const backHairGeo = new THREE.CapsuleGeometry(0.035, 0.1, 8, 16);
+      // Top hair cap
+      const topHairGeo = new THREE.SphereGeometry(0.095, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.55);
+      const topHair = new THREE.Mesh(topHairGeo, hairMat);
+      topHair.position.y = 0.015;
+      headGroup.add(topHair);
+
+      // Back flowing hair
+      const backHairGeo = new THREE.CapsuleGeometry(0.04, 0.14, 8, 16);
       const backHair = new THREE.Mesh(backHairGeo, hairMat);
-      backHair.position.set(0, -0.07, -0.04);
+      backHair.position.set(0, -0.08, -0.045);
       headGroup.add(backHair);
+
+      // Side hair strands
+      [-0.065, 0.065].forEach(x => {
+        const sideHairGeo = new THREE.CapsuleGeometry(0.025, 0.08, 6, 12);
+        const sideHair = new THREE.Mesh(sideHairGeo, hairMat);
+        sideHair.position.set(x, -0.04, -0.02);
+        headGroup.add(sideHair);
+      });
+
+      // Bangs
+      if (appearance.gender === 'female') {
+        const bangsGeo = new THREE.BoxGeometry(0.14, 0.025, 0.04);
+        const bangs = new THREE.Mesh(bangsGeo, hairMat);
+        bangs.position.set(0, 0.065, 0.065);
+        bangs.rotation.x = 0.2;
+        headGroup.add(bangs);
+      }
+    } else {
+      // Short hair cap
+      const shortHairGeo = new THREE.SphereGeometry(0.093, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.4);
+      const shortHair = new THREE.Mesh(shortHairGeo, hairMat);
+      shortHair.position.y = 0.015;
+      headGroup.add(shortHair);
+
+      // Side fade (slightly darker)
+      const fadeMat = new THREE.MeshStandardMaterial({
+        color: appearance.hairColor,
+        roughness: 0.9,
+        transparent: true,
+        opacity: 0.7,
+      });
+      [-0.082, 0.082].forEach(x => {
+        const fadeGeo = new THREE.SphereGeometry(0.03, 12, 12);
+        const fade = new THREE.Mesh(fadeGeo, fadeMat);
+        fade.position.set(x, 0.02, 0);
+        fade.scale.set(0.4, 0.8, 0.7);
+        headGroup.add(fade);
+      });
     }
   }
 
-  // ===== EYES =====
-  const eyeGeo = new THREE.SphereGeometry(0.012, 16, 16);
-  const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: '#fff' });
-  const pupilGeo = new THREE.SphereGeometry(0.006, 8, 8);
-  const pupilMat = new THREE.MeshStandardMaterial({ color: '#2c3e50' });
-  [-0.028, 0.028].forEach(x => {
-    const eye = new THREE.Mesh(eyeGeo, eyeWhiteMat);
-    eye.position.set(x, 0.01, 0.075);
-    eye.scale.z = 0.5;
-    headGroup.add(eye);
+  // ===== FACE DETAILS =====
+
+  // Eyes (with more detail)
+  const eyeWhiteGeo = new THREE.SphereGeometry(0.014, 16, 16);
+  const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 });
+  const irisGeo = new THREE.SphereGeometry(0.008, 12, 12);
+  const irisMat = new THREE.MeshStandardMaterial({ color: '#5d4037' });
+  const pupilGeo = new THREE.SphereGeometry(0.004, 8, 8);
+  const pupilMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a' });
+  const eyeShineGeo = new THREE.SphereGeometry(0.002, 6, 6);
+  const eyeShineMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+
+  [-0.03, 0.03].forEach(x => {
+    // Eye white
+    const eyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+    eyeWhite.position.set(x, 0.012, 0.072);
+    eyeWhite.scale.set(1, 0.75, 0.5);
+    headGroup.add(eyeWhite);
+
+    // Iris
+    const iris = new THREE.Mesh(irisGeo, irisMat);
+    iris.position.set(x, 0.012, 0.082);
+    headGroup.add(iris);
+
+    // Pupil
     const pupil = new THREE.Mesh(pupilGeo, pupilMat);
-    pupil.position.set(x, 0.01, 0.085);
+    pupil.position.set(x, 0.012, 0.086);
     headGroup.add(pupil);
+
+    // Eye shine (reflection dot)
+    const shine = new THREE.Mesh(eyeShineGeo, eyeShineMat);
+    shine.position.set(x + 0.003, 0.016, 0.087);
+    headGroup.add(shine);
+
+    // Eyelid (top)
+    const eyelidGeo = new THREE.SphereGeometry(0.016, 12, 12, 0, Math.PI * 2, 0, Math.PI * 0.3);
+    const eyelidMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone });
+    const eyelid = new THREE.Mesh(eyelidGeo, eyelidMat);
+    eyelid.position.set(x, 0.02, 0.07);
+    eyelid.scale.set(1, 0.5, 0.5);
+    headGroup.add(eyelid);
   });
 
-  // ===== EYEBROWS =====
-  const browGeo = new THREE.BoxGeometry(0.025, 0.005, 0.005);
+  // Eyebrows (thicker, more natural)
   const browMat = new THREE.MeshStandardMaterial({ color: appearance.hairColor });
-  [-0.028, 0.028].forEach((x, i) => {
+  [-0.03, 0.03].forEach((x, i) => {
+    const browGeo = new THREE.BoxGeometry(0.028, 0.006, 0.008);
     const brow = new THREE.Mesh(browGeo, browMat);
-    brow.position.set(x, 0.035, 0.075);
-    brow.rotation.z = i === 0 ? -0.1 : 0.1;
+    brow.position.set(x, 0.038, 0.072);
+    brow.rotation.z = i === 0 ? -0.12 : 0.12;
     headGroup.add(brow);
   });
 
-  // ===== NOSE =====
-  const noseGeo = new THREE.ConeGeometry(0.01, 0.02, 8);
-  const noseMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone });
-  const nose = new THREE.Mesh(noseGeo, noseMat);
-  nose.position.set(0, -0.005, 0.085);
-  nose.rotation.x = Math.PI;
-  headGroup.add(nose);
+  // Nose (more 3D)
+  const noseGroup = new THREE.Group();
+  const noseBridgeGeo = new THREE.BoxGeometry(0.012, 0.025, 0.015);
+  const noseMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.8 });
+  const noseBridge = new THREE.Mesh(noseBridgeGeo, noseMat);
+  noseBridge.position.set(0, 0, 0.08);
+  noseGroup.add(noseBridge);
 
-  // ===== SMILE =====
-  const smileGeo = new THREE.TorusGeometry(0.018, 0.003, 8, 16, Math.PI);
-  const smileMat = new THREE.MeshStandardMaterial({ color: '#c0392b' });
-  const smile = new THREE.Mesh(smileGeo, smileMat);
-  smile.position.set(0, -0.035, 0.075);
-  smile.rotation.x = Math.PI;
-  headGroup.add(smile);
+  const noseTipGeo = new THREE.SphereGeometry(0.012, 8, 8);
+  const noseTip = new THREE.Mesh(noseTipGeo, noseMat);
+  noseTip.position.set(0, -0.01, 0.085);
+  noseTip.scale.set(1, 0.7, 0.8);
+  noseGroup.add(noseTip);
 
-  // ===== EARS =====
-  const earGeo = new THREE.SphereGeometry(0.015, 8, 8);
-  const earMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone });
-  [-0.085, 0.085].forEach(x => {
-    const ear = new THREE.Mesh(earGeo, earMat);
-    ear.position.set(x, 0, 0);
-    ear.scale.set(0.5, 0.8, 0.6);
-    headGroup.add(ear);
+  // Nostrils
+  const nostrilGeo = new THREE.SphereGeometry(0.004, 6, 6);
+  const nostrilMat = new THREE.MeshStandardMaterial({ color: '#2c2c2c' });
+  [-0.007, 0.007].forEach(x => {
+    const nostril = new THREE.Mesh(nostrilGeo, nostrilMat);
+    nostril.position.set(x, -0.015, 0.082);
+    noseGroup.add(nostril);
+  });
+
+  headGroup.add(noseGroup);
+
+  // Mouth (more realistic)
+  const mouthGroup = new THREE.Group();
+
+  // Upper lip
+  const upperLipGeo = new THREE.TorusGeometry(0.016, 0.003, 8, 16, Math.PI);
+  const lipMat = new THREE.MeshStandardMaterial({ color: '#c0392b', roughness: 0.6 });
+  const upperLip = new THREE.Mesh(upperLipGeo, lipMat);
+  upperLip.position.set(0, -0.032, 0.075);
+  upperLip.rotation.z = Math.PI;
+  upperLip.scale.set(1, 0.5, 1);
+  mouthGroup.add(upperLip);
+
+  // Lower lip
+  const lowerLipGeo = new THREE.TorusGeometry(0.014, 0.0035, 8, 16, Math.PI);
+  const lowerLipMat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.5 });
+  const lowerLip = new THREE.Mesh(lowerLipGeo, lowerLipMat);
+  lowerLip.position.set(0, -0.038, 0.074);
+  lowerLip.scale.set(1, 0.6, 1);
+  mouthGroup.add(lowerLip);
+
+  headGroup.add(mouthGroup);
+
+  // Ears (more detailed)
+  const earMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.7 });
+  [-0.087, 0.087].forEach(x => {
+    const earGroup = new THREE.Group();
+
+    // Outer ear
+    const outerEarGeo = new THREE.SphereGeometry(0.018, 8, 8);
+    const outerEar = new THREE.Mesh(outerEarGeo, earMat);
+    outerEar.scale.set(0.4, 0.85, 0.55);
+    earGroup.add(outerEar);
+
+    // Inner ear
+    const innerEarGeo = new THREE.SphereGeometry(0.012, 6, 6);
+    const innerEarMat = new THREE.MeshStandardMaterial({
+      color: appearance.skinTone,
+      roughness: 0.5,
+      emissive: '#331111',
+      emissiveIntensity: 0.1,
+    });
+    const innerEar = new THREE.Mesh(innerEarGeo, innerEarMat);
+    innerEar.position.z = 0.003;
+    innerEar.scale.set(0.3, 0.6, 0.3);
+    earGroup.add(innerEar);
+
+    earGroup.position.set(x, 0, 0);
+    headGroup.add(earGroup);
+  });
+
+  // Chin definition
+  const chinGeo = new THREE.SphereGeometry(0.04, 12, 12);
+  const chinMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.7 });
+  const chin = new THREE.Mesh(chinGeo, chinMat);
+  chin.position.set(0, -0.06, 0.03);
+  chin.scale.set(1, 0.5, 0.8);
+  headGroup.add(chin);
+
+  // Cheeks (subtle)
+  const cheekGeo = new THREE.SphereGeometry(0.025, 8, 8);
+  const cheekMat = new THREE.MeshStandardMaterial({
+    color: appearance.skinTone,
+    roughness: 0.6,
+    emissive: '#ff9999',
+    emissiveIntensity: 0.05,
+  });
+  [-0.05, 0.05].forEach(x => {
+    const cheek = new THREE.Mesh(cheekGeo, cheekMat);
+    cheek.position.set(x, -0.015, 0.06);
+    cheek.scale.set(0.8, 0.6, 0.4);
+    headGroup.add(cheek);
   });
 
   headGroup.position.y = 0.32;
   human.add(headGroup);
 
   // ===== NECK =====
-  const neckGeo = new THREE.CylinderGeometry(0.022, 0.028, 0.04, 16);
-  const neckMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone });
+  const neckGeo = new THREE.CylinderGeometry(0.024, 0.03, 0.045, 16);
+  const neckMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.7 });
   const neck = new THREE.Mesh(neckGeo, neckMat);
   neck.position.y = 0.21;
   human.add(neck);
 
-  // ===== TORSO =====
-  const torsoGeo = new THREE.CylinderGeometry(0.07, 0.055, 0.16, 16);
+  // ===== TORSO (shirt with collar) =====
+  const torsoGroup = new THREE.Group();
+
+  // Main torso
+  const torsoGeo = new THREE.CylinderGeometry(0.075, 0.058, 0.17, 16);
   const torsoMat = new THREE.MeshStandardMaterial({
     color: appearance.shirtColor,
+    roughness: 0.6,
     emissive: isHighlighted ? '#ffff00' : '#000',
-    emissiveIntensity: hlEmit
+    emissiveIntensity: hlEmit,
   });
   const torso = new THREE.Mesh(torsoGeo, torsoMat);
-  torso.position.y = 0.11;
-  human.add(torso);
+  torsoGroup.add(torso);
 
-  // ===== ARMS =====
-  const armGeo = new THREE.CapsuleGeometry(0.014, 0.09, 8, 16);
-  const armMat = new THREE.MeshStandardMaterial({ color: appearance.shirtColor });
-  const skinArmMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone });
+  // Collar
+  const collarGeo = new THREE.TorusGeometry(0.055, 0.012, 8, 16, Math.PI * 1.2);
+  const collarMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.4 });
+  const collar = new THREE.Mesh(collarGeo, collarMat);
+  collar.position.set(0, 0.075, 0.02);
+  collar.rotation.x = Math.PI / 2;
+  collar.rotation.z = -Math.PI * 0.1;
+  torsoGroup.add(collar);
+
+  // Buttons (3 dots)
+  const buttonGeo = new THREE.SphereGeometry(0.006, 8, 8);
+  const buttonMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 });
+  [0.04, 0, -0.04].forEach(y => {
+    const button = new THREE.Mesh(buttonGeo, buttonMat);
+    button.position.set(0, y, 0.06);
+    torsoGroup.add(button);
+  });
+
+  // Shirt bottom (slight flare)
+  const shirtBottomGeo = new THREE.CylinderGeometry(0.06, 0.065, 0.02, 16);
+  const shirtBottom = new THREE.Mesh(shirtBottomGeo, torsoMat);
+  shirtBottom.position.y = -0.095;
+  torsoGroup.add(shirtBottom);
+
+  torsoGroup.position.y = 0.11;
+  human.add(torsoGroup);
+
+  // ===== ARMS (with better proportions) =====
+  const armShirtMat = new THREE.MeshStandardMaterial({ color: appearance.shirtColor, roughness: 0.6 });
+  const skinMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.7 });
+
   [-1, 1].forEach(side => {
     const armGroup = new THREE.Group();
-    armGroup.add(new THREE.Mesh(armGeo, armMat));
-    const lowerArmGeo = new THREE.CapsuleGeometry(0.011, 0.06, 8, 16);
-    const lowerArm = new THREE.Mesh(lowerArmGeo, skinArmMat);
-    lowerArm.position.y = -0.09;
+
+    // Shoulder (round)
+    const shoulderGeo = new THREE.SphereGeometry(0.025, 12, 12);
+    const shoulder = new THREE.Mesh(shoulderGeo, armShirtMat);
+    shoulder.position.y = 0.04;
+    armGroup.add(shoulder);
+
+    // Upper arm (shirt sleeve)
+    const upperArmGeo = new THREE.CapsuleGeometry(0.016, 0.08, 8, 16);
+    const upperArm = new THREE.Mesh(upperArmGeo, armShirtMat);
+    armGroup.add(upperArm);
+
+    // Sleeve cuff
+    const cuffGeo = new THREE.CylinderGeometry(0.018, 0.016, 0.015, 12);
+    const cuff = new THREE.Mesh(cuffGeo, armShirtMat);
+    cuff.position.y = -0.05;
+    armGroup.add(cuff);
+
+    // Lower arm (skin)
+    const lowerArmGeo = new THREE.CapsuleGeometry(0.013, 0.065, 8, 16);
+    const lowerArm = new THREE.Mesh(lowerArmGeo, skinMat);
+    lowerArm.position.y = -0.1;
     armGroup.add(lowerArm);
+
+    // Wrist
+    const wristGeo = new THREE.CylinderGeometry(0.013, 0.012, 0.01, 10);
+    const wrist = new THREE.Mesh(wristGeo, skinMat);
+    wrist.position.y = -0.14;
+    armGroup.add(wrist);
+
+    // Hand
     const handGeo = new THREE.SphereGeometry(0.018, 12, 12);
-    const hand = new THREE.Mesh(handGeo, skinArmMat);
-    hand.position.y = -0.14;
-    hand.scale.set(0.7, 0.9, 0.5);
+    const hand = new THREE.Mesh(handGeo, skinMat);
+    hand.position.y = -0.155;
+    hand.scale.set(0.65, 0.9, 0.45);
     armGroup.add(hand);
-    armGroup.position.set(side * 0.085, 0.1, 0);
-    armGroup.rotation.z = side * 0.2;
+
+    // Thumb
+    const thumbGeo = new THREE.CapsuleGeometry(0.005, 0.015, 4, 8);
+    const thumb = new THREE.Mesh(thumbGeo, skinMat);
+    thumb.position.set(side * 0.012, -0.155, 0.01);
+    thumb.rotation.z = side * 0.5;
+    armGroup.add(thumb);
+
+    armGroup.position.set(side * 0.09, 0.1, 0);
+    armGroup.rotation.z = side * 0.15;
     human.add(armGroup);
   });
 
-  // ===== HIPS =====
-  const hipsGeo = new THREE.CylinderGeometry(0.055, 0.05, 0.04, 16);
-  const hipsMat = new THREE.MeshStandardMaterial({ color: appearance.pantsColor });
+  // ===== BELT =====
+  const beltGeo = new THREE.CylinderGeometry(0.058, 0.055, 0.018, 16);
+  const beltMat = new THREE.MeshStandardMaterial({ color: '#2c2c2c', roughness: 0.4, metalness: 0.3 });
+  const belt = new THREE.Mesh(beltGeo, beltMat);
+  belt.position.y = 0.025;
+  human.add(belt);
+
+  // Belt buckle
+  const buckleGeo = new THREE.BoxGeometry(0.02, 0.015, 0.008);
+  const buckleMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.8, roughness: 0.2 });
+  const buckle = new THREE.Mesh(buckleGeo, buckleMat);
+  buckle.position.set(0, 0.025, 0.055);
+  human.add(buckle);
+
+  // ===== HIPS / PANTS TOP =====
+  const hipsGeo = new THREE.CylinderGeometry(0.057, 0.052, 0.04, 16);
+  const hipsMat = new THREE.MeshStandardMaterial({ color: appearance.pantsColor, roughness: 0.7 });
   const hips = new THREE.Mesh(hipsGeo, hipsMat);
-  hips.position.y = 0.01;
+  hips.position.y = 0.005;
   human.add(hips);
 
-  // ===== LEGS =====
-  const legGeo = new THREE.CapsuleGeometry(0.02, 0.1, 8, 16);
-  const legMat = new THREE.MeshStandardMaterial({ color: appearance.pantsColor });
-  [-0.028, 0.028].forEach(x => {
-    const leg = new THREE.Mesh(legGeo, legMat);
-    leg.position.set(x, -0.07, 0);
-    human.add(leg);
+  // ===== LEGS (with knees) =====
+  const legMat = new THREE.MeshStandardMaterial({ color: appearance.pantsColor, roughness: 0.7 });
+
+  [-0.03, 0.03].forEach(x => {
+    const legGroup = new THREE.Group();
+
+    // Upper leg (thigh)
+    const thighGeo = new THREE.CapsuleGeometry(0.022, 0.055, 8, 16);
+    const thigh = new THREE.Mesh(thighGeo, legMat);
+    legGroup.add(thigh);
+
+    // Knee joint
+    const kneeGeo = new THREE.SphereGeometry(0.022, 10, 10);
+    const knee = new THREE.Mesh(kneeGeo, legMat);
+    knee.position.y = -0.04;
+    legGroup.add(knee);
+
+    // Lower leg (shin)
+    const shinGeo = new THREE.CapsuleGeometry(0.018, 0.05, 8, 16);
+    const shin = new THREE.Mesh(shinGeo, legMat);
+    shin.position.y = -0.085;
+    legGroup.add(shin);
+
+    // Ankle
+    const ankleGeo = new THREE.SphereGeometry(0.016, 8, 8);
+    const ankle = new THREE.Mesh(ankleGeo, legMat);
+    ankle.position.y = -0.115;
+    legGroup.add(ankle);
+
+    legGroup.position.set(x, -0.05, 0);
+    human.add(legGroup);
   });
 
-  // ===== SHOES =====
-  const shoeGeo = new THREE.BoxGeometry(0.032, 0.015, 0.045);
-  const shoeMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a' });
-  [-0.028, 0.028].forEach(x => {
-    const shoe = new THREE.Mesh(shoeGeo, shoeMat);
-    shoe.position.set(x, -0.135, 0.008);
-    human.add(shoe);
+  // ===== SHOES (detailed) =====
+  const shoeMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.5, metalness: 0.1 });
+  const soleMat = new THREE.MeshStandardMaterial({ color: '#333333', roughness: 0.8 });
+
+  [-0.03, 0.03].forEach(x => {
+    const shoeGroup = new THREE.Group();
+
+    // Shoe body
+    const shoeBodyGeo = new THREE.BoxGeometry(0.035, 0.018, 0.05);
+    const shoeBody = new THREE.Mesh(shoeBodyGeo, shoeMat);
+    shoeGroup.add(shoeBody);
+
+    // Shoe toe (rounded front)
+    const toeGeo = new THREE.SphereGeometry(0.017, 8, 8);
+    const toe = new THREE.Mesh(toeGeo, shoeMat);
+    toe.position.set(0, -0.003, 0.02);
+    toe.scale.set(1, 0.5, 0.8);
+    shoeGroup.add(toe);
+
+    // Sole
+    const soleGeo = new THREE.BoxGeometry(0.036, 0.006, 0.052);
+    const sole = new THREE.Mesh(soleGeo, soleMat);
+    sole.position.y = -0.012;
+    shoeGroup.add(sole);
+
+    // Lace detail
+    const laceGeo = new THREE.BoxGeometry(0.008, 0.002, 0.025);
+    const laceMat = new THREE.MeshStandardMaterial({ color: '#ffffff' });
+    const lace = new THREE.Mesh(laceGeo, laceMat);
+    lace.position.set(0, 0.01, 0);
+    shoeGroup.add(lace);
+
+    shoeGroup.position.set(x, -0.155, 0.008);
+    human.add(shoeGroup);
   });
 
   // ===== NAME LABEL =====
   const labelCanvas = document.createElement('canvas');
-  labelCanvas.width = 128; labelCanvas.height = 32;
+  labelCanvas.width = 200;
+  labelCanvas.height = 48;
   const lctx = labelCanvas.getContext('2d')!;
-  lctx.fillStyle = isHighlighted ? '#ffff00' : 'rgba(0,0,0,0.8)';
-  lctx.beginPath();
-  lctx.roundRect(0, 0, 128, 32, 8);
-  lctx.fill();
-  lctx.fillStyle = isHighlighted ? '#000' : '#fff';
-  lctx.font = 'bold 18px Arial';
+
+  if (isHighlighted) {
+    lctx.fillStyle = '#ffff00';
+    lctx.beginPath();
+    lctx.roundRect(0, 0, 200, 48, 12);
+    lctx.fill();
+    lctx.fillStyle = '#000';
+  } else {
+    lctx.fillStyle = 'rgba(0,0,0,0.85)';
+    lctx.beginPath();
+    lctx.roundRect(0, 0, 200, 48, 12);
+    lctx.fill();
+    lctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    lctx.lineWidth = 2;
+    lctx.beginPath();
+    lctx.roundRect(1, 1, 198, 46, 12);
+    lctx.stroke();
+    lctx.fillStyle = '#ffffff';
+  }
+  lctx.font = 'bold 24px Arial';
   lctx.textAlign = 'center';
-  lctx.fillText(name, 64, 22);
+  lctx.fillText(name, 100, 34);
+
   const labelTex = new THREE.CanvasTexture(labelCanvas);
   const labelSprite = new THREE.Sprite(
     new THREE.SpriteMaterial({ map: labelTex, transparent: true })
   );
-  labelSprite.position.y = 0.48;
-  labelSprite.scale.set(0.32, 0.08, 1);
+  labelSprite.position.y = 0.5;
+  labelSprite.scale.set(0.35, 0.09, 1);
   human.add(labelSprite);
 
-  // ===== HIGHLIGHT RING =====
+  // ===== HIGHLIGHT EFFECTS =====
   if (isHighlighted) {
-    const ringGeo = new THREE.RingGeometry(0.07, 0.12, 32);
+    // Ground ring
+    const ringGeo = new THREE.RingGeometry(0.08, 0.13, 32);
     const ringMat = new THREE.MeshBasicMaterial({
       color: '#ffff00',
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.8
+      opacity: 0.7,
     });
     const ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.position.y = -0.14;
+    ring.position.y = -0.16;
     ring.rotation.x = -Math.PI / 2;
     human.add(ring);
+
+    // Floating arrow above name
+    const arrowGeo = new THREE.ConeGeometry(0.04, 0.08, 8);
+    const arrowMat = new THREE.MeshBasicMaterial({ color: '#ffff00' });
+    const arrowMesh = new THREE.Mesh(arrowGeo, arrowMat);
+    arrowMesh.position.y = 0.58;
+    arrowMesh.rotation.z = Math.PI;
+    human.add(arrowMesh);
   }
 
   return human;
 }
 
+// ==================== END OF PART 2 ====================
+// ==================== PART 3: Improved Clipboard + Train + Domino + Book ====================
+// Place right after Part 2
+
+// ==================== CLIPBOARD (To-Do — Flat with Checks & Script) ====================
 
 function createClipboard(label: string, color: string, isHighlighted: boolean): THREE.Group {
   const clipboard = new THREE.Group();
 
-  // Wooden board
-  const boardGeo = new THREE.BoxGeometry(0.38, 0.5, 0.025);
+  // Wooden board (thinner, more flat)
+  const boardGeo = new THREE.BoxGeometry(0.4, 0.52, 0.018);
   const boardMat = new THREE.MeshStandardMaterial({
-    color: '#8b4513', roughness: 0.7,
+    color: '#6d4c2a',
+    roughness: 0.65,
     emissive: isHighlighted ? '#ffff00' : '#000',
-    emissiveIntensity: isHighlighted ? 0.3 : 0
+    emissiveIntensity: isHighlighted ? 0.25 : 0,
   });
   clipboard.add(new THREE.Mesh(boardGeo, boardMat));
 
-  // Metal clip at top
-  const clipGeo = new THREE.BoxGeometry(0.12, 0.05, 0.04);
-  const clipMat = new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.8 });
-  const clip = new THREE.Mesh(clipGeo, clipMat);
-  clip.position.set(0, 0.27, 0.025);
-  clipboard.add(clip);
+  // Board edge (dark rim)
+  const edgeGeo = new THREE.BoxGeometry(0.41, 0.53, 0.01);
+  const edgeMat = new THREE.MeshStandardMaterial({ color: '#4a3520', roughness: 0.8 });
+  const edge = new THREE.Mesh(edgeGeo, edgeMat);
+  edge.position.z = -0.01;
+  clipboard.add(edge);
 
-  // Paper with task details
+  // Metal clip at top
+  const clipBaseGeo = new THREE.BoxGeometry(0.14, 0.04, 0.025);
+  const clipMat = new THREE.MeshStandardMaterial({ color: '#8a8a8a', metalness: 0.9, roughness: 0.2 });
+  const clipBase = new THREE.Mesh(clipBaseGeo, clipMat);
+  clipBase.position.set(0, 0.28, 0.015);
+  clipboard.add(clipBase);
+
+  // Clip lever
+  const clipLeverGeo = new THREE.BoxGeometry(0.08, 0.015, 0.03);
+  const clipLever = new THREE.Mesh(clipLeverGeo, clipMat);
+  clipLever.position.set(0, 0.3, 0.03);
+  clipLever.rotation.x = -0.3;
+  clipboard.add(clipLever);
+
+  // Clip spring
+  const springGeo = new THREE.TorusGeometry(0.008, 0.002, 6, 12, Math.PI);
+  const spring = new THREE.Mesh(springGeo, clipMat);
+  spring.position.set(0, 0.285, 0.025);
+  spring.rotation.y = Math.PI / 2;
+  clipboard.add(spring);
+
+  // Paper sheet
   const paperCanvas = document.createElement('canvas');
-  paperCanvas.width = 128; paperCanvas.height = 180;
+  paperCanvas.width = 200;
+  paperCanvas.height = 300;
   const pctx = paperCanvas.getContext('2d')!;
-  pctx.fillStyle = '#ffffff';
-  pctx.fillRect(0, 0, 128, 180);
+
+  // Paper background
+  pctx.fillStyle = '#fefef6';
+  pctx.fillRect(0, 0, 200, 300);
+
+  // Slight paper texture (subtle lines)
+  pctx.strokeStyle = '#f0ede4';
+  pctx.lineWidth = 0.5;
+  for (let y = 0; y < 300; y += 3) {
+    pctx.beginPath();
+    pctx.moveTo(0, y);
+    pctx.lineTo(200, y);
+    pctx.stroke();
+  }
+
+  // Color header band
   pctx.fillStyle = color;
-  pctx.fillRect(0, 0, 128, 30);
+  pctx.fillRect(0, 0, 200, 38);
+
+  // Title text on header
   pctx.fillStyle = '#ffffff';
-  pctx.font = 'bold 16px Arial';
+  pctx.font = 'bold 18px Arial';
   pctx.textAlign = 'center';
-  pctx.fillText(label, 64, 22);
-  pctx.strokeStyle = '#e0e0e0';
+  pctx.fillText('TO-DO: ' + label, 100, 27);
+
+  // Ruled lines
+  pctx.strokeStyle = '#d4d0c8';
+  pctx.lineWidth = 0.8;
+  const lineStartY = 55;
+  const lineSpacing = 22;
+  const tasks = [
+    { text: 'Review notes', done: true },
+    { text: 'Complete homework', done: true },
+    { text: 'Practice coding', done: isHighlighted },
+    { text: 'Read chapter 5', done: false },
+    { text: 'Submit project', done: false },
+    { text: 'Study for exam', done: false },
+    { text: 'Group meeting', done: false },
+    { text: 'Lab report', done: false },
+  ];
+
+  tasks.forEach((task, i) => {
+    const y = lineStartY + i * lineSpacing;
+
+    // Ruled line
+    pctx.strokeStyle = '#d4d0c8';
+    pctx.beginPath();
+    pctx.moveTo(12, y + 16);
+    pctx.lineTo(188, y + 16);
+    pctx.stroke();
+
+    // Checkbox
+    pctx.strokeStyle = '#666';
+    pctx.lineWidth = 1.5;
+    pctx.strokeRect(14, y, 14, 14);
+
+    if (task.done) {
+      // Checkmark
+      pctx.strokeStyle = '#27ae60';
+      pctx.lineWidth = 2.5;
+      pctx.beginPath();
+      pctx.moveTo(16, y + 7);
+      pctx.lineTo(20, y + 12);
+      pctx.lineTo(27, y + 3);
+      pctx.stroke();
+
+      // Strikethrough text
+      pctx.fillStyle = '#999';
+      pctx.font = '12px Arial';
+      pctx.textAlign = 'left';
+      pctx.fillText(task.text, 34, y + 12);
+      pctx.strokeStyle = '#999';
+      pctx.lineWidth = 1;
+      pctx.beginPath();
+      pctx.moveTo(34, y + 8);
+      pctx.lineTo(34 + pctx.measureText(task.text).width, y + 8);
+      pctx.stroke();
+    } else {
+      // Normal text
+      pctx.fillStyle = '#2c3e50';
+      pctx.font = '12px Arial';
+      pctx.textAlign = 'left';
+      pctx.fillText(task.text, 34, y + 12);
+    }
+  });
+
+  // Page number at bottom
+  pctx.fillStyle = '#aaa';
+  pctx.font = '10px Arial';
+  pctx.textAlign = 'center';
+  pctx.fillText('Page 1 of 1', 100, 285);
+
+  // Red margin line
+  pctx.strokeStyle = '#e74c3c';
   pctx.lineWidth = 1;
-  for (let y = 50; y < 170; y += 18) {
-    pctx.beginPath();
-    pctx.moveTo(10, y);
-    pctx.lineTo(118, y);
-    pctx.stroke();
-  }
-  // Checkbox
-  pctx.strokeStyle = '#333';
-  pctx.lineWidth = 2;
-  pctx.strokeRect(12, 55, 14, 14);
-  // Checkmark if highlighted
-  if (isHighlighted) {
-    pctx.strokeStyle = '#2ecc71';
-    pctx.lineWidth = 3;
-    pctx.beginPath();
-    pctx.moveTo(14, 62);
-    pctx.lineTo(19, 67);
-    pctx.lineTo(26, 57);
-    pctx.stroke();
-  }
+  pctx.beginPath();
+  pctx.moveTo(10, 40);
+  pctx.lineTo(10, 290);
+  pctx.stroke();
+
   const paperTex = new THREE.CanvasTexture(paperCanvas);
   const paper = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.34, 0.45),
+    new THREE.PlaneGeometry(0.36, 0.48),
     new THREE.MeshBasicMaterial({ map: paperTex })
   );
-  paper.position.z = 0.015;
+  paper.position.z = 0.011;
   clipboard.add(paper);
+
+  // Paper edge shadow
+  const shadowGeo = new THREE.PlaneGeometry(0.37, 0.49);
+  const shadowMat = new THREE.MeshBasicMaterial({
+    color: '#000000',
+    transparent: true,
+    opacity: 0.08,
+  });
+  const shadow = new THREE.Mesh(shadowGeo, shadowMat);
+  shadow.position.z = 0.009;
+  clipboard.add(shadow);
+
+  // Pencil resting on clipboard
+  const pencilGroup = new THREE.Group();
+  const pencilBodyGeo = new THREE.CylinderGeometry(0.006, 0.006, 0.18, 6);
+  const pencilMat = new THREE.MeshStandardMaterial({ color: '#f4d03f' });
+  const pencilBody = new THREE.Mesh(pencilBodyGeo, pencilMat);
+  pencilGroup.add(pencilBody);
+
+  const pencilTipGeo = new THREE.ConeGeometry(0.006, 0.02, 6);
+  const pencilTipMat = new THREE.MeshStandardMaterial({ color: '#f5deb3' });
+  const pencilTip = new THREE.Mesh(pencilTipGeo, pencilTipMat);
+  pencilTip.position.y = -0.1;
+  pencilGroup.add(pencilTip);
+
+  const pencilLeadGeo = new THREE.ConeGeometry(0.002, 0.008, 6);
+  const pencilLeadMat = new THREE.MeshStandardMaterial({ color: '#333' });
+  const pencilLead = new THREE.Mesh(pencilLeadGeo, pencilLeadMat);
+  pencilLead.position.y = -0.114;
+  pencilGroup.add(pencilLead);
+
+  const eraserGeo = new THREE.CylinderGeometry(0.007, 0.006, 0.015, 6);
+  const eraserMat = new THREE.MeshStandardMaterial({ color: '#e88b8b' });
+  const eraser = new THREE.Mesh(eraserGeo, eraserMat);
+  eraser.position.y = 0.098;
+  pencilGroup.add(eraser);
+
+  pencilGroup.position.set(0.12, -0.05, 0.02);
+  pencilGroup.rotation.z = 0.8;
+  clipboard.add(pencilGroup);
+
+  // Highlight glow
+  if (isHighlighted) {
+    const glowGeo = new THREE.BoxGeometry(0.44, 0.56, 0.04);
+    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 });
+    clipboard.add(new THREE.Mesh(glowGeo, glowMat));
+  }
 
   return clipboard;
 }
 
-// ==================== TRAIN CAR (Train environment) ====================
+// ==================== TRAIN CAR (More Realistic) ====================
 
 function createTrainCar(isEngine: boolean, color: string, label: string, isHighlighted: boolean): THREE.Group {
   const train = new THREE.Group();
 
-  // Main body
-  const bodyGeo = new THREE.BoxGeometry(0.65, 0.32, 0.28);
+  // Main body (rounded edges feel)
+  const bodyGeo = new THREE.BoxGeometry(0.7, 0.34, 0.3);
   const bodyMat = new THREE.MeshStandardMaterial({
-    color, metalness: 0.3, roughness: 0.7,
+    color,
+    metalness: 0.35,
+    roughness: 0.6,
     emissive: isHighlighted ? '#ffff00' : '#000',
-    emissiveIntensity: isHighlighted ? 0.4 : 0
+    emissiveIntensity: isHighlighted ? 0.4 : 0,
   });
   const body = new THREE.Mesh(bodyGeo, bodyMat);
-  body.position.y = 0.1;
+  body.position.y = 0.12;
   train.add(body);
 
-  // Roof
-  const roofGeo = new THREE.BoxGeometry(0.6, 0.05, 0.26);
-  const roof = new THREE.Mesh(roofGeo, new THREE.MeshStandardMaterial({ color: '#2c3e50' }));
-  roof.position.y = 0.285;
+  // Body stripe (decorative line)
+  const stripeGeo = new THREE.BoxGeometry(0.71, 0.025, 0.305);
+  const stripeMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.5 });
+  const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+  stripe.position.y = 0.18;
+  train.add(stripe);
+
+  // Roof (curved look)
+  const roofGeo = new THREE.BoxGeometry(0.64, 0.04, 0.26);
+  const roofMat = new THREE.MeshStandardMaterial({ color: '#1a1a2e', metalness: 0.4 });
+  const roof = new THREE.Mesh(roofGeo, roofMat);
+  roof.position.y = 0.31;
   train.add(roof);
 
+  // Roof curve
+  const roofCurveGeo = new THREE.CylinderGeometry(0.13, 0.13, 0.64, 16, 1, false, 0, Math.PI);
+  const roofCurve = new THREE.Mesh(roofCurveGeo, roofMat);
+  roofCurve.position.y = 0.31;
+  roofCurve.rotation.z = Math.PI / 2;
+  roofCurve.scale.y = 0.25;
+  train.add(roofCurve);
+
   // Undercarriage
-  const underGeo = new THREE.BoxGeometry(0.6, 0.04, 0.22);
-  const under = new THREE.Mesh(underGeo, new THREE.MeshStandardMaterial({ color: '#1a1a1a' }));
-  under.position.y = -0.08;
+  const underGeo = new THREE.BoxGeometry(0.65, 0.04, 0.24);
+  const underMat = new THREE.MeshStandardMaterial({ color: '#111111', metalness: 0.6 });
+  const under = new THREE.Mesh(underGeo, underMat);
+  under.position.y = -0.06;
   train.add(under);
 
-  // Wheels with hubs
-  const wheelGeo = new THREE.CylinderGeometry(0.055, 0.055, 0.035, 20);
-  const wheelMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', metalness: 0.6 });
-  const hubGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.04, 12);
-  const hubMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.8 });
+  // Wheels (detailed)
+  const wheelGeo = new THREE.CylinderGeometry(0.058, 0.058, 0.025, 24);
+  const wheelMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', metalness: 0.7, roughness: 0.3 });
+  const hubCapGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.028, 16);
+  const hubCapMat = new THREE.MeshStandardMaterial({ color: '#d4d4d4', metalness: 0.9, roughness: 0.1 });
+  const wheelRimGeo = new THREE.TorusGeometry(0.055, 0.005, 8, 24);
+  const wheelRimMat = new THREE.MeshStandardMaterial({ color: '#888', metalness: 0.8 });
+
   const wheelPositions: [number, number, number][] = [
-    [-0.2, -0.06, 0.14], [0.2, -0.06, 0.14],
-    [-0.2, -0.06, -0.14], [0.2, -0.06, -0.14]
+    [-0.22, -0.06, 0.15], [0.22, -0.06, 0.15],
+    [-0.22, -0.06, -0.15], [0.22, -0.06, -0.15],
   ];
-  wheelPositions.forEach(([x, y, z]) => {
+  wheelPositions.forEach(([wx, wy, wz]) => {
     const wheel = new THREE.Mesh(wheelGeo, wheelMat);
     wheel.rotation.x = Math.PI / 2;
-    wheel.position.set(x, y, z);
+    wheel.position.set(wx, wy, wz);
     train.add(wheel);
-    const hub = new THREE.Mesh(hubGeo, hubMat);
-    hub.rotation.x = Math.PI / 2;
-    hub.position.set(x, y, z);
-    train.add(hub);
+
+    const hubCap = new THREE.Mesh(hubCapGeo, hubCapMat);
+    hubCap.rotation.x = Math.PI / 2;
+    hubCap.position.set(wx, wy, wz);
+    train.add(hubCap);
+
+    const rim = new THREE.Mesh(wheelRimGeo, wheelRimMat);
+    rim.position.set(wx, wy, wz > 0 ? wz + 0.013 : wz - 0.013);
+    rim.rotation.x = Math.PI / 2;
+    train.add(rim);
+
+    // Wheel spokes
+    const spokeGeo = new THREE.BoxGeometry(0.003, 0.09, 0.003);
+    const spokeMat = new THREE.MeshStandardMaterial({ color: '#999' });
+    [0, Math.PI / 3, Math.PI * 2 / 3].forEach(angle => {
+      const spoke = new THREE.Mesh(spokeGeo, spokeMat);
+      spoke.position.set(wx, wy, wz > 0 ? wz + 0.013 : wz - 0.013);
+      spoke.rotation.z = angle;
+      train.add(spoke);
+    });
   });
 
-  // Windows (only for non-engine cars)
+  // Windows
   if (!isEngine) {
-    const windowGeo = new THREE.PlaneGeometry(0.08, 0.07);
+    const windowGeo = new THREE.PlaneGeometry(0.09, 0.08);
     const windowMat = new THREE.MeshStandardMaterial({
-      color: '#87ceeb', side: THREE.DoubleSide, metalness: 0.3
+      color: '#87ceeb',
+      side: THREE.DoubleSide,
+      metalness: 0.4,
+      roughness: 0.2,
     });
-    [-0.18, 0, 0.18].forEach(x => {
+    const windowFrameMat = new THREE.MeshStandardMaterial({ color: '#555', metalness: 0.6 });
+
+    [-0.2, 0, 0.2].forEach(x => {
+      // Front windows
       const wF = new THREE.Mesh(windowGeo, windowMat);
-      wF.position.set(x, 0.15, 0.141);
+      wF.position.set(x, 0.17, 0.152);
       train.add(wF);
+
+      // Window frame front
+      const frameFGeo = new THREE.BoxGeometry(0.1, 0.09, 0.005);
+      const frameF = new THREE.Mesh(frameFGeo, windowFrameMat);
+      frameF.position.set(x, 0.17, 0.153);
+      train.add(frameF);
+
+      // Back windows
       const wB = new THREE.Mesh(windowGeo, windowMat);
-      wB.position.set(x, 0.15, -0.141);
+      wB.position.set(x, 0.17, -0.152);
       train.add(wB);
     });
   }
 
-  // Engine-specific parts
+  // Engine specific parts
   if (isEngine) {
-    // Boiler
-    const boilerGeo = new THREE.CylinderGeometry(0.1, 0.11, 0.22, 20);
-    const boiler = new THREE.Mesh(boilerGeo, new THREE.MeshStandardMaterial({
-      color: '#c0392b', metalness: 0.4
-    }));
+    // Boiler (main cylinder)
+    const boilerGeo = new THREE.CylinderGeometry(0.12, 0.13, 0.28, 24);
+    const boilerMat = new THREE.MeshStandardMaterial({ color: '#b71c1c', metalness: 0.45, roughness: 0.5 });
+    const boiler = new THREE.Mesh(boilerGeo, boilerMat);
     boiler.rotation.z = Math.PI / 2;
-    boiler.position.set(0.44, 0.1, 0);
+    boiler.position.set(0.5, 0.12, 0);
     train.add(boiler);
 
-    // Chimney
-    const chimneyGeo = new THREE.CylinderGeometry(0.035, 0.05, 0.14, 12);
-    const chimney = new THREE.Mesh(chimneyGeo, new THREE.MeshStandardMaterial({ color: '#2c3e50' }));
-    chimney.position.set(0.15, 0.38, 0);
+    // Boiler bands (metal rings)
+    const bandGeo = new THREE.TorusGeometry(0.132, 0.008, 8, 24);
+    const bandMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.8 });
+    [0.38, 0.48, 0.58].forEach(x => {
+      const band = new THREE.Mesh(bandGeo, bandMat);
+      band.position.set(x, 0.12, 0);
+      band.rotation.y = Math.PI / 2;
+      train.add(band);
+    });
+
+    // Boiler front plate
+    const frontPlateGeo = new THREE.CircleGeometry(0.12, 24);
+    const frontPlateMat = new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.6, side: THREE.DoubleSide });
+    const frontPlate = new THREE.Mesh(frontPlateGeo, frontPlateMat);
+    frontPlate.position.set(0.64, 0.12, 0);
+    frontPlate.rotation.y = Math.PI / 2;
+    train.add(frontPlate);
+
+    // Headlight
+    const headlightGeo = new THREE.CylinderGeometry(0.03, 0.035, 0.04, 16);
+    const headlightMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.7 });
+    const headlight = new THREE.Mesh(headlightGeo, headlightMat);
+    headlight.position.set(0.66, 0.2, 0);
+    headlight.rotation.z = Math.PI / 2;
+    train.add(headlight);
+
+    // Headlight lens
+    const lensGeo = new THREE.CircleGeometry(0.025, 16);
+    const lensMat = new THREE.MeshBasicMaterial({ color: '#ffffcc' });
+    const lens = new THREE.Mesh(lensGeo, lensMat);
+    lens.position.set(0.68, 0.2, 0);
+    lens.rotation.y = Math.PI / 2;
+    train.add(lens);
+
+    // Chimney (smokestack)
+    const chimneyGeo = new THREE.CylinderGeometry(0.03, 0.045, 0.16, 12);
+    const chimneyMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', metalness: 0.5 });
+    const chimney = new THREE.Mesh(chimneyGeo, chimneyMat);
+    chimney.position.set(0.2, 0.4, 0);
     train.add(chimney);
 
-    // Smoke puffs
-    const smokeGeo = new THREE.SphereGeometry(0.04, 8, 8);
-    const smokeMat = new THREE.MeshBasicMaterial({
-      color: '#bdc3c7', transparent: true, opacity: 0.5
-    });
-    [0.48, 0.55, 0.63].forEach((y, i) => {
+    // Chimney cap
+    const capGeo = new THREE.CylinderGeometry(0.045, 0.035, 0.02, 12);
+    const cap = new THREE.Mesh(capGeo, chimneyMat);
+    cap.position.set(0.2, 0.49, 0);
+    train.add(cap);
+
+    // Smoke puffs (3D spheres)
+    const smokeMat = new THREE.MeshBasicMaterial({ color: '#bdc3c7', transparent: true, opacity: 0.35 });
+    [
+      { y: 0.55, s: 0.04 },
+      { y: 0.62, s: 0.055 },
+      { y: 0.7, s: 0.07 },
+      { y: 0.8, s: 0.08 },
+    ].forEach(({ y, s }) => {
+      const smokeGeo = new THREE.SphereGeometry(s, 8, 8);
       const smoke = new THREE.Mesh(smokeGeo, smokeMat);
-      smoke.position.set(0.15, y, 0);
-      smoke.scale.setScalar(1 + i * 0.25);
+      smoke.position.set(0.2 + (y - 0.55) * 0.3, y, (Math.random() - 0.5) * 0.08);
       train.add(smoke);
     });
 
-    // Cow catcher
-    const catcherGeo = new THREE.BoxGeometry(0.04, 0.08, 0.22);
-    const catcher = new THREE.Mesh(catcherGeo, new THREE.MeshStandardMaterial({ color: '#1a1a1a' }));
-    catcher.position.set(0.55, -0.02, 0);
-    train.add(catcher);
+    // Cow catcher (front guard)
+    const catcherGroup = new THREE.Group();
+    const catcherMat = new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.6 });
+    const catcherBaseGeo = new THREE.BoxGeometry(0.06, 0.1, 0.25);
+    const catcherBase = new THREE.Mesh(catcherBaseGeo, catcherMat);
+    catcherGroup.add(catcherBase);
+
+    // V-shape bars
+    [-0.08, 0.08].forEach(z => {
+      const barGeo = new THREE.BoxGeometry(0.08, 0.04, 0.015);
+      const bar = new THREE.Mesh(barGeo, catcherMat);
+      bar.position.set(0.02, -0.03, z);
+      bar.rotation.y = z > 0 ? 0.3 : -0.3;
+      catcherGroup.add(bar);
+    });
+
+    catcherGroup.position.set(0.68, -0.02, 0);
+    train.add(catcherGroup);
+
+    // Steam dome
+    const domeGeo = new THREE.SphereGeometry(0.04, 12, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+    const domeMat = new THREE.MeshStandardMaterial({ color: '#c0392b', metalness: 0.5 });
+    const dome = new THREE.Mesh(domeGeo, domeMat);
+    dome.position.set(0.42, 0.25, 0);
+    train.add(dome);
   }
 
-  // Coupling hooks on both sides
-  const hookGeo = new THREE.BoxGeometry(0.03, 0.02, 0.02);
-  const hookMat = new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.7 });
-  [-0.34, 0.34].forEach(x => {
+  // Coupling hooks (both sides)
+  const hookGeo = new THREE.BoxGeometry(0.04, 0.025, 0.025);
+  const hookMat = new THREE.MeshStandardMaterial({ color: '#666', metalness: 0.8, roughness: 0.2 });
+  [-0.37, 0.37].forEach(x => {
     const hook = new THREE.Mesh(hookGeo, hookMat);
-    hook.position.set(x, 0, 0);
+    hook.position.set(x, 0.02, 0);
     train.add(hook);
+
+    // Hook ring
+    const ringGeo = new THREE.TorusGeometry(0.015, 0.004, 6, 12);
+    const ring = new THREE.Mesh(ringGeo, hookMat);
+    ring.position.set(x > 0 ? x + 0.03 : x - 0.03, 0.02, 0);
+    ring.rotation.y = Math.PI / 2;
+    train.add(ring);
   });
 
-  // Floating label
+  // Label
   const canvas = document.createElement('canvas');
-  canvas.width = 128; canvas.height = 32;
+  canvas.width = 160;
+  canvas.height = 48;
   const ctx = canvas.getContext('2d')!;
-  ctx.fillStyle = isHighlighted ? '#ffff00' : '#fff';
-  ctx.font = 'bold 22px Arial';
+  ctx.fillStyle = isHighlighted ? 'rgba(255,255,0,0.9)' : 'rgba(0,0,0,0.7)';
+  ctx.beginPath();
+  ctx.roundRect(0, 0, 160, 48, 10);
+  ctx.fill();
+  ctx.fillStyle = isHighlighted ? '#000' : '#fff';
+  ctx.font = 'bold 26px Arial';
   ctx.textAlign = 'center';
-  ctx.fillText(label, 64, 24);
+  ctx.fillText(label, 80, 34);
   const labelTex = new THREE.CanvasTexture(canvas);
-  const labelSprite = new THREE.Sprite(
-    new THREE.SpriteMaterial({ map: labelTex, transparent: true })
-  );
-  labelSprite.position.y = 0.45;
-  labelSprite.scale.set(0.4, 0.1, 1);
+  const labelSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex, transparent: true }));
+  labelSprite.position.y = 0.5;
+  labelSprite.scale.set(0.45, 0.14, 1);
   train.add(labelSprite);
+
+  // Highlight
+  if (isHighlighted) {
+    const glowGeo = new THREE.BoxGeometry(0.75, 0.4, 0.35);
+    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.1 });
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    glow.position.y = 0.12;
+    train.add(glow);
+  }
 
   return train;
 }
 
-// ==================== DOMINO (Domino environment) ====================
+// ==================== DOMINO (Improved) ====================
 
 function createDomino(value: string, isHighlighted: boolean): THREE.Group {
   const domino = new THREE.Group();
 
-  // Main tile
-  const tileGeo = new THREE.BoxGeometry(0.22, 0.45, 0.06);
+  // Main tile (thicker, more solid)
+  const tileGeo = new THREE.BoxGeometry(0.24, 0.48, 0.07);
   const tileMat = new THREE.MeshStandardMaterial({
-    color: isHighlighted ? '#1abc9c' : '#ecf0f1',
+    color: isHighlighted ? '#1abc9c' : '#f5f0e8',
+    roughness: 0.4,
+    metalness: 0.05,
     emissive: isHighlighted ? '#1abc9c' : '#000',
-    emissiveIntensity: isHighlighted ? 0.3 : 0
+    emissiveIntensity: isHighlighted ? 0.25 : 0,
   });
   domino.add(new THREE.Mesh(tileGeo, tileMat));
 
-  // Center dividing line
-  const lineGeo = new THREE.BoxGeometry(0.18, 0.008, 0.01);
-  const line = new THREE.Mesh(lineGeo, new THREE.MeshStandardMaterial({ color: '#2c3e50' }));
-  line.position.z = 0.031;
-  domino.add(line);
-
-  // Border backing
-  const borderGeo = new THREE.BoxGeometry(0.23, 0.46, 0.02);
-  const border = new THREE.Mesh(borderGeo, new THREE.MeshStandardMaterial({ color: '#2c3e50' }));
-  border.position.z = -0.025;
+  // Rounded edge effect (border)
+  const borderGeo = new THREE.BoxGeometry(0.25, 0.49, 0.06);
+  const borderMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.5 });
+  const border = new THREE.Mesh(borderGeo, borderMat);
+  border.position.z = -0.01;
   domino.add(border);
 
+  // Center dividing line (recessed groove)
+  const grooveGeo = new THREE.BoxGeometry(0.2, 0.012, 0.015);
+  const grooveMat = new THREE.MeshStandardMaterial({ color: '#2c3e50', roughness: 0.3 });
+  const groove = new THREE.Mesh(grooveGeo, grooveMat);
+  groove.position.z = 0.03;
+  domino.add(groove);
+
+  // Decorative corner dots
+  const cornerDotGeo = new THREE.CircleGeometry(0.008, 8);
+  const cornerDotMat = new THREE.MeshBasicMaterial({ color: '#c0392b', side: THREE.DoubleSide });
+  [[-0.09, 0.21], [0.09, 0.21], [-0.09, -0.21], [0.09, -0.21]].forEach(([x, y]) => {
+    const cornerDot = new THREE.Mesh(cornerDotGeo, cornerDotMat);
+    cornerDot.position.set(x, y, 0.036);
+    domino.add(cornerDot);
+  });
+
   // Dots based on value
-  const dotGeo = new THREE.CircleGeometry(0.018, 16);
-  const dotMat = new THREE.MeshBasicMaterial({ color: '#2c3e50', side: THREE.DoubleSide });
   const val = parseInt(value) || 1;
+  const dotGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.015, 16);
+  const dotMat = new THREE.MeshStandardMaterial({
+    color: isHighlighted ? '#fff' : '#1a1a1a',
+    roughness: 0.3,
+    metalness: 0.1,
+  });
+
+  // Dot positions for top half
+  const dotPositions: Record<number, [number, number][]> = {
+    1: [[0, 0.14]],
+    2: [[-0.05, 0.2], [0.05, 0.08]],
+    3: [[-0.05, 0.2], [0, 0.14], [0.05, 0.08]],
+    4: [[-0.05, 0.2], [0.05, 0.2], [-0.05, 0.08], [0.05, 0.08]],
+  };
+
+  const topDots = dotPositions[Math.min(val, 4)] || dotPositions[1];
 
   // Top half dots
-  const topDots: [number, number][] = [];
-  if (val >= 1) topDots.push([0, 0.14]);
-  if (val >= 2) topDots.push([-0.05, 0.2]);
-  if (val >= 3) topDots.push([0.05, 0.08]);
   topDots.forEach(([x, y]) => {
     const dot = new THREE.Mesh(dotGeo, dotMat);
-    dot.position.set(x, y, 0.032);
+    dot.position.set(x, y, 0.028);
+    dot.rotation.x = Math.PI / 2;
     domino.add(dot);
+
+    // Dot recess
+    const recessGeo = new THREE.CircleGeometry(0.022, 12);
+    const recessMat = new THREE.MeshBasicMaterial({ color: '#ddd', side: THREE.DoubleSide });
+    const recess = new THREE.Mesh(recessGeo, recessMat);
+    recess.position.set(x, y, 0.035);
+    domino.add(recess);
   });
 
   // Bottom half dots (mirrored)
   topDots.forEach(([x, y]) => {
     const dot = new THREE.Mesh(dotGeo, dotMat);
-    dot.position.set(-x, -y, 0.032);
+    dot.position.set(-x, -y, 0.028);
+    dot.rotation.x = Math.PI / 2;
     domino.add(dot);
+
+    const recessGeo = new THREE.CircleGeometry(0.022, 12);
+    const recessMat = new THREE.MeshBasicMaterial({ color: '#ddd', side: THREE.DoubleSide });
+    const recess = new THREE.Mesh(recessGeo, recessMat);
+    recess.position.set(-x, -y, 0.035);
+    domino.add(recess);
   });
+
+  // Value number (small, on side)
+  const numCanvas = document.createElement('canvas');
+  numCanvas.width = 32;
+  numCanvas.height = 32;
+  const nctx = numCanvas.getContext('2d')!;
+  nctx.fillStyle = isHighlighted ? '#fff' : '#666';
+  nctx.font = 'bold 20px Arial';
+  nctx.textAlign = 'center';
+  nctx.fillText(value, 16, 24);
+  const numTex = new THREE.CanvasTexture(numCanvas);
+  const numSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: numTex, transparent: true }));
+  numSprite.position.set(0.14, 0, 0);
+  numSprite.scale.set(0.08, 0.08, 1);
+  domino.add(numSprite);
 
   // Highlight glow
   if (isHighlighted) {
-    const glowGeo = new THREE.BoxGeometry(0.26, 0.49, 0.02);
-    const glowMat = new THREE.MeshBasicMaterial({
-      color: '#ffff00', transparent: true, opacity: 0.3
-    });
+    const glowGeo = new THREE.BoxGeometry(0.28, 0.52, 0.03);
+    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.2 });
     domino.add(new THREE.Mesh(glowGeo, glowMat));
   }
 
   return domino;
 }
 
-// ==================== BOOK (Books stack environment) ====================
+// ==================== BOOK (More Realistic) ====================
 
 function createBook(label: string, color: string, isHighlighted: boolean): THREE.Group {
   const book = new THREE.Group();
 
-  // Cover
-  const coverGeo = new THREE.BoxGeometry(0.55, 0.07, 0.38);
+  // Cover (hardback)
+  const coverGeo = new THREE.BoxGeometry(0.58, 0.075, 0.4);
   const coverMat = new THREE.MeshStandardMaterial({
-    color, roughness: 0.6,
+    color,
+    roughness: 0.5,
+    metalness: 0.05,
     emissive: isHighlighted ? '#ffff00' : '#000',
-    emissiveIntensity: isHighlighted ? 0.35 : 0
+    emissiveIntensity: isHighlighted ? 0.3 : 0,
   });
   book.add(new THREE.Mesh(coverGeo, coverMat));
 
-  // Pages inside
-  const pagesGeo = new THREE.BoxGeometry(0.52, 0.055, 0.35);
-  const pages = new THREE.Mesh(pagesGeo, new THREE.MeshStandardMaterial({ color: '#f5f5dc' }));
-  pages.position.x = 0.01;
+  // Cover emboss edges
+  const topEdgeGeo = new THREE.BoxGeometry(0.58, 0.003, 0.4);
+  const edgeMat = new THREE.MeshStandardMaterial({ color, roughness: 0.3, metalness: 0.15 });
+  const topEdge = new THREE.Mesh(topEdgeGeo, edgeMat);
+  topEdge.position.y = 0.039;
+  book.add(topEdge);
+  const bottomEdge = new THREE.Mesh(topEdgeGeo, edgeMat);
+  bottomEdge.position.y = -0.039;
+  book.add(bottomEdge);
+
+  // Pages (visible from side, cream colored)
+  const pagesGeo = new THREE.BoxGeometry(0.54, 0.06, 0.37);
+  const pagesMat = new THREE.MeshStandardMaterial({ color: '#f5f0e0', roughness: 0.9 });
+  const pages = new THREE.Mesh(pagesGeo, pagesMat);
+  pages.position.x = 0.015;
   book.add(pages);
 
-  // Spine
-  const spineGeo = new THREE.BoxGeometry(0.02, 0.07, 0.38);
-  const spine = new THREE.Mesh(spineGeo, new THREE.MeshStandardMaterial({ color: '#5d4037' }));
-  spine.position.x = -0.285;
+  // Page lines (visible from side)
+  const pageLinesCanvas = document.createElement('canvas');
+  pageLinesCanvas.width = 16;
+  pageLinesCanvas.height = 128;
+  const plctx = pageLinesCanvas.getContext('2d')!;
+  plctx.fillStyle = '#f5f0e0';
+  plctx.fillRect(0, 0, 16, 128);
+  for (let y = 0; y < 128; y += 2) {
+    plctx.fillStyle = y % 4 === 0 ? '#e8e0d0' : '#f0e8d8';
+    plctx.fillRect(0, y, 16, 1);
+  }
+  const pageLinesTex = new THREE.CanvasTexture(pageLinesCanvas);
+  const pageSide = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.06, 0.37),
+    new THREE.MeshBasicMaterial({ map: pageLinesTex })
+  );
+  pageSide.position.set(0.29, 0, 0);
+  pageSide.rotation.y = Math.PI / 2;
+  book.add(pageSide);
+
+  // Spine (rounded look)
+  const spineGeo = new THREE.BoxGeometry(0.025, 0.08, 0.4);
+  const spineMat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(color).multiplyScalar(0.7),
+    roughness: 0.4,
+  });
+  const spine = new THREE.Mesh(spineGeo, spineMat);
+  spine.position.x = -0.3;
   book.add(spine);
 
-  // Spine text (rotated)
+  // Spine ridges
+  const ridgeGeo = new THREE.BoxGeometry(0.003, 0.082, 0.01);
+  const ridgeMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.6 });
+  [-0.15, -0.05, 0.05, 0.15].forEach(z => {
+    const ridge = new THREE.Mesh(ridgeGeo, ridgeMat);
+    ridge.position.set(-0.313, 0, z);
+    book.add(ridge);
+  });
+
+  // Spine text
   const spineCanvas = document.createElement('canvas');
-  spineCanvas.width = 32; spineCanvas.height = 128;
+  spineCanvas.width = 32;
+  spineCanvas.height = 160;
   const sctx = spineCanvas.getContext('2d')!;
   sctx.fillStyle = '#ffd700';
   sctx.save();
-  sctx.translate(16, 64);
+  sctx.translate(16, 80);
   sctx.rotate(-Math.PI / 2);
   sctx.font = 'bold 18px serif';
   sctx.textAlign = 'center';
@@ -616,309 +1577,850 @@ function createBook(label: string, color: string, isHighlighted: boolean): THREE
   sctx.restore();
   const spineTex = new THREE.CanvasTexture(spineCanvas);
   const spineLabel = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.05, 0.32),
+    new THREE.PlaneGeometry(0.06, 0.35),
     new THREE.MeshBasicMaterial({ map: spineTex, transparent: true })
   );
-  spineLabel.position.set(-0.296, 0, 0);
+  spineLabel.position.set(-0.314, 0, 0);
   spineLabel.rotation.y = -Math.PI / 2;
   book.add(spineLabel);
 
-  // Cover title text
+  // Cover title
   const coverCanvas = document.createElement('canvas');
-  coverCanvas.width = 128; coverCanvas.height = 128;
+  coverCanvas.width = 200;
+  coverCanvas.height = 160;
   const cctx = coverCanvas.getContext('2d')!;
+
+  // Gold border
+  cctx.strokeStyle = '#ffd700';
+  cctx.lineWidth = 4;
+  cctx.strokeRect(10, 10, 180, 140);
+
+  // Inner border
+  cctx.strokeStyle = '#ffd700';
+  cctx.lineWidth = 1;
+  cctx.strokeRect(18, 18, 164, 124);
+
+  // Title
   cctx.fillStyle = '#ffd700';
-  cctx.font = 'bold 24px serif';
+  cctx.font = 'bold 28px serif';
   cctx.textAlign = 'center';
-  cctx.fillText(label, 64, 70);
+  cctx.fillText(label, 100, 85);
+
+  // Subtitle
+  cctx.font = '14px serif';
+  cctx.fillText('TEXTBOOK', 100, 110);
+
+  // Decorative line
+  cctx.strokeStyle = '#ffd700';
+  cctx.lineWidth = 2;
+  cctx.beginPath();
+  cctx.moveTo(50, 55);
+  cctx.lineTo(150, 55);
+  cctx.stroke();
+
   const coverTex = new THREE.CanvasTexture(coverCanvas);
   const coverLabel = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.35, 0.25),
+    new THREE.PlaneGeometry(0.4, 0.3),
     new THREE.MeshBasicMaterial({ map: coverTex, transparent: true })
   );
-  coverLabel.position.y = 0.036;
+  coverLabel.position.y = 0.039;
   coverLabel.rotation.x = -Math.PI / 2;
   book.add(coverLabel);
+
+  // Bookmark ribbon
+  const ribbonGeo = new THREE.PlaneGeometry(0.015, 0.12);
+  const ribbonMat = new THREE.MeshStandardMaterial({
+    color: '#e74c3c',
+    side: THREE.DoubleSide,
+    roughness: 0.6,
+  });
+  const ribbon = new THREE.Mesh(ribbonGeo, ribbonMat);
+  ribbon.position.set(0.1, 0, 0.2);
+  ribbon.rotation.x = 0.1;
+  book.add(ribbon);
+
+  // Highlight
+  if (isHighlighted) {
+    const glowGeo = new THREE.BoxGeometry(0.62, 0.1, 0.44);
+    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 });
+    book.add(new THREE.Mesh(glowGeo, glowMat));
+  }
 
   return book;
 }
 
+// ==================== END OF PART 3 ====================
+// ==================== PART 4: Improved Plate + Box + Car + Ticket ====================
+// Place right after Part 3
+
+// ==================== PLATE (Cafeteria with Food) ====================
 
 function createPlate(label: string, isHighlighted: boolean): THREE.Group {
   const plate = new THREE.Group();
 
-  // Main plate disc
-  const plateGeo = new THREE.CylinderGeometry(0.28, 0.26, 0.025, 32);
+  // Main plate disc (wider, more realistic)
+  const plateGeo = new THREE.CylinderGeometry(0.3, 0.27, 0.02, 36);
   const plateMat = new THREE.MeshStandardMaterial({
-    color: '#ecf0f1', roughness: 0.3, metalness: 0.1,
+    color: '#f8f8f0',
+    roughness: 0.25,
+    metalness: 0.08,
     emissive: isHighlighted ? '#ffff00' : '#000',
-    emissiveIntensity: isHighlighted ? 0.25 : 0
+    emissiveIntensity: isHighlighted ? 0.2 : 0,
   });
   plate.add(new THREE.Mesh(plateGeo, plateMat));
 
-  // Outer rim ring
-  const rimGeo = new THREE.TorusGeometry(0.27, 0.012, 16, 32);
-  const rim = new THREE.Mesh(rimGeo, new THREE.MeshStandardMaterial({ color: '#bdc3c7' }));
+  // Plate rim (raised edge)
+  const rimGeo = new THREE.TorusGeometry(0.29, 0.014, 12, 36);
+  const rimMat = new THREE.MeshStandardMaterial({
+    color: '#e8e8e0',
+    roughness: 0.3,
+    metalness: 0.1,
+  });
+  const rim = new THREE.Mesh(rimGeo, rimMat);
   rim.rotation.x = Math.PI / 2;
-  rim.position.y = 0.012;
+  rim.position.y = 0.01;
   plate.add(rim);
 
-  // Decorative inner ring (blue band)
-  const innerRingGeo = new THREE.RingGeometry(0.12, 0.16, 32);
-  const innerRing = new THREE.Mesh(innerRingGeo, new THREE.MeshStandardMaterial({
-    color: '#3498db', side: THREE.DoubleSide
-  }));
-  innerRing.rotation.x = -Math.PI / 2;
-  innerRing.position.y = 0.014;
+  // Inner decorative ring (blue band like china plate)
+  const innerRingGeo = new THREE.TorusGeometry(0.2, 0.008, 8, 32);
+  const innerRingMat = new THREE.MeshStandardMaterial({ color: '#2980b9', roughness: 0.4 });
+  const innerRing = new THREE.Mesh(innerRingGeo, innerRingMat);
+  innerRing.rotation.x = Math.PI / 2;
+  innerRing.position.y = 0.012;
   plate.add(innerRing);
 
-  // Center decoration (red circle)
-  const centerGeo = new THREE.CircleGeometry(0.06, 32);
-  const center = new THREE.Mesh(centerGeo, new THREE.MeshStandardMaterial({
-    color: '#e74c3c', side: THREE.DoubleSide
-  }));
-  center.rotation.x = -Math.PI / 2;
-  center.position.y = 0.015;
-  plate.add(center);
+  // Second decorative ring
+  const outerRingGeo = new THREE.TorusGeometry(0.25, 0.005, 8, 32);
+  const outerRing = new THREE.Mesh(outerRingGeo, innerRingMat);
+  outerRing.rotation.x = Math.PI / 2;
+  outerRing.position.y = 0.012;
+  plate.add(outerRing);
+
+  // Plate center design (flower pattern)
+  const centerCanvas = document.createElement('canvas');
+  centerCanvas.width = 128;
+  centerCanvas.height = 128;
+  const cctx = centerCanvas.getContext('2d')!;
+
+  // Draw decorative pattern
+  cctx.fillStyle = '#2980b9';
+  for (let a = 0; a < 8; a++) {
+    const angle = (a / 8) * Math.PI * 2;
+    const px = 64 + Math.cos(angle) * 25;
+    const py = 64 + Math.sin(angle) * 25;
+    cctx.beginPath();
+    cctx.ellipse(px, py, 8, 4, angle, 0, Math.PI * 2);
+    cctx.fill();
+  }
+  // Center dot
+  cctx.beginPath();
+  cctx.arc(64, 64, 6, 0, Math.PI * 2);
+  cctx.fill();
+
+  const centerTex = new THREE.CanvasTexture(centerCanvas);
+  const centerDesign = new THREE.Mesh(
+    new THREE.CircleGeometry(0.1, 24),
+    new THREE.MeshBasicMaterial({ map: centerTex, transparent: true, side: THREE.DoubleSide })
+  );
+  centerDesign.rotation.x = -Math.PI / 2;
+  centerDesign.position.y = 0.012;
+  plate.add(centerDesign);
+
+  // ===== FOOD ON PLATE =====
+  const plateNum = parseInt(label.replace(/\D/g, '')) || 1;
+
+  // Different food based on plate number
+  if (plateNum % 3 === 1) {
+    // Rice mound
+    const riceGeo = new THREE.SphereGeometry(0.06, 12, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+    const riceMat = new THREE.MeshStandardMaterial({ color: '#f5f5dc', roughness: 0.9 });
+    const rice = new THREE.Mesh(riceGeo, riceMat);
+    rice.position.set(-0.06, 0.013, 0);
+    plate.add(rice);
+
+    // Chicken leg
+    const chickenGeo = new THREE.CapsuleGeometry(0.025, 0.06, 6, 12);
+    const chickenMat = new THREE.MeshStandardMaterial({ color: '#d4a054', roughness: 0.7 });
+    const chicken = new THREE.Mesh(chickenGeo, chickenMat);
+    chicken.position.set(0.06, 0.035, 0.02);
+    chicken.rotation.z = 0.4;
+    plate.add(chicken);
+
+    // Chicken bone
+    const boneGeo = new THREE.CylinderGeometry(0.004, 0.004, 0.04, 6);
+    const boneMat = new THREE.MeshStandardMaterial({ color: '#f0e6d0' });
+    const bone = new THREE.Mesh(boneGeo, boneMat);
+    bone.position.set(0.06, 0.035, 0.02);
+    bone.rotation.z = 0.4;
+    bone.rotation.x = Math.PI / 2;
+    plate.add(bone);
+
+    // Vegetables (green peas)
+    const peaMat = new THREE.MeshStandardMaterial({ color: '#27ae60', roughness: 0.6 });
+    for (let i = 0; i < 6; i++) {
+      const peaGeo = new THREE.SphereGeometry(0.012, 8, 8);
+      const pea = new THREE.Mesh(peaGeo, peaMat);
+      pea.position.set(
+        0.02 + Math.random() * 0.06 - 0.03,
+        0.02,
+        -0.06 + Math.random() * 0.04
+      );
+      plate.add(pea);
+    }
+  } else if (plateNum % 3 === 2) {
+    // Spaghetti
+    const spaghettiMat = new THREE.MeshStandardMaterial({ color: '#f0d58c', roughness: 0.7 });
+    for (let i = 0; i < 8; i++) {
+      const noodleGeo = new THREE.TorusGeometry(0.04 + Math.random() * 0.03, 0.004, 6, 16);
+      const noodle = new THREE.Mesh(noodleGeo, spaghettiMat);
+      noodle.position.set(
+        (Math.random() - 0.5) * 0.06,
+        0.02 + i * 0.003,
+        (Math.random() - 0.5) * 0.06
+      );
+      noodle.rotation.x = Math.random() * 0.5;
+      noodle.rotation.y = Math.random() * Math.PI;
+      plate.add(noodle);
+    }
+
+    // Sauce
+    const sauceGeo = new THREE.SphereGeometry(0.04, 8, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+    const sauceMat = new THREE.MeshStandardMaterial({ color: '#c0392b', roughness: 0.5 });
+    const sauce = new THREE.Mesh(sauceGeo, sauceMat);
+    sauce.position.set(0, 0.035, 0);
+    sauce.scale.set(1.2, 0.6, 1.2);
+    plate.add(sauce);
+
+    // Meatball
+    const meatballGeo = new THREE.SphereGeometry(0.025, 10, 10);
+    const meatballMat = new THREE.MeshStandardMaterial({ color: '#8b4513', roughness: 0.6 });
+    const meatball = new THREE.Mesh(meatballGeo, meatballMat);
+    meatball.position.set(0.02, 0.04, 0.01);
+    plate.add(meatball);
+  } else {
+    // Salad
+    const lettuceMat = new THREE.MeshStandardMaterial({ color: '#2ecc71', roughness: 0.7 });
+    for (let i = 0; i < 5; i++) {
+      const leafGeo = new THREE.SphereGeometry(0.03, 6, 6);
+      const leaf = new THREE.Mesh(leafGeo, lettuceMat);
+      leaf.position.set(
+        (Math.random() - 0.5) * 0.1,
+        0.02,
+        (Math.random() - 0.5) * 0.1
+      );
+      leaf.scale.set(1.2, 0.4, 1);
+      leaf.rotation.y = Math.random() * Math.PI;
+      plate.add(leaf);
+    }
+
+    // Tomato slices
+    const tomatoMat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.5 });
+    for (let i = 0; i < 3; i++) {
+      const tomatoGeo = new THREE.CylinderGeometry(0.018, 0.018, 0.006, 12);
+      const tomato = new THREE.Mesh(tomatoGeo, tomatoMat);
+      tomato.position.set(
+        -0.02 + i * 0.035,
+        0.03,
+        -0.02 + i * 0.01
+      );
+      plate.add(tomato);
+    }
+
+    // Cheese cubes
+    const cheeseMat = new THREE.MeshStandardMaterial({ color: '#f1c40f', roughness: 0.6 });
+    for (let i = 0; i < 3; i++) {
+      const cheeseGeo = new THREE.BoxGeometry(0.015, 0.015, 0.015);
+      const cheese = new THREE.Mesh(cheeseGeo, cheeseMat);
+      cheese.position.set(
+        0.04 + Math.random() * 0.04,
+        0.025,
+        (Math.random() - 0.5) * 0.06
+      );
+      cheese.rotation.y = Math.random() * 0.5;
+      plate.add(cheese);
+    }
+  }
+
+  // Highlight
+  if (isHighlighted) {
+    const glowGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.03, 32);
+    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.15 });
+    plate.add(new THREE.Mesh(glowGeo, glowMat));
+  }
 
   return plate;
 }
 
-// ==================== CARDBOARD BOX (Boxes stack environment) ====================
+// ==================== CARDBOARD BOX (with Openable Peek) ====================
 
-function createCardboardBox(label: string, color: string, isHighlighted: boolean): THREE.Group {
+function createCardboardBox(label: string, color: string, isHighlighted: boolean, isOpen?: boolean): THREE.Group {
   const box = new THREE.Group();
 
   // Main body
-  const bodyGeo = new THREE.BoxGeometry(0.5, 0.35, 0.4);
+  const bodyGeo = new THREE.BoxGeometry(0.52, 0.36, 0.42);
   const bodyMat = new THREE.MeshStandardMaterial({
-    color, roughness: 0.9,
+    color,
+    roughness: 0.85,
     emissive: isHighlighted ? '#ffff00' : '#000',
-    emissiveIntensity: isHighlighted ? 0.35 : 0
+    emissiveIntensity: isHighlighted ? 0.3 : 0,
   });
-  box.add(new THREE.Mesh(bodyGeo, bodyMat));
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.castShadow = true;
+  box.add(body);
 
-  // Packing tape on top
-  const tapeGeo = new THREE.BoxGeometry(0.08, 0.01, 0.42);
-  const tape = new THREE.Mesh(tapeGeo, new THREE.MeshStandardMaterial({ color: '#d4a574' }));
-  tape.position.y = 0.18;
-  box.add(tape);
+  // Cardboard texture (subtle lines)
+  const texCanvas = document.createElement('canvas');
+  texCanvas.width = 128;
+  texCanvas.height = 128;
+  const tctx = texCanvas.getContext('2d')!;
+  tctx.fillStyle = color;
+  tctx.fillRect(0, 0, 128, 128);
+  // Corrugation lines
+  tctx.strokeStyle = 'rgba(0,0,0,0.08)';
+  tctx.lineWidth = 1;
+  for (let y = 0; y < 128; y += 4) {
+    tctx.beginPath();
+    tctx.moveTo(0, y);
+    tctx.lineTo(128, y);
+    tctx.stroke();
+  }
 
-  // Corner edges (darker brown)
-  const edgeMat = new THREE.MeshStandardMaterial({ color: '#8b4513' });
-  const vEdgeGeo = new THREE.BoxGeometry(0.01, 0.35, 0.01);
-  const edgePositions: [number, number, number][] = [
-    [-0.245, 0, 0.195], [0.245, 0, 0.195],
-    [-0.245, 0, -0.195], [0.245, 0, -0.195]
-  ];
-  edgePositions.forEach(([x, y, z]) => {
-    const edge = new THREE.Mesh(vEdgeGeo, edgeMat);
-    edge.position.set(x, y, z);
-    box.add(edge);
+  // Corner edges (darker brown creases)
+  const creaseMat = new THREE.MeshStandardMaterial({ color: '#7a5530', roughness: 0.9 });
+  const vCreaseGeo = new THREE.BoxGeometry(0.012, 0.36, 0.012);
+  [[-0.255, 0, 0.205], [0.255, 0, 0.205], [-0.255, 0, -0.205], [0.255, 0, -0.205]].forEach(([x, y, z]) => {
+    const crease = new THREE.Mesh(vCreaseGeo, creaseMat);
+    crease.position.set(x, y, z);
+    box.add(crease);
   });
 
-  // Front label with FRAGILE warning
-  const canvas = document.createElement('canvas');
-  canvas.width = 128; canvas.height = 80;
-  const ctx = canvas.getContext('2d')!;
-  // White label background
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, 128, 80);
-  ctx.strokeStyle = '#333';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(2, 2, 124, 76);
-  // Red FRAGILE banner
-  ctx.fillStyle = '#e74c3c';
-  ctx.fillRect(5, 5, 118, 20);
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 14px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText('FRAGILE', 64, 20);
+  // ===== FLAPS (open when peeking) =====
+  const flapMat = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.85,
+    side: THREE.DoubleSide,
+  });
+
+  const flapAngle = isOpen ? -1.2 : 0;
+
+  // Front flap
+  const frontFlapGeo = new THREE.BoxGeometry(0.52, 0.15, 0.01);
+  const frontFlap = new THREE.Mesh(frontFlapGeo, flapMat);
+  frontFlap.position.set(0, 0.18 + (isOpen ? 0.06 : 0), 0.21);
+  frontFlap.rotation.x = flapAngle;
+  box.add(frontFlap);
+
+  // Back flap
+  const backFlap = new THREE.Mesh(frontFlapGeo, flapMat);
+  backFlap.position.set(0, 0.18 + (isOpen ? 0.06 : 0), -0.21);
+  backFlap.rotation.x = -flapAngle;
+  box.add(backFlap);
+
+  // Side flaps
+  const sideFlapGeo = new THREE.BoxGeometry(0.01, 0.15, 0.42);
+  const leftFlap = new THREE.Mesh(sideFlapGeo, flapMat);
+  leftFlap.position.set(-0.26, 0.18 + (isOpen ? 0.04 : 0), 0);
+  leftFlap.rotation.z = isOpen ? 0.8 : 0;
+  box.add(leftFlap);
+
+  const rightFlap = new THREE.Mesh(sideFlapGeo, flapMat);
+  rightFlap.position.set(0.26, 0.18 + (isOpen ? 0.04 : 0), 0);
+  rightFlap.rotation.z = isOpen ? -0.8 : 0;
+  box.add(rightFlap);
+
+  // Inside visible when open
+  if (isOpen) {
+    // Inside color (darker)
+    const insideGeo = new THREE.PlaneGeometry(0.5, 0.4);
+    const insideMat = new THREE.MeshStandardMaterial({
+      color: '#a0734a',
+      side: THREE.DoubleSide,
+      roughness: 0.9,
+    });
+    const insideBottom = new THREE.Mesh(insideGeo, insideMat);
+    insideBottom.rotation.x = -Math.PI / 2;
+    insideBottom.position.y = -0.17;
+    box.add(insideBottom);
+
+    // Items peeking inside
+    const itemGeo = new THREE.BoxGeometry(0.12, 0.1, 0.1);
+    const itemMat = new THREE.MeshStandardMaterial({ color: '#3498db', roughness: 0.6 });
+    const item1 = new THREE.Mesh(itemGeo, itemMat);
+    item1.position.set(-0.1, -0.05, 0);
+    item1.rotation.y = 0.2;
+    box.add(item1);
+
+    const item2Geo = new THREE.CylinderGeometry(0.04, 0.04, 0.12, 12);
+    const item2Mat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.5 });
+    const item2 = new THREE.Mesh(item2Geo, item2Mat);
+    item2.position.set(0.08, -0.03, 0.05);
+    box.add(item2);
+
+    // Glow from inside
+    const glowInsideGeo = new THREE.PointLight(0xffff00, 0.5, 0.5);
+    glowInsideGeo.position.set(0, 0, 0);
+    box.add(glowInsideGeo);
+  }
+
+  // Packing tape
+  const tapeGeo = new THREE.BoxGeometry(0.08, 0.005, 0.44);
+  const tapeMat = new THREE.MeshStandardMaterial({
+    color: '#d4a574',
+    transparent: true,
+    opacity: 0.7,
+    roughness: 0.3,
+  });
+  if (!isOpen) {
+    const tape = new THREE.Mesh(tapeGeo, tapeMat);
+    tape.position.y = 0.183;
+    box.add(tape);
+  }
+
+  // Front label
+  const labelCanvas = document.createElement('canvas');
+  labelCanvas.width = 160;
+  labelCanvas.height = 100;
+  const lctx = labelCanvas.getContext('2d')!;
+
+  lctx.fillStyle = '#ffffff';
+  lctx.fillRect(0, 0, 160, 100);
+  lctx.strokeStyle = '#333';
+  lctx.lineWidth = 2;
+  lctx.strokeRect(2, 2, 156, 96);
+
+  // FRAGILE banner
+  lctx.fillStyle = '#e74c3c';
+  lctx.fillRect(5, 5, 150, 25);
+  lctx.fillStyle = '#fff';
+  lctx.font = 'bold 16px Arial';
+  lctx.textAlign = 'center';
+  lctx.fillText('⚠ FRAGILE ⚠', 80, 24);
+
   // Box name
-  ctx.fillStyle = '#000';
-  ctx.font = 'bold 22px Arial';
-  ctx.fillText(label, 64, 55);
-  const labelTex = new THREE.CanvasTexture(canvas);
+  lctx.fillStyle = '#000';
+  lctx.font = 'bold 26px Arial';
+  lctx.fillText(label, 80, 62);
+
+  // Handle with care
+  lctx.fillStyle = '#666';
+  lctx.font = '10px Arial';
+  lctx.fillText('HANDLE WITH CARE', 80, 82);
+
+  // Up arrows
+  lctx.fillStyle = '#333';
+  lctx.font = '14px Arial';
+  lctx.fillText('↑ THIS SIDE UP ↑', 80, 95);
+
+  const labelTex = new THREE.CanvasTexture(labelCanvas);
   const labelMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.35, 0.22),
+    new THREE.PlaneGeometry(0.38, 0.24),
     new THREE.MeshBasicMaterial({ map: labelTex })
   );
-  labelMesh.position.z = 0.201;
+  labelMesh.position.set(0, 0, 0.212);
   box.add(labelMesh);
+
+  // Side handles (cutout look)
+  [-0.261, 0.261].forEach(x => {
+    const handleGeo = new THREE.TorusGeometry(0.04, 0.008, 6, 12, Math.PI);
+    const handleMat = new THREE.MeshStandardMaterial({ color: '#5d3a1a', roughness: 0.8 });
+    const handle = new THREE.Mesh(handleGeo, handleMat);
+    handle.position.set(x, 0.05, 0);
+    handle.rotation.y = Math.PI / 2;
+    handle.rotation.z = Math.PI;
+    box.add(handle);
+  });
+
+  // Highlight
+  if (isHighlighted) {
+    const glowGeo = new THREE.BoxGeometry(0.56, 0.4, 0.46);
+    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 });
+    box.add(new THREE.Mesh(glowGeo, glowMat));
+  }
 
   return box;
 }
 
-// ==================== CAR (Tollgate queue environment) ====================
+// ==================== CAR (More Realistic + Animated Ready) ====================
 
 function createCar(color: string, label: string, isHighlighted: boolean): THREE.Group {
   const car = new THREE.Group();
 
-  // Lower body
-  const bodyGeo = new THREE.BoxGeometry(0.55, 0.18, 0.28);
+  // Lower body (wider, more car-shaped)
+  const bodyGeo = new THREE.BoxGeometry(0.6, 0.16, 0.3);
   const bodyMat = new THREE.MeshStandardMaterial({
-    color, metalness: 0.6, roughness: 0.4,
+    color,
+    metalness: 0.65,
+    roughness: 0.35,
     emissive: isHighlighted ? '#ffff00' : '#000',
-    emissiveIntensity: isHighlighted ? 0.35 : 0
+    emissiveIntensity: isHighlighted ? 0.3 : 0,
   });
   const body = new THREE.Mesh(bodyGeo, bodyMat);
-  body.position.y = 0.08;
+  body.position.y = 0.1;
   car.add(body);
 
-  // Cabin (upper body)
-  const cabinGeo = new THREE.BoxGeometry(0.3, 0.12, 0.24);
-  const cabin = new THREE.Mesh(cabinGeo, bodyMat);
-  cabin.position.set(-0.05, 0.22, 0);
+  // Body contour (side skirt)
+  const skirtGeo = new THREE.BoxGeometry(0.58, 0.03, 0.31);
+  const skirtMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.7 });
+  const skirt = new THREE.Mesh(skirtGeo, skirtMat);
+  skirt.position.y = 0.015;
+  car.add(skirt);
+
+  // Hood (front slope)
+  const hoodGeo = new THREE.BoxGeometry(0.15, 0.04, 0.28);
+  const hood = new THREE.Mesh(hoodGeo, bodyMat);
+  hood.position.set(0.22, 0.2, 0);
+  hood.rotation.z = -0.15;
+  car.add(hood);
+
+  // Cabin (upper body with slope)
+  const cabinGeo = new THREE.BoxGeometry(0.28, 0.13, 0.26);
+  const cabinMat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.6,
+    roughness: 0.35,
+  });
+  const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+  cabin.position.set(-0.04, 0.24, 0);
   car.add(cabin);
 
-  // Windshield (front)
-  const windshieldGeo = new THREE.PlaneGeometry(0.24, 0.1);
-  const windshieldMat = new THREE.MeshStandardMaterial({
-    color: '#87ceeb', metalness: 0.3, side: THREE.DoubleSide
+  // Roof
+  const roofGeo = new THREE.BoxGeometry(0.25, 0.015, 0.24);
+  const roofMat = new THREE.MeshStandardMaterial({ color, metalness: 0.7, roughness: 0.3 });
+  const roof = new THREE.Mesh(roofGeo, roofMat);
+  roof.position.set(-0.04, 0.31, 0);
+  car.add(roof);
+
+  // Windshield
+  const windshieldGeo = new THREE.PlaneGeometry(0.24, 0.11);
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: '#87ceeb',
+    metalness: 0.5,
+    roughness: 0.1,
+    transparent: true,
+    opacity: 0.7,
+    side: THREE.DoubleSide,
   });
-  const windshield = new THREE.Mesh(windshieldGeo, windshieldMat);
-  windshield.position.set(0.1, 0.22, 0);
+  const windshield = new THREE.Mesh(windshieldGeo, glassMat);
+  windshield.position.set(0.11, 0.24, 0);
   windshield.rotation.y = Math.PI / 2;
-  windshield.rotation.z = 0.2;
+  windshield.rotation.z = 0.25;
   car.add(windshield);
 
   // Rear window
-  const rearWindow = new THREE.Mesh(windshieldGeo, windshieldMat);
-  rearWindow.position.set(-0.2, 0.22, 0);
+  const rearWindow = new THREE.Mesh(windshieldGeo, glassMat);
+  rearWindow.position.set(-0.19, 0.24, 0);
   rearWindow.rotation.y = Math.PI / 2;
-  rearWindow.rotation.z = -0.2;
+  rearWindow.rotation.z = -0.25;
   car.add(rearWindow);
 
-  // Side windows
-  const sideWindowGeo = new THREE.PlaneGeometry(0.18, 0.08);
+  // Side windows (2 per side)
+  const sideWinGeo = new THREE.PlaneGeometry(0.1, 0.08);
   [-1, 1].forEach(side => {
-    const sw = new THREE.Mesh(sideWindowGeo, windshieldMat);
-    sw.position.set(-0.05, 0.22, side * 0.121);
-    car.add(sw);
+    [-0.08, 0.03].forEach(x => {
+      const sw = new THREE.Mesh(sideWinGeo, glassMat);
+      sw.position.set(x, 0.25, side * 0.131);
+      car.add(sw);
+    });
   });
 
-  // Wheels with chrome hubs
-  const wheelGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.03, 20);
-  const wheelMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a' });
-  const hubGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.035, 12);
-  const hubMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.8 });
-  const wheelPositions: [number, number, number][] = [
-    [-0.18, -0.02, 0.14], [0.18, -0.02, 0.14],
-    [-0.18, -0.02, -0.14], [0.18, -0.02, -0.14]
+  // Window divider (B-pillar)
+  const pillarGeo = new THREE.BoxGeometry(0.015, 0.13, 0.01);
+  const pillarMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a' });
+  [-0.131, 0.131].forEach(z => {
+    const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+    pillar.position.set(-0.025, 0.24, z);
+    car.add(pillar);
+  });
+
+  // Wheels (detailed with tire tread)
+  const tireGeo = new THREE.TorusGeometry(0.05, 0.02, 12, 24);
+  const tireMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.9 });
+  const rimGeo = new THREE.CylinderGeometry(0.032, 0.032, 0.025, 16);
+  const rimMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.9, roughness: 0.1 });
+  const hubGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.028, 8);
+  const hubMat = new THREE.MeshStandardMaterial({ color: '#888', metalness: 0.9 });
+
+  const wheelPos: [number, number, number][] = [
+    [-0.19, 0.0, 0.155], [0.19, 0.0, 0.155],
+    [-0.19, 0.0, -0.155], [0.19, 0.0, -0.155],
   ];
-  wheelPositions.forEach(([x, y, z]) => {
-    const w = new THREE.Mesh(wheelGeo, wheelMat);
-    w.rotation.x = Math.PI / 2;
-    w.position.set(x, y, z);
-    car.add(w);
-    const h = new THREE.Mesh(hubGeo, hubMat);
-    h.rotation.x = Math.PI / 2;
-    h.position.set(x, y, z);
-    car.add(h);
+  wheelPos.forEach(([wx, wy, wz]) => {
+    // Tire
+    const tire = new THREE.Mesh(tireGeo, tireMat);
+    tire.position.set(wx, wy, wz);
+    car.add(tire);
+
+    // Rim
+    const rim = new THREE.Mesh(rimGeo, rimMat);
+    rim.rotation.x = Math.PI / 2;
+    rim.position.set(wx, wy, wz);
+    car.add(rim);
+
+    // Hub
+    const hub = new THREE.Mesh(hubGeo, hubMat);
+    hub.rotation.x = Math.PI / 2;
+    hub.position.set(wx, wy, wz);
+    car.add(hub);
+
+    // Rim spokes
+    const spokeGeo = new THREE.BoxGeometry(0.004, 0.05, 0.004);
+    const spokeMat = new THREE.MeshStandardMaterial({ color: '#ddd', metalness: 0.8 });
+    [0, Math.PI / 2.5, Math.PI / 1.25, Math.PI * 1.5 / 2.5, Math.PI * 2 / 1.25].forEach(angle => {
+      const spoke = new THREE.Mesh(spokeGeo, spokeMat);
+      spoke.position.set(wx, wy, wz > 0 ? wz + 0.014 : wz - 0.014);
+      spoke.rotation.z = angle;
+      car.add(spoke);
+    });
   });
 
-  // Headlights (front, yellow)
-  const lightGeo = new THREE.CircleGeometry(0.025, 16);
-  [-0.08, 0.08].forEach(z => {
-    const hl = new THREE.Mesh(lightGeo, new THREE.MeshBasicMaterial({ color: '#ffffcc' }));
-    hl.position.set(0.276, 0.08, z);
-    hl.rotation.y = Math.PI / 2;
+  // Headlights (LED style)
+  const headlightGeo = new THREE.BoxGeometry(0.01, 0.04, 0.06);
+  const headlightMat = new THREE.MeshBasicMaterial({ color: '#ffffee' });
+  [-0.1, 0.1].forEach(z => {
+    const hl = new THREE.Mesh(headlightGeo, headlightMat);
+    hl.position.set(0.3, 0.1, z);
     car.add(hl);
-    // Tail lights (rear, red)
-    const tl = new THREE.Mesh(lightGeo, new THREE.MeshBasicMaterial({ color: '#ff0000' }));
-    tl.position.set(-0.276, 0.08, z);
-    tl.rotation.y = -Math.PI / 2;
+
+    // Headlight housing
+    const housingGeo = new THREE.BoxGeometry(0.015, 0.05, 0.07);
+    const housingMat = new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.5 });
+    const housing = new THREE.Mesh(housingGeo, housingMat);
+    housing.position.set(0.298, 0.1, z);
+    car.add(housing);
+  });
+
+  // Tail lights
+  const tailGeo = new THREE.BoxGeometry(0.01, 0.035, 0.05);
+  const tailMat = new THREE.MeshBasicMaterial({ color: '#ff2222' });
+  [-0.1, 0.1].forEach(z => {
+    const tl = new THREE.Mesh(tailGeo, tailMat);
+    tl.position.set(-0.3, 0.1, z);
     car.add(tl);
   });
 
-  // License plate on rear
+  // Front grille
+  const grilleGeo = new THREE.PlaneGeometry(0.01, 0.06);
+  const grilleMat = new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.7, side: THREE.DoubleSide });
+  for (let z = -0.08; z <= 0.08; z += 0.02) {
+    const bar = new THREE.Mesh(grilleGeo, grilleMat);
+    bar.position.set(0.301, 0.08, z);
+    bar.rotation.y = Math.PI / 2;
+    car.add(bar);
+  }
+
+  // Side mirrors
+  [-0.145, 0.145].forEach(z => {
+    const mirrorGeo = new THREE.BoxGeometry(0.02, 0.015, 0.025);
+    const mirrorMat = new THREE.MeshStandardMaterial({ color: '#333' });
+    const mirror = new THREE.Mesh(mirrorGeo, mirrorMat);
+    mirror.position.set(0.05, 0.2, z);
+    car.add(mirror);
+
+    const glassGeo = new THREE.PlaneGeometry(0.015, 0.012);
+    const mirrorGlass = new THREE.Mesh(glassGeo, glassMat);
+    mirrorGlass.position.set(0.05, 0.2, z > 0 ? z + 0.013 : z - 0.013);
+    car.add(mirrorGlass);
+  });
+
+  // License plate
   const plateCanvas = document.createElement('canvas');
-  plateCanvas.width = 64; plateCanvas.height = 24;
+  plateCanvas.width = 96;
+  plateCanvas.height = 36;
   const pctx = plateCanvas.getContext('2d')!;
   pctx.fillStyle = '#fff';
-  pctx.fillRect(0, 0, 64, 24);
-  pctx.fillStyle = '#000';
-  pctx.font = 'bold 12px Arial';
+  pctx.fillRect(0, 0, 96, 36);
+  pctx.strokeStyle = '#333';
+  pctx.lineWidth = 2;
+  pctx.strokeRect(1, 1, 94, 34);
+  pctx.fillStyle = '#2c3e50';
+  pctx.font = 'bold 16px Arial';
   pctx.textAlign = 'center';
-  pctx.fillText(label, 32, 17);
+  pctx.fillText(label, 48, 25);
   const plateTex = new THREE.CanvasTexture(plateCanvas);
   const plateMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.12, 0.04),
+    new THREE.PlaneGeometry(0.14, 0.05),
     new THREE.MeshBasicMaterial({ map: plateTex })
   );
-  plateMesh.position.set(-0.276, 0.02, 0);
+  plateMesh.position.set(-0.301, 0.05, 0);
   plateMesh.rotation.y = -Math.PI / 2;
   car.add(plateMesh);
+
+  // Exhaust pipe
+  const exhaustGeo = new THREE.CylinderGeometry(0.012, 0.015, 0.06, 10);
+  const exhaustMat = new THREE.MeshStandardMaterial({ color: '#555', metalness: 0.8, roughness: 0.3 });
+  const exhaust = new THREE.Mesh(exhaustGeo, exhaustMat);
+  exhaust.position.set(-0.28, -0.02, 0.1);
+  exhaust.rotation.z = Math.PI / 2;
+  car.add(exhaust);
+
+  // Highlight
+  if (isHighlighted) {
+    const glowGeo = new THREE.BoxGeometry(0.65, 0.35, 0.35);
+    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.1 });
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    glow.position.y = 0.15;
+    car.add(glow);
+  }
 
   return car;
 }
 
-// ==================== TICKET (Tickets queue environment) ====================
+// ==================== TICKET (Processing Line Style) ====================
 
 function createTicket(label: string, color: string, isHighlighted: boolean): THREE.Group {
   const ticket = new THREE.Group();
 
-  // Main ticket body
-  const ticketGeo = new THREE.BoxGeometry(0.4, 0.22, 0.01);
+  // Main ticket body (thicker, card-like)
+  const ticketGeo = new THREE.BoxGeometry(0.42, 0.24, 0.015);
   const ticketMat = new THREE.MeshStandardMaterial({
     color,
+    roughness: 0.4,
     emissive: isHighlighted ? '#ffff00' : '#000',
-    emissiveIntensity: isHighlighted ? 0.35 : 0
+    emissiveIntensity: isHighlighted ? 0.3 : 0,
   });
   ticket.add(new THREE.Mesh(ticketGeo, ticketMat));
 
   // Tear-off stub
-  const stubGeo = new THREE.BoxGeometry(0.1, 0.22, 0.01);
-  const stub = new THREE.Mesh(stubGeo, new THREE.MeshStandardMaterial({ color }));
-  stub.position.x = 0.25;
+  const stubGeo = new THREE.BoxGeometry(0.1, 0.24, 0.015);
+  const stubMat = new THREE.MeshStandardMaterial({ color, roughness: 0.5 });
+  const stub = new THREE.Mesh(stubGeo, stubMat);
+  stub.position.x = 0.26;
   ticket.add(stub);
 
-  // Perforation dots (tear line)
+  // Perforation dots
   const dotGeo = new THREE.CircleGeometry(0.005, 8);
   const dotMat = new THREE.MeshBasicMaterial({ color: '#fff', side: THREE.DoubleSide });
-  for (let y = -0.1; y <= 0.1; y += 0.02) {
+  for (let y = -0.1; y <= 0.1; y += 0.015) {
     const dot = new THREE.Mesh(dotGeo, dotMat);
-    dot.position.set(0.195, y, 0.006);
+    dot.position.set(0.205, y, 0.009);
     ticket.add(dot);
   }
 
-  // Ticket face with design
-  const canvas = document.createElement('canvas');
-  canvas.width = 180; canvas.height = 100;
-  const ctx = canvas.getContext('2d')!;
-  // Striped background
-  ctx.fillStyle = 'rgba(255,255,255,0.1)';
-  for (let i = 0; i < 180; i += 10) {
-    ctx.fillRect(i, 0, 5, 100);
+  // Front face design
+  const frontCanvas = document.createElement('canvas');
+  frontCanvas.width = 220;
+  frontCanvas.height = 120;
+  const fctx = frontCanvas.getContext('2d')!;
+
+  // Background pattern (diagonal stripes)
+  fctx.fillStyle = 'rgba(255,255,255,0.08)';
+  for (let i = -120; i < 340; i += 12) {
+    fctx.save();
+    fctx.beginPath();
+    fctx.moveTo(i, 0);
+    fctx.lineTo(i + 60, 120);
+    fctx.lineTo(i + 66, 120);
+    fctx.lineTo(i + 6, 0);
+    fctx.closePath();
+    fctx.fill();
+    fctx.restore();
   }
-  // "ADMIT ONE" header
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 16px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText('ADMIT ONE', 70, 25);
+
+  // Top banner
+  fctx.fillStyle = 'rgba(0,0,0,0.3)';
+  fctx.fillRect(0, 0, 220, 25);
+
+  // "ADMIT ONE"
+  fctx.fillStyle = '#fff';
+  fctx.font = 'bold 14px Arial';
+  fctx.textAlign = 'center';
+  fctx.fillText('★ ADMIT ONE ★', 90, 18);
+
   // Ticket number (large)
-  ctx.font = 'bold 28px Arial';
-  ctx.fillText(label, 70, 60);
-  // VIP stars
-  ctx.font = '12px Arial';
-  ctx.fillText('⭐ VIP ⭐', 70, 85);
-  // Stub side text (rotated)
-  ctx.font = 'bold 14px Arial';
-  ctx.save();
-  ctx.translate(155, 50);
-  ctx.rotate(-Math.PI / 2);
-  ctx.fillText(label, 0, 0);
-  ctx.restore();
-  const ticketTex = new THREE.CanvasTexture(canvas);
-  const ticketLabel = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.38, 0.2),
-    new THREE.MeshBasicMaterial({ map: ticketTex, transparent: true })
+  fctx.font = 'bold 36px Arial';
+  fctx.fillText(label, 90, 68);
+
+  // Decorative line
+  fctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  fctx.lineWidth = 1;
+  fctx.beginPath();
+  fctx.moveTo(20, 80);
+  fctx.lineTo(160, 80);
+  fctx.stroke();
+
+  // VIP text
+  fctx.font = 'bold 12px Arial';
+  fctx.fillText('⭐ VIP ACCESS ⭐', 90, 98);
+
+  // Date
+  fctx.font = '9px Arial';
+  fctx.fillStyle = 'rgba(255,255,255,0.6)';
+  fctx.fillText('VALID TODAY ONLY', 90, 113);
+
+  // Stub text (rotated)
+  fctx.save();
+  fctx.translate(195, 60);
+  fctx.rotate(-Math.PI / 2);
+  fctx.fillStyle = '#fff';
+  fctx.font = 'bold 14px Arial';
+  fctx.textAlign = 'center';
+  fctx.fillText(label, 0, 0);
+  fctx.restore();
+
+  const frontTex = new THREE.CanvasTexture(frontCanvas);
+  const frontFace = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.42, 0.22),
+    new THREE.MeshBasicMaterial({ map: frontTex, transparent: true })
   );
-  ticketLabel.position.z = 0.006;
-  ticket.add(ticketLabel);
+  frontFace.position.z = 0.009;
+  ticket.add(frontFace);
+
+  // Gold border edges
+  const borderMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.6, roughness: 0.3 });
+  const hBorderGeo = new THREE.BoxGeometry(0.43, 0.005, 0.018);
+  const topBorder = new THREE.Mesh(hBorderGeo, borderMat);
+  topBorder.position.y = 0.12;
+  ticket.add(topBorder);
+  const bottomBorder = new THREE.Mesh(hBorderGeo, borderMat);
+  bottomBorder.position.y = -0.12;
+  ticket.add(bottomBorder);
+
+  const vBorderGeo = new THREE.BoxGeometry(0.005, 0.24, 0.018);
+  const leftBorder = new THREE.Mesh(vBorderGeo, borderMat);
+  leftBorder.position.x = -0.21;
+  ticket.add(leftBorder);
+  const rightBorder = new THREE.Mesh(vBorderGeo, borderMat);
+  rightBorder.position.x = 0.31;
+  ticket.add(rightBorder);
+
+  // Barcode on back
+  const backCanvas = document.createElement('canvas');
+  backCanvas.width = 200;
+  backCanvas.height = 60;
+  const bctx = backCanvas.getContext('2d')!;
+  bctx.fillStyle = '#fff';
+  bctx.fillRect(0, 0, 200, 60);
+  bctx.fillStyle = '#000';
+  for (let i = 10; i < 190; i += 3) {
+    const h = 30 + Math.random() * 15;
+    bctx.fillRect(i, 10, 1.5, h);
+  }
+  bctx.font = '8px monospace';
+  bctx.textAlign = 'center';
+  bctx.fillText(label + '-' + Math.floor(Math.random() * 9999), 100, 55);
+
+  const backTex = new THREE.CanvasTexture(backCanvas);
+  const backFace = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.35, 0.1),
+    new THREE.MeshBasicMaterial({ map: backTex })
+  );
+  backFace.position.z = -0.009;
+  backFace.rotation.y = Math.PI;
+  ticket.add(backFace);
+
+  // Highlight
+  if (isHighlighted) {
+    const glowGeo = new THREE.BoxGeometry(0.46, 0.28, 0.03);
+    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.15 });
+    ticket.add(new THREE.Mesh(glowGeo, glowMat));
+  }
 
   return ticket;
 }
+
+// ==================== END OF PART 4 ====================
+// ==================== PART 5: buildSceneContent (ALL ENVIRONMENTS) ====================
+// Place right after Part 4
 
 function buildSceneContent(
   group: THREE.Group,
@@ -926,15 +2428,16 @@ function buildSceneContent(
   highlightIndex: number | null,
   highlightIndex2: number | null,
   structure: DataStructure,
-  environment: string
+  environment: string,
+  animPhase?: string,
+  animData?: Record<string, any>
 ): void {
-  // Clear existing children
   while (group.children.length > 0) {
     group.remove(group.children[0]);
   }
 
   const spacing = structure === 'linkedlist' ? 1.1
-    : structure === 'queue' ? 0.9
+    : structure === 'queue' ? 0.95
     : 0.85;
   const startX = -((data.length - 1) * spacing) / 2;
 
@@ -943,70 +2446,237 @@ function buildSceneContent(
   // ========================================================
   if (structure === 'array') {
 
-    // ---------- GROCERY SHELF ----------
+    // ---------- 7-ELEVEN GROCERY SHELF ----------
     if (environment === 'grocery') {
+      const shelfWidth = data.length * spacing + 0.8;
+
       data.forEach((item, i) => {
         const isHl = highlightIndex === i || highlightIndex2 === i;
-        const box = createGroceryBox(item.color, item.label, isHl);
-        box.position.set(startX + i * spacing, isHl ? 0.15 : 0, 0);
-        group.add(box);
+        const product = createGroceryBox(item.color, item.label, isHl);
+        product.position.set(startX + i * spacing, 0.08, 0);
+        if (isHl) product.position.y += 0.1;
+        applyItemAnimation(product, i, animPhase || '', animData || {}, 'array');
+        group.add(product);
 
         const idx = createTextSprite(`[${i}]`, isHl ? '#ffff00' : '#ffffff', 22);
-        idx.position.set(startX + i * spacing, -0.45, 0);
+        idx.position.set(startX + i * spacing, -0.15, 0);
         idx.scale.set(0.3, 0.15, 1);
         group.add(idx);
       });
 
-      // Wooden shelf
-      const shelfGeo = new THREE.BoxGeometry(data.length * spacing + 0.6, 0.04, 0.5);
-      const shelfMat = new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.8 });
-      const shelf = new THREE.Mesh(shelfGeo, shelfMat);
-      shelf.position.y = -0.32;
-      group.add(shelf);
+      // Metal shelf rack
+      const shelfMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.7, roughness: 0.3 });
 
-      // Shelf supports
-      const supportGeo = new THREE.BoxGeometry(0.06, 0.5, 0.06);
-      [-data.length * spacing / 2 - 0.2, data.length * spacing / 2 + 0.2].forEach(x => {
-        const support = new THREE.Mesh(supportGeo, shelfMat);
-        support.position.set(x, -0.55, 0);
-        group.add(support);
+      const mainShelf = new THREE.Mesh(new THREE.BoxGeometry(shelfWidth, 0.03, 0.35), shelfMat);
+      mainShelf.position.y = 0.06;
+      group.add(mainShelf);
+
+      const lip = new THREE.Mesh(new THREE.BoxGeometry(shelfWidth, 0.04, 0.015), shelfMat);
+      lip.position.set(0, 0.08, 0.175);
+      group.add(lip);
+
+      const lowerShelf = new THREE.Mesh(new THREE.BoxGeometry(shelfWidth, 0.03, 0.35), shelfMat);
+      lowerShelf.position.y = -0.35;
+      group.add(lowerShelf);
+
+      const lowerLip = new THREE.Mesh(new THREE.BoxGeometry(shelfWidth, 0.04, 0.015), shelfMat);
+      lowerLip.position.set(0, -0.33, 0.175);
+      group.add(lowerLip);
+
+      // Poles
+      const poleMat = new THREE.MeshStandardMaterial({ color: '#a0a0a0', metalness: 0.8, roughness: 0.2 });
+      const poleGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.9, 12);
+      const poleXs = [-shelfWidth / 2 + 0.05, shelfWidth / 2 - 0.05];
+      if (data.length > 3) poleXs.push(0);
+      poleXs.forEach(x => {
+        [0.16, -0.14].forEach(z => {
+          const pole = new THREE.Mesh(poleGeo, poleMat);
+          pole.position.set(x, -0.1, z);
+          group.add(pole);
+        });
       });
 
-    // ---------- CLASSROOM SEATS ----------
+      // Price strip
+      const stripCanvas = document.createElement('canvas');
+      stripCanvas.width = 512; stripCanvas.height = 32;
+      const sctx = stripCanvas.getContext('2d')!;
+      sctx.fillStyle = '#2e7d32';
+      sctx.fillRect(0, 0, 512, 32);
+      sctx.fillStyle = '#fff';
+      sctx.font = 'bold 16px Arial';
+      sctx.textAlign = 'center';
+      sctx.fillText('★ FRESH ITEMS ★ BEST PRICE ★ FRESH ITEMS ★ BEST PRICE ★', 256, 22);
+      const strip = new THREE.Mesh(
+        new THREE.PlaneGeometry(shelfWidth, 0.06),
+        new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(stripCanvas) })
+      );
+      strip.position.set(0, 0.05, 0.178);
+      group.add(strip);
+
+      // Back panel + pegboard
+      const backPanel = new THREE.Mesh(
+        new THREE.PlaneGeometry(shelfWidth, 0.85),
+        new THREE.MeshStandardMaterial({ color: '#f5f5f5', side: THREE.DoubleSide, roughness: 0.9 })
+      );
+      backPanel.position.set(0, -0.05, -0.16);
+      group.add(backPanel);
+
+      const holeMat = new THREE.MeshBasicMaterial({ color: '#ddd', side: THREE.DoubleSide });
+      const holeGeo = new THREE.CircleGeometry(0.008, 8);
+      for (let hx = -shelfWidth / 2 + 0.1; hx < shelfWidth / 2; hx += 0.08) {
+        for (let hy = -0.3; hy < 0.35; hy += 0.08) {
+          const hole = new THREE.Mesh(holeGeo, holeMat);
+          hole.position.set(hx, hy, -0.158);
+          group.add(hole);
+        }
+      }
+
+      // Floor tiles
+      const floorGeo = new THREE.PlaneGeometry(shelfWidth + 0.5, 0.8);
+      const floor = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: '#e8dcc8', side: THREE.DoubleSide }));
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = -0.56;
+      group.add(floor);
+
+    // ---------- CLASSROOM (Room + Seated Humans) ----------
     } else if (environment === 'classroom') {
+      const roomWidth = data.length * spacing + 1.5;
+
       data.forEach((item, i) => {
         const isHl = highlightIndex === i || highlightIndex2 === i;
         if (item.appearance) {
           const human = createHuman3D(item.appearance, item.label, isHl);
           human.position.set(startX + i * spacing, isHl ? 0.08 : 0, 0);
           human.scale.setScalar(0.8);
+          applyItemAnimation(human, i, animPhase || '', animData || {}, 'array');
           group.add(human);
+
           const chair = createChair(startX + i * spacing);
           chair.scale.setScalar(0.8);
           group.add(chair);
+
+          // Desk in front of each student
+          const deskGeo = new THREE.BoxGeometry(0.3, 0.02, 0.2);
+          const deskMat = new THREE.MeshStandardMaterial({ color: '#a0855b', roughness: 0.7 });
+          const desk = new THREE.Mesh(deskGeo, deskMat);
+          desk.position.set(startX + i * spacing, -0.1, 0.2);
+          desk.scale.setScalar(0.8);
+          group.add(desk);
+
+          // Desk legs
+          const dlegGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.16, 6);
+          const dlegMat = new THREE.MeshStandardMaterial({ color: '#666' });
+          [[-0.12, -0.19, 0.08], [0.12, -0.19, 0.08], [-0.12, -0.19, -0.08], [0.12, -0.19, -0.08]].forEach(([dx, dy, dz]) => {
+            const dleg = new THREE.Mesh(dlegGeo, dlegMat);
+            dleg.position.set(startX + i * spacing + dx * 0.8, dy * 0.8 - 0.1, (dz + 0.2) * 0.8);
+            group.add(dleg);
+          });
         }
+
         const idx = createTextSprite(`[${i}]`, isHl ? '#ffff00' : '#ffffff', 22);
-        idx.position.set(startX + i * spacing, -0.38, 0);
+        idx.position.set(startX + i * spacing, -0.42, 0);
         idx.scale.set(0.25, 0.12, 1);
         group.add(idx);
       });
 
       // Classroom floor
-      const floorGeo = new THREE.PlaneGeometry(data.length * spacing + 1, 0.8);
-      const floor = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({
-        color: '#7f8c8d', side: THREE.DoubleSide
-      }));
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(roomWidth, 1.5),
+        new THREE.MeshStandardMaterial({ color: '#c4a882', side: THREE.DoubleSide, roughness: 0.8 })
+      );
       floor.rotation.x = -Math.PI / 2;
-      floor.position.y = -0.32;
+      floor.position.y = -0.35;
       group.add(floor);
 
-    // ---------- TODO TASKS ----------
+      // Floor tile grid
+      const tileLineMat = new THREE.MeshBasicMaterial({ color: '#b39b7a', side: THREE.DoubleSide });
+      for (let tx = -roomWidth / 2; tx <= roomWidth / 2; tx += 0.4) {
+        const line = new THREE.Mesh(new THREE.PlaneGeometry(0.005, 1.5), tileLineMat);
+        line.rotation.x = -Math.PI / 2;
+        line.position.set(tx, -0.349, 0);
+        group.add(line);
+      }
+
+      // Back wall
+      const wallMat = new THREE.MeshStandardMaterial({ color: '#f0e6d2', roughness: 0.9 });
+      const backWall = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, 1.0), wallMat);
+      backWall.position.set(0, 0.1, -0.5);
+      group.add(backWall);
+
+      // Whiteboard on back wall
+      const boardGeo = new THREE.BoxGeometry(roomWidth * 0.6, 0.45, 0.02);
+      const boardMat2 = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 });
+      const board = new THREE.Mesh(boardGeo, boardMat2);
+      board.position.set(0, 0.25, -0.48);
+      group.add(board);
+
+      // Board frame
+      const frameMat = new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.5 });
+      const hFrame = new THREE.BoxGeometry(roomWidth * 0.62, 0.02, 0.03);
+      const topFrame = new THREE.Mesh(hFrame, frameMat);
+      topFrame.position.set(0, 0.48, -0.47);
+      group.add(topFrame);
+      const botFrame = new THREE.Mesh(hFrame, frameMat);
+      botFrame.position.set(0, 0.02, -0.47);
+      group.add(botFrame);
+
+      // Board text
+      const boardCanvas = document.createElement('canvas');
+      boardCanvas.width = 256; boardCanvas.height = 128;
+      const bctx = boardCanvas.getContext('2d')!;
+      bctx.fillStyle = '#2c3e50';
+      bctx.font = 'bold 24px Arial';
+      bctx.textAlign = 'center';
+      bctx.fillText('Data Structures', 128, 40);
+      bctx.font = '16px Arial';
+      bctx.fillText('Array: O(1) Access', 128, 70);
+      bctx.fillText('Index: 0, 1, 2, ...', 128, 95);
+      const boardTex = new THREE.CanvasTexture(boardCanvas);
+      const boardText = new THREE.Mesh(
+        new THREE.PlaneGeometry(roomWidth * 0.55, 0.35),
+        new THREE.MeshBasicMaterial({ map: boardTex, transparent: true })
+      );
+      boardText.position.set(0, 0.25, -0.468);
+      group.add(boardText);
+
+      // Side walls (short)
+      [-roomWidth / 2, roomWidth / 2].forEach(x => {
+        const sideWall = new THREE.Mesh(
+          new THREE.PlaneGeometry(1.5, 1.0),
+          wallMat
+        );
+        sideWall.position.set(x, 0.1, 0);
+        sideWall.rotation.y = x > 0 ? -Math.PI / 2 : Math.PI / 2;
+        group.add(sideWall);
+      });
+
+      // Ceiling
+      const ceiling = new THREE.Mesh(
+        new THREE.PlaneGeometry(roomWidth, 1.5),
+        new THREE.MeshStandardMaterial({ color: '#f5f5f0', side: THREE.DoubleSide })
+      );
+      ceiling.rotation.x = Math.PI / 2;
+      ceiling.position.y = 0.6;
+      group.add(ceiling);
+
+      // Ceiling lights
+      for (let lx = -roomWidth / 3; lx <= roomWidth / 3; lx += roomWidth / 3) {
+        const lightFixture = new THREE.Mesh(
+          new THREE.BoxGeometry(0.3, 0.015, 0.08),
+          new THREE.MeshBasicMaterial({ color: '#ffffee' })
+        );
+        lightFixture.position.set(lx, 0.59, 0);
+        group.add(lightFixture);
+      }
+
+    // ---------- TODO LIST (Flat on Surface) ----------
     } else if (environment === 'todo') {
       data.forEach((item, i) => {
         const isHl = highlightIndex === i || highlightIndex2 === i;
         const clipboard = createClipboard(item.label, item.color, isHl);
         clipboard.position.set(startX + i * spacing, isHl ? 0.12 : 0, 0);
-        clipboard.scale.setScalar(0.75);
+        clipboard.scale.setScalar(0.7);
+        applyItemAnimation(clipboard, i, animPhase || '', animData || {}, 'array');
         group.add(clipboard);
 
         const idx = createTextSprite(`[${i}]`, isHl ? '#ffff00' : '#ffffff', 22);
@@ -1015,11 +2685,21 @@ function buildSceneContent(
         group.add(idx);
       });
 
-      // Desk surface
-      const deskGeo = new THREE.BoxGeometry(data.length * spacing + 0.5, 0.03, 0.4);
-      const desk = new THREE.Mesh(deskGeo, new THREE.MeshStandardMaterial({ color: '#5d4037' }));
-      desk.position.y = -0.28;
+      // Wooden desk
+      const deskWidth = data.length * spacing + 0.5;
+      const desk = new THREE.Mesh(
+        new THREE.BoxGeometry(deskWidth, 0.04, 0.5),
+        new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.7 })
+      );
+      desk.position.y = -0.3;
       group.add(desk);
+
+      // Desk edge (rounded)
+      const edgeGeo = new THREE.CylinderGeometry(0.02, 0.02, deskWidth, 16);
+      const edge = new THREE.Mesh(edgeGeo, new THREE.MeshStandardMaterial({ color: '#4a3520' }));
+      edge.rotation.z = Math.PI / 2;
+      edge.position.set(0, -0.3, 0.26);
+      group.add(edge);
     }
 
   // ========================================================
@@ -1034,60 +2714,63 @@ function buildSceneContent(
         const trainCar = createTrainCar(i === 0, item.color, item.label, isHl);
         trainCar.position.set(startX + i * spacing, isHl ? 0.12 : 0, 0);
         trainCar.scale.setScalar(0.85);
+        applyItemAnimation(trainCar, i, animPhase || '', animData || {}, 'linkedlist');
         group.add(trainCar);
 
-        // Arrow to next node
         if (i < data.length - 1) {
-          const arrow = createArrow(startX + i * spacing, startX + (i + 1) * spacing, false);
+          const arrow = createArrow(startX + i * spacing, startX + (i + 1) * spacing, highlightIndex === i || highlightIndex === i + 1);
           arrow.position.y = -0.15;
           group.add(arrow);
+
+          // Node pointer label
+          const ptrLabel = createTextSprite('next →', '#00ff00', 14);
+          ptrLabel.position.set((startX + i * spacing + startX + (i + 1) * spacing) / 2, -0.28, 0);
+          ptrLabel.scale.set(0.3, 0.1, 1);
+          group.add(ptrLabel);
         }
       });
 
-      // HEAD label
-      const headSprite = createTextSprite('HEAD', '#ff0000', 20);
-      headSprite.position.set(startX, 0.55, 0);
+      // HEAD / TAIL / NULL labels
+      const headSprite = createTextSprite('HEAD', '#ff0000', 22);
+      headSprite.position.set(startX, 0.6, 0);
       headSprite.scale.set(0.35, 0.14, 1);
       group.add(headSprite);
 
-      // TAIL label
-      const tailSprite = createTextSprite('TAIL', '#0066ff', 20);
-      tailSprite.position.set(startX + (data.length - 1) * spacing, 0.55, 0);
+      const tailSprite = createTextSprite('TAIL', '#0066ff', 22);
+      tailSprite.position.set(startX + (data.length - 1) * spacing, 0.6, 0);
       tailSprite.scale.set(0.35, 0.14, 1);
       group.add(tailSprite);
 
-      // NULL terminator
-      const nullSprite = createTextSprite('NULL', '#ff0000', 22);
+      const nullSprite = createTextSprite('NULL', '#ff0000', 24);
       nullSprite.position.set(startX + data.length * spacing, 0, 0);
       nullSprite.scale.set(0.35, 0.25, 1);
       group.add(nullSprite);
 
-      // Arrow to NULL
-      const nullArrow = createArrow(
-        startX + (data.length - 1) * spacing,
-        startX + data.length * spacing - 0.15,
-        false
-      );
+      const nullArrow = createArrow(startX + (data.length - 1) * spacing, startX + data.length * spacing - 0.15, false);
       nullArrow.position.y = -0.15;
       group.add(nullArrow);
 
-      // Railroad rails
-      const railGeo = new THREE.BoxGeometry(data.length * spacing + 1.5, 0.02, 0.03);
+      // Rails
       const railMat = new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.6 });
+      const railGeo = new THREE.BoxGeometry(data.length * spacing + 1.5, 0.02, 0.03);
       [-0.12, 0.12].forEach(z => {
-        const rail = new THREE.Mesh(railGeo, railMat);
-        rail.position.set(0, -0.12, z);
-        group.add(rail);
+        group.add(new THREE.Mesh(railGeo, railMat)).position.set(0, -0.12, z);
       });
 
-      // Railroad ties
-      const tieGeo = new THREE.BoxGeometry(0.04, 0.015, 0.35);
       const tieMat = new THREE.MeshStandardMaterial({ color: '#5d4037' });
-      for (let x = startX - 0.5; x <= startX + data.length * spacing + 0.5; x += 0.2) {
-        const tie = new THREE.Mesh(tieGeo, tieMat);
-        tie.position.set(x, -0.13, 0);
-        group.add(tie);
+      const tieGeo = new THREE.BoxGeometry(0.04, 0.015, 0.35);
+      for (let x = startX - 0.5; x <= startX + data.length * spacing + 0.5; x += 0.18) {
+        group.add(new THREE.Mesh(tieGeo, tieMat)).position.set(x, -0.13, 0);
       }
+
+      // Ground
+      const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(data.length * spacing + 2, 1),
+        new THREE.MeshStandardMaterial({ color: '#8b7355', side: THREE.DoubleSide })
+      );
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = -0.14;
+      group.add(ground);
 
     // ---------- PEOPLE LINE ----------
     } else if (environment === 'people') {
@@ -1097,42 +2780,39 @@ function buildSceneContent(
           const human = createHuman3D(item.appearance, item.label, isHl);
           human.position.set(startX + i * spacing, isHl ? 0.08 : 0, 0);
           human.scale.setScalar(0.75);
+          applyItemAnimation(human, i, animPhase || '', animData || {}, 'linkedlist');
           group.add(human);
         }
-        // Arrow to next person
         if (i < data.length - 1) {
           const arrow = createArrow(startX + i * spacing, startX + (i + 1) * spacing, false);
           arrow.position.y = 0.1;
           group.add(arrow);
+
+          const ptrLabel = createTextSprite('next →', '#00ff00', 14);
+          ptrLabel.position.set((startX + i * spacing + startX + (i + 1) * spacing) / 2, -0.05, 0);
+          ptrLabel.scale.set(0.28, 0.08, 1);
+          group.add(ptrLabel);
         }
       });
 
-      // HEAD label
-      const headSprite = createTextSprite('HEAD', '#ff0000', 18);
+      const headSprite = createTextSprite('HEAD', '#ff0000', 20);
       headSprite.position.set(startX, 0.55, 0);
       headSprite.scale.set(0.3, 0.12, 1);
       group.add(headSprite);
 
-      // NULL terminator
-      const nullSprite = createTextSprite('NULL', '#ff0000', 20);
+      const nullSprite = createTextSprite('NULL', '#ff0000', 22);
       nullSprite.position.set(startX + data.length * spacing, 0.1, 0);
       nullSprite.scale.set(0.3, 0.2, 1);
       group.add(nullSprite);
 
-      // Arrow to NULL
-      const nullArrow = createArrow(
-        startX + (data.length - 1) * spacing,
-        startX + data.length * spacing - 0.1,
-        false
-      );
+      const nullArrow = createArrow(startX + (data.length - 1) * spacing, startX + data.length * spacing - 0.1, false);
       nullArrow.position.y = 0.1;
       group.add(nullArrow);
 
-      // Floor
-      const floorGeo = new THREE.PlaneGeometry(data.length * spacing + 1, 0.5);
-      const floor = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({
-        color: '#95a5a6', side: THREE.DoubleSide
-      }));
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(data.length * spacing + 1, 0.6),
+        new THREE.MeshStandardMaterial({ color: '#95a5a6', side: THREE.DoubleSide })
+      );
       floor.rotation.x = -Math.PI / 2;
       floor.position.y = -0.17;
       group.add(floor);
@@ -1143,10 +2823,10 @@ function buildSceneContent(
         const isHl = highlightIndex === i;
         const domino = createDomino(item.label, isHl);
         domino.position.set(startX + i * spacing, isHl ? 0.1 : 0, 0);
-        domino.scale.setScalar(0.9);
+        domino.scale.setScalar(0.85);
+        applyItemAnimation(domino, i, animPhase || '', animData || {}, 'linkedlist');
         group.add(domino);
 
-        // Arrow to next domino
         if (i < data.length - 1) {
           const arrow = createArrow(startX + i * spacing, startX + (i + 1) * spacing, false);
           arrow.position.y = -0.35;
@@ -1154,32 +2834,34 @@ function buildSceneContent(
         }
       });
 
-      // HEAD label
-      const headSprite = createTextSprite('HEAD', '#ff0000', 18);
+      const headSprite = createTextSprite('HEAD', '#ff0000', 20);
       headSprite.position.set(startX, 0.4, 0);
       headSprite.scale.set(0.3, 0.12, 1);
       group.add(headSprite);
 
-      // NULL terminator
-      const nullSprite = createTextSprite('NULL', '#ff0000', 18);
+      const nullSprite = createTextSprite('NULL', '#ff0000', 20);
       nullSprite.position.set(startX + data.length * spacing, -0.35, 0);
       nullSprite.scale.set(0.3, 0.2, 1);
       group.add(nullSprite);
 
-      // Arrow to NULL
-      const nullArrow = createArrow(
-        startX + (data.length - 1) * spacing,
-        startX + data.length * spacing - 0.1,
-        false
-      );
+      const nullArrow = createArrow(startX + (data.length - 1) * spacing, startX + data.length * spacing - 0.1, false);
       nullArrow.position.y = -0.35;
       group.add(nullArrow);
 
       // Green felt table
-      const tableGeo = new THREE.BoxGeometry(data.length * spacing + 0.8, 0.03, 0.5);
-      const table = new THREE.Mesh(tableGeo, new THREE.MeshStandardMaterial({ color: '#27ae60' }));
-      table.position.y = -0.28;
+      const table = new THREE.Mesh(
+        new THREE.BoxGeometry(data.length * spacing + 0.8, 0.04, 0.6),
+        new THREE.MeshStandardMaterial({ color: '#1b5e20', roughness: 0.9 })
+      );
+      table.position.y = -0.3;
       group.add(table);
+
+      // Table edge
+      const edgeMat = new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.7 });
+      const edgeGeo = new THREE.BoxGeometry(data.length * spacing + 0.85, 0.06, 0.04);
+      [0.32, -0.32].forEach(z => {
+        group.add(new THREE.Mesh(edgeGeo, edgeMat)).position.set(0, -0.3, z);
+      });
     }
 
   // ========================================================
@@ -1197,79 +2879,119 @@ function buildSceneContent(
         const book = createBook(item.label, item.color, isHl);
         book.position.set(isHl ? 0.2 : 0, baseY + i * stackSpacing, 0);
         book.rotation.y = (i % 2 === 0) ? 0 : 0.05;
+        applyItemAnimation(book, i, animPhase || '', animData || {}, 'stack');
         group.add(book);
 
-        // TOP label on topmost book
         if (i === data.length - 1) {
-          const topSprite = createTextSprite('← TOP', '#ff0000', 22);
-          topSprite.position.set(0.6, baseY + i * stackSpacing, 0);
+          const topSprite = createTextSprite('← TOP', '#ff0000', 24);
+          topSprite.position.set(0.7, baseY + i * stackSpacing, 0);
           topSprite.scale.set(0.4, 0.15, 1);
           group.add(topSprite);
         }
       });
 
-      // Desk under books
-      const deskGeo = new THREE.BoxGeometry(1.2, 0.04, 0.6);
-      const desk = new THREE.Mesh(deskGeo, new THREE.MeshStandardMaterial({ color: '#5d4037' }));
-      desk.position.y = baseY - 0.08;
+      // Desk
+      const desk = new THREE.Mesh(
+        new THREE.BoxGeometry(1.4, 0.04, 0.7),
+        new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.7 })
+      );
+      desk.position.y = baseY - 0.1;
       group.add(desk);
 
-    // ---------- PLATES ----------
+    // ---------- PLATES (Cafeteria) ----------
     } else if (environment === 'plates') {
-      const plateSpacing = 0.045;
+      const plateSpacing = 0.05;
       const plateBaseY = -data.length * plateSpacing / 2;
 
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const plate = createPlate(item.label, isHl);
         plate.position.set(isHl ? 0.15 : 0, plateBaseY + i * plateSpacing, 0);
-        plate.scale.setScalar(0.7);
+        plate.scale.setScalar(0.65);
+        applyItemAnimation(plate, i, animPhase || '', animData || {}, 'stack');
         group.add(plate);
 
-        // TOP label on topmost plate
         if (i === data.length - 1) {
-          const topSprite = createTextSprite('← TOP', '#ff0000', 22);
-          topSprite.position.set(0.45, plateBaseY + i * plateSpacing, 0);
+          const topSprite = createTextSprite('← TOP', '#ff0000', 24);
+          topSprite.position.set(0.5, plateBaseY + i * plateSpacing, 0);
           topSprite.scale.set(0.35, 0.12, 1);
           group.add(topSprite);
         }
       });
 
-      // Counter surface
-      const counterGeo = new THREE.BoxGeometry(0.9, 0.05, 0.5);
-      const counter = new THREE.Mesh(counterGeo, new THREE.MeshStandardMaterial({
-        color: '#7f8c8d', metalness: 0.3
-      }));
+      // Counter
+      const counter = new THREE.Mesh(
+        new THREE.BoxGeometry(1.0, 0.06, 0.6),
+        new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.4, roughness: 0.4 })
+      );
       counter.position.y = plateBaseY - 0.06;
       group.add(counter);
 
-    // ---------- BOXES ----------
+      // Counter front panel
+      const panel = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.0, 0.3),
+        new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
+      );
+      panel.position.set(0, plateBaseY - 0.2, 0.3);
+      group.add(panel);
+
+      // "CAFETERIA" sign
+      const signCanvas = document.createElement('canvas');
+      signCanvas.width = 256; signCanvas.height = 48;
+      const sctx = signCanvas.getContext('2d')!;
+      sctx.fillStyle = '#e74c3c';
+      sctx.fillRect(0, 0, 256, 48);
+      sctx.fillStyle = '#fff';
+      sctx.font = 'bold 28px Arial';
+      sctx.textAlign = 'center';
+      sctx.fillText('🍽️ CAFETERIA 🍽️', 128, 35);
+      const signSprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(signCanvas), transparent: true })
+      );
+      signSprite.position.set(0, plateBaseY + data.length * plateSpacing + 0.3, 0);
+      signSprite.scale.set(0.8, 0.15, 1);
+      group.add(signSprite);
+
+    // ---------- BOXES (Openable) ----------
     } else if (environment === 'boxes') {
       const boxSpacing = 0.42;
       const boxBaseY = -data.length * boxSpacing / 2 + 0.2;
 
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
-        const box = createCardboardBox(item.label, item.color, isHl);
+        const isTop = i === data.length - 1;
+        const isPeeking = animPhase === 'stack-peek-open' && isTop && isHl;
+        const box = createCardboardBox(item.label, item.color, isHl, isPeeking);
         box.position.set(isHl ? 0.2 : 0, boxBaseY + i * boxSpacing, 0);
-        box.rotation.y = (i % 2 === 0) ? 0 : 0.08;
-        box.scale.setScalar(0.85);
+        box.rotation.y = (i % 2 === 0) ? 0 : 0.06;
+        box.scale.setScalar(0.82);
+        applyItemAnimation(box, i, animPhase || '', animData || {}, 'stack');
         group.add(box);
 
-        // TOP label on topmost box
-        if (i === data.length - 1) {
-          const topSprite = createTextSprite('← TOP', '#ff0000', 22);
-          topSprite.position.set(0.55, boxBaseY + i * boxSpacing, 0);
+        if (isTop) {
+          const topSprite = createTextSprite('← TOP', '#ff0000', 24);
+          topSprite.position.set(0.6, boxBaseY + i * boxSpacing, 0);
           topSprite.scale.set(0.35, 0.12, 1);
           group.add(topSprite);
         }
       });
 
-      // Pallet under boxes
-      const palletGeo = new THREE.BoxGeometry(0.8, 0.06, 0.6);
-      const pallet = new THREE.Mesh(palletGeo, new THREE.MeshStandardMaterial({ color: '#a0522d' }));
-      pallet.position.y = boxBaseY - 0.22;
+      // Pallet
+      const pallet = new THREE.Mesh(
+        new THREE.BoxGeometry(0.85, 0.06, 0.65),
+        new THREE.MeshStandardMaterial({ color: '#a0522d', roughness: 0.9 })
+      );
+      pallet.position.y = boxBaseY - 0.24;
       group.add(pallet);
+
+      // Pallet slats
+      const slatGeo = new THREE.BoxGeometry(0.85, 0.015, 0.08);
+      const slatMat = new THREE.MeshStandardMaterial({ color: '#8b6914' });
+      [-0.25, 0, 0.25].forEach(z => {
+        const slat = new THREE.Mesh(slatGeo, slatMat);
+        slat.position.set(0, boxBaseY - 0.28, z);
+        group.add(slat);
+      });
     }
 
   // ========================================================
@@ -1282,62 +3004,93 @@ function buildSceneContent(
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const car = createCar(item.color, item.label, isHl);
-        car.position.set(startX + i * spacing, isHl ? 0.1 : 0, 0);
-        car.scale.setScalar(0.85);
+        car.position.set(startX + i * spacing, isHl ? 0.08 : 0, 0);
+        car.scale.setScalar(0.82);
+        applyItemAnimation(car, i, animPhase || '', animData || {}, 'queue');
         group.add(car);
       });
 
-      // FRONT label
-      const frontSprite = createTextSprite('FRONT', '#00ff00', 18);
-      frontSprite.position.set(startX, -0.25, 0);
+      // FRONT / REAR labels
+      const frontSprite = createTextSprite('FRONT', '#00ff00', 20);
+      frontSprite.position.set(startX, -0.22, 0);
       frontSprite.scale.set(0.3, 0.12, 1);
       group.add(frontSprite);
 
-      // REAR label
-      const rearSprite = createTextSprite('REAR', '#ff6600', 18);
-      rearSprite.position.set(startX + (data.length - 1) * spacing, -0.25, 0);
+      const rearSprite = createTextSprite('REAR', '#ff6600', 20);
+      rearSprite.position.set(startX + (data.length - 1) * spacing, -0.22, 0);
       rearSprite.scale.set(0.3, 0.12, 1);
       group.add(rearSprite);
 
       // Toll gate structure
-      const gateX = startX - 0.7;
-      const poleGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.6, 12);
-      const pole = new THREE.Mesh(poleGeo, new THREE.MeshStandardMaterial({ color: '#f1c40f' }));
-      pole.position.set(gateX, 0.2, 0.25);
-      group.add(pole);
+      const gateX = startX - 0.8;
+
+      // Gate poles
+      const poleMat = new THREE.MeshStandardMaterial({ color: '#f1c40f', metalness: 0.5 });
+      const poleGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.7, 12);
+      [0.25, -0.25].forEach(z => {
+        group.add(new THREE.Mesh(poleGeo, poleMat)).position.set(gateX, 0.25, z);
+      });
+
+      // Gate top bar
+      const topBarGeo = new THREE.BoxGeometry(0.06, 0.06, 0.55);
+      group.add(new THREE.Mesh(topBarGeo, poleMat)).position.set(gateX, 0.6, 0);
 
       // Barrier arm
       const barrierGeo = new THREE.BoxGeometry(0.5, 0.04, 0.04);
       const barrier = new THREE.Mesh(barrierGeo, new THREE.MeshStandardMaterial({ color: '#e74c3c' }));
-      barrier.position.set(gateX - 0.25, 0.45, 0.25);
+      barrier.position.set(gateX - 0.25, 0.5, 0);
       barrier.rotation.z = 0.3;
       group.add(barrier);
 
-      // Road surface
-      const roadGeo = new THREE.PlaneGeometry(data.length * spacing + 2, 0.6);
-      const road = new THREE.Mesh(roadGeo, new THREE.MeshStandardMaterial({
-        color: '#34495e', side: THREE.DoubleSide
-      }));
+      // Barrier stripes
+      const stripeMat = new THREE.MeshStandardMaterial({ color: '#ffffff' });
+      for (let sx = -0.2; sx < 0.2; sx += 0.08) {
+        const stripeGeo = new THREE.BoxGeometry(0.03, 0.045, 0.045);
+        const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+        stripe.position.set(gateX - 0.25 + sx, 0.5, 0);
+        stripe.rotation.z = 0.3;
+        group.add(stripe);
+      }
+
+      // "TOLL" sign
+      const signCanvas = document.createElement('canvas');
+      signCanvas.width = 128; signCanvas.height = 48;
+      const signCtx = signCanvas.getContext('2d')!;
+      signCtx.fillStyle = '#2c3e50';
+      signCtx.fillRect(0, 0, 128, 48);
+      signCtx.fillStyle = '#fff';
+      signCtx.font = 'bold 28px Arial';
+      signCtx.textAlign = 'center';
+      signCtx.fillText('TOLL', 64, 36);
+      const signSprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(signCanvas), transparent: true })
+      );
+      signSprite.position.set(gateX, 0.72, 0);
+      signSprite.scale.set(0.35, 0.13, 1);
+      group.add(signSprite);
+
+      // Road
+      const road = new THREE.Mesh(
+        new THREE.PlaneGeometry(data.length * spacing + 2.5, 0.7),
+        new THREE.MeshStandardMaterial({ color: '#34495e', side: THREE.DoubleSide })
+      );
       road.rotation.x = -Math.PI / 2;
       road.position.y = -0.08;
       group.add(road);
 
-      // Road dashed lines
-      const dashLineGeo = new THREE.PlaneGeometry(0.15, 0.03);
-      const dashLineMat = new THREE.MeshStandardMaterial({
-        color: '#ffffff', side: THREE.DoubleSide
-      });
-      for (let x = startX - 0.8; x <= startX + data.length * spacing + 0.5; x += 0.3) {
-        const dashLine = new THREE.Mesh(dashLineGeo, dashLineMat);
-        dashLine.rotation.x = -Math.PI / 2;
-        dashLine.position.set(x, -0.075, 0);
-        group.add(dashLine);
+      // Dashed road lines
+      const dashMat = new THREE.MeshStandardMaterial({ color: '#ffffff', side: THREE.DoubleSide });
+      for (let x = startX - 1; x <= startX + data.length * spacing + 0.5; x += 0.25) {
+        const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.025), dashMat);
+        dash.rotation.x = -Math.PI / 2;
+        dash.position.set(x, -0.075, 0);
+        group.add(dash);
       }
 
       // Exit arrow
-      const exitSprite = createTextSprite('→', '#00ff00', 36);
-      exitSprite.position.set(gateX - 0.5, 0, 0);
-      exitSprite.scale.set(0.4, 0.25, 1);
+      const exitSprite = createTextSprite('EXIT →', '#00ff00', 22);
+      exitSprite.position.set(gateX - 0.6, 0.3, 0);
+      exitSprite.scale.set(0.35, 0.12, 1);
       group.add(exitSprite);
 
     // ---------- TICKETS ----------
@@ -1346,88 +3099,153 @@ function buildSceneContent(
         const isHl = highlightIndex === i;
         const ticket = createTicket(item.label, item.color, isHl);
         ticket.position.set(startX + i * spacing, isHl ? 0.1 : 0, 0);
-        ticket.scale.setScalar(0.85);
+        ticket.scale.setScalar(0.82);
+        applyItemAnimation(ticket, i, animPhase || '', animData || {}, 'queue');
         group.add(ticket);
       });
 
-      // FRONT label
-      const frontSprite = createTextSprite('FRONT', '#00ff00', 18);
-      frontSprite.position.set(startX, -0.25, 0);
+      const frontSprite = createTextSprite('FRONT', '#00ff00', 20);
+      frontSprite.position.set(startX, -0.22, 0);
       frontSprite.scale.set(0.3, 0.12, 1);
       group.add(frontSprite);
 
-      // REAR label
-      const rearSprite = createTextSprite('REAR', '#ff6600', 18);
-      rearSprite.position.set(startX + (data.length - 1) * spacing, -0.25, 0);
+      const rearSprite = createTextSprite('REAR', '#ff6600', 20);
+      rearSprite.position.set(startX + (data.length - 1) * spacing, -0.22, 0);
       rearSprite.scale.set(0.3, 0.12, 1);
       group.add(rearSprite);
 
-      // Counter surface
-      const counterGeo = new THREE.BoxGeometry(data.length * spacing + 0.6, 0.04, 0.4);
-      const counter = new THREE.Mesh(counterGeo, new THREE.MeshStandardMaterial({ color: '#2c3e50' }));
+      // Counter
+      const counter = new THREE.Mesh(
+        new THREE.BoxGeometry(data.length * spacing + 0.6, 0.04, 0.4),
+        new THREE.MeshStandardMaterial({ color: '#2c3e50', metalness: 0.3 })
+      );
       counter.position.y = -0.15;
       group.add(counter);
 
-    // ---------- STUDENTS ----------
+      // "NOW SERVING" sign
+      const servingCanvas = document.createElement('canvas');
+      servingCanvas.width = 200; servingCanvas.height = 64;
+      const svctx = servingCanvas.getContext('2d')!;
+      svctx.fillStyle = '#1a1a2e';
+      svctx.fillRect(0, 0, 200, 64);
+      svctx.strokeStyle = '#ffd700';
+      svctx.lineWidth = 2;
+      svctx.strokeRect(3, 3, 194, 58);
+      svctx.fillStyle = '#00ff00';
+      svctx.font = 'bold 14px Arial';
+      svctx.textAlign = 'center';
+      svctx.fillText('NOW SERVING', 100, 22);
+      svctx.font = 'bold 28px Arial';
+      svctx.fillStyle = '#ff0';
+      svctx.fillText(data.length > 0 ? data[0].label : '---', 100, 52);
+      const servingSprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(servingCanvas), transparent: true })
+      );
+      servingSprite.position.set(startX - 0.6, 0.2, 0);
+      servingSprite.scale.set(0.45, 0.15, 1);
+      group.add(servingSprite);
+
+    // ---------- STUDENTS (School Queue with Building) ----------
     } else if (environment === 'students') {
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         if (item.appearance) {
           const human = createHuman3D(item.appearance, item.label, isHl);
           human.position.set(startX + i * spacing, isHl ? 0.08 : 0, 0);
-          human.scale.setScalar(0.7);
+          human.scale.setScalar(0.68);
+          applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue');
           group.add(human);
         }
       });
 
-      // FRONT label
       const frontSprite = createTextSprite('FRONT', '#00ff00', 18);
-      frontSprite.position.set(startX, -0.22, 0);
+      frontSprite.position.set(startX, -0.2, 0);
       frontSprite.scale.set(0.28, 0.1, 1);
       group.add(frontSprite);
 
-      // REAR label
       const rearSprite = createTextSprite('REAR', '#ff6600', 18);
-      rearSprite.position.set(startX + (data.length - 1) * spacing, -0.22, 0);
+      rearSprite.position.set(startX + (data.length - 1) * spacing, -0.2, 0);
       rearSprite.scale.set(0.28, 0.1, 1);
       group.add(rearSprite);
 
-      // Door
-      const doorGeo = new THREE.BoxGeometry(0.04, 0.5, 0.3);
-      const door = new THREE.Mesh(doorGeo, new THREE.MeshStandardMaterial({ color: '#8b4513' }));
-      door.position.set(startX - 0.7, 0.1, 0);
-      group.add(door);
+      // School building entrance
+      const buildingX = startX - 0.9;
+      const wallMat = new THREE.MeshStandardMaterial({ color: '#8b4513', roughness: 0.8 });
+
+      // Building front wall
+      const frontWall = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.7, 0.8), wallMat);
+      frontWall.position.set(buildingX, 0.2, 0);
+      group.add(frontWall);
 
       // Door frame
-      const doorFrameGeo = new THREE.BoxGeometry(0.06, 0.55, 0.35);
-      const doorFrame = new THREE.Mesh(doorFrameGeo, new THREE.MeshStandardMaterial({ color: '#5d4037' }));
-      doorFrame.position.set(startX - 0.72, 0.1, 0);
+      const doorFrameMat = new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.6 });
+      const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.5, 0.35), doorFrameMat);
+      doorFrame.position.set(buildingX + 0.02, 0.1, 0);
       group.add(doorFrame);
 
-      // Floor
-      const floorGeo = new THREE.PlaneGeometry(data.length * spacing + 1.5, 0.5);
-      const floor = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({
-        color: '#bdc3c7', side: THREE.DoubleSide
-      }));
-      floor.rotation.x = -Math.PI / 2;
-      floor.position.y = -0.15;
-      group.add(floor);
+      // Door (open)
+      const doorMat = new THREE.MeshStandardMaterial({ color: '#6d4c2a', roughness: 0.7 });
+      const door = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.45, 0.15), doorMat);
+      door.position.set(buildingX + 0.05, 0.08, 0.12);
+      door.rotation.y = -0.8;
+      group.add(door);
+
+      // School sign
+      const schoolCanvas = document.createElement('canvas');
+      schoolCanvas.width = 200; schoolCanvas.height = 48;
+      const schCtx = schoolCanvas.getContext('2d')!;
+      schCtx.fillStyle = '#1a5276';
+      schCtx.fillRect(0, 0, 200, 48);
+      schCtx.strokeStyle = '#ffd700';
+      schCtx.lineWidth = 3;
+      schCtx.strokeRect(2, 2, 196, 44);
+      schCtx.fillStyle = '#fff';
+      schCtx.font = 'bold 16px Arial';
+      schCtx.textAlign = 'center';
+      schCtx.fillText('📚 DS ACADEMY 📚', 100, 32);
+      const schoolSprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(schoolCanvas), transparent: true })
+      );
+      schoolSprite.position.set(buildingX, 0.62, 0);
+      schoolSprite.scale.set(0.5, 0.12, 1);
+      group.add(schoolSprite);
+
+      // Roof
+      const roofGeo = new THREE.BoxGeometry(0.1, 0.04, 0.85);
+      const roofMat = new THREE.MeshStandardMaterial({ color: '#c0392b' });
+      const roofMesh = new THREE.Mesh(roofGeo, roofMat);
+      roofMesh.position.set(buildingX, 0.57, 0);
+      group.add(roofMesh);
+
+      // Floor / pathway
+      const pathway = new THREE.Mesh(
+        new THREE.PlaneGeometry(data.length * spacing + 1.8, 0.5),
+        new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
+      );
+      pathway.rotation.x = -Math.PI / 2;
+      pathway.position.y = -0.14;
+      group.add(pathway);
+
+      // Path lines
+      const pathLineMat = new THREE.MeshBasicMaterial({ color: '#95a5a6', side: THREE.DoubleSide });
+      [-0.2, 0.2].forEach(z => {
+        const pathLine = new THREE.Mesh(new THREE.PlaneGeometry(data.length * spacing + 1.5, 0.01), pathLineMat);
+        pathLine.rotation.x = -Math.PI / 2;
+        pathLine.position.set(0, -0.139, z);
+        group.add(pathLine);
+      });
     }
   }
 }
 
-
-
-// ==================== PARTS 6-9 COMBINED ====================
-// Delete your old Home(), OpBtn, and Visualization3D
-// Paste this entire block after buildSceneContent()
+// ==================== END OF PART 5 ====================
+// ==================== PARTS 6-9: Home + OpBtn + Visualization3D ====================
+// Place right after Part 5 (after buildSceneContent)
 
 export default function Home() {
-  // ==================== REFS ====================
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // ==================== CORE STATE ====================
   const [isLoading, setIsLoading] = useState(true);
   const [loadingText, setLoadingText] = useState('Starting...');
   const [model, setModel] = useState<any>(null);
@@ -1449,6 +3267,8 @@ export default function Home() {
   const [operationMessage, setOperationMessage] = useState('');
   const [codeDisplay, setCodeDisplay] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
+  const [animPhase, setAnimPhase] = useState('');
+  const [animData, setAnimData] = useState<Record<string, any>>({});
 
   const [appMode, setAppMode] = useState<AppMode>('person');
   const [surfacePosition, setSurfacePosition] = useState<Position | null>(null);
@@ -1456,7 +3276,6 @@ export default function Home() {
   const [isDraggingSurface, setIsDraggingSurface] = useState(false);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
 
-  // ==================== WEBXR STATE ====================
   const [webxrSupported, setWebxrSupported] = useState(false);
   const [webxrActive, setWebxrActive] = useState(false);
   const [webxrPlaced, setWebxrPlaced] = useState(false);
@@ -1552,7 +3371,6 @@ export default function Home() {
   // ==================== HELPERS ====================
 
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
   const getArrayData = () => arrayEnv === 'grocery' ? groceryItems : arrayEnv === 'classroom' ? students : tasks;
   const setArrayData = arrayEnv === 'grocery' ? setGroceryItems : arrayEnv === 'classroom' ? setStudents : setTasks;
   const getLinkedListData = () => linkedListEnv === 'train' ? trainCars : linkedListEnv === 'people' ? peopleLine : dominoNodes;
@@ -1562,12 +3380,9 @@ export default function Home() {
   const getQueueData = () => queueEnv === 'tollgate' ? tollGate : queueEnv === 'tickets' ? ticketQueue : studentQueue;
   const setQueueData = queueEnv === 'tollgate' ? setTollGate : queueEnv === 'tickets' ? setTicketQueue : setStudentQueue;
   const getCurrentData = () => currentStructure === 'array' ? getArrayData() : currentStructure === 'linkedlist' ? getLinkedListData() : currentStructure === 'stack' ? getStackData() : getQueueData();
-
   const currentEnvId = currentStructure === 'array' ? arrayEnv : currentStructure === 'linkedlist' ? linkedListEnv : currentStructure === 'stack' ? stackEnv : queueEnv;
   const setCurrentEnv = currentStructure === 'array' ? setArrayEnv : currentStructure === 'linkedlist' ? setLinkedListEnv : currentStructure === 'stack' ? setStackEnv : setQueueEnv;
   const currentData = getCurrentData();
-
-  // ==================== ZOOM ====================
 
   const zoomIn = useCallback(() => setZoomLevel(prev => prev + 0.25), []);
   const zoomOut = useCallback(() => setZoomLevel(prev => Math.max(prev - 0.25, 0.1)), []);
@@ -1579,21 +3394,16 @@ export default function Home() {
     try {
       if (stream) stream.getTracks().forEach(track => track.stop());
       const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false
+        video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
       });
       if (videoRef.current) {
         videoRef.current.srcObject = newStream;
         await new Promise<void>((resolve) => {
-          if (videoRef.current) {
-            videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); resolve(); };
-          }
+          if (videoRef.current) videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); resolve(); };
         });
       }
       setStream(newStream);
-    } catch (err) {
-      throw new Error('Cannot access camera.');
-    }
+    } catch (err) { throw new Error('Cannot access camera.'); }
   }, [stream]);
 
   const switchCamera = async () => {
@@ -1605,14 +3415,11 @@ export default function Home() {
   const loadModel = async () => {
     setLoadingText('Loading AI...');
     const tf = await import('@tensorflow/tfjs');
-    await tf.ready();
-    await tf.setBackend('webgl');
+    await tf.ready(); await tf.setBackend('webgl');
     setLoadingText('Loading detector...');
     const cocoSsd = await import('@tensorflow-models/coco-ssd');
     return await cocoSsd.load({ base: 'lite_mobilenet_v2' });
   };
-
-  // ==================== INIT ====================
 
   useEffect(() => {
     const init = async () => {
@@ -1622,23 +3429,16 @@ export default function Home() {
         const loadedModel = await loadModel();
         setModel(loadedModel);
         setIsLoading(false);
-      } catch (err: any) {
-        setError(err.message);
-        setIsLoading(false);
-      }
+      } catch (err: any) { setError(err.message); setIsLoading(false); }
     };
     init();
-    return () => {
-      if (stream) stream.getTracks().forEach(track => track.stop());
-    };
+    return () => { if (stream) stream.getTracks().forEach(track => track.stop()); };
   }, []);
 
   // ==================== PERSON DETECTION ====================
 
   useEffect(() => {
-    if (!model || !videoRef.current || !canvasRef.current) return;
-    if (appMode !== 'person') return;
-
+    if (!model || !videoRef.current || !canvasRef.current || appMode !== 'person') return;
     let animationId: number, running = true, lastDetection = 0;
     const detect = async () => {
       if (!running || !videoRef.current || !canvasRef.current) return;
@@ -1647,21 +3447,16 @@ export default function Home() {
       lastDetection = now;
       const video = videoRef.current, canvas = canvasRef.current;
       if (video.readyState !== 4) { animationId = requestAnimationFrame(detect); return; }
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
       try {
         const predictions = await model.detect(video);
         const humans = predictions.filter((p: any) => p.class === 'person' && p.score > 0.5);
         if (humans.length > 0) {
           const [x, y, width, height] = humans[0].bbox;
-          const scaleX = window.innerWidth / canvas.width;
-          const scaleY = window.innerHeight / canvas.height;
+          const scaleX = window.innerWidth / canvas.width, scaleY = window.innerHeight / canvas.height;
           setDetectedPerson({ bbox: humans[0].bbox, class: humans[0].class, score: humans[0].score });
           setPersonPosition({ x: x * scaleX, y: y * scaleY, width: width * scaleX, height: height * scaleY });
-        } else {
-          setDetectedPerson(null);
-          setPersonPosition(null);
-        }
+        } else { setDetectedPerson(null); setPersonPosition(null); }
       } catch (e) { console.error(e); }
       if (running) animationId = requestAnimationFrame(detect);
     };
@@ -1669,7 +3464,7 @@ export default function Home() {
     return () => { running = false; if (animationId) cancelAnimationFrame(animationId); };
   }, [model, appMode]);
 
-  // ==================== WEBXR SUPPORT CHECK ====================
+  // ==================== WEBXR ====================
 
   useEffect(() => {
     const checkXR = async () => {
@@ -1678,285 +3473,166 @@ export default function Home() {
           const supported = await (navigator as any).xr.isSessionSupported('immersive-ar');
           setWebxrSupported(supported);
         }
-      } catch {
-        setWebxrSupported(false);
-      }
+      } catch { setWebxrSupported(false); }
     };
     checkXR();
   }, []);
-
-  // ==================== CLEANUP WEBXR ====================
 
   const cleanupWebXR = useCallback(() => {
     if (xrRendererRef.current) {
       xrRendererRef.current.setAnimationLoop(null);
       xrRendererRef.current.dispose();
-      if (xrContainerRef.current && xrRendererRef.current.domElement.parentNode === xrContainerRef.current) {
+      if (xrContainerRef.current && xrRendererRef.current.domElement.parentNode === xrContainerRef.current)
         xrContainerRef.current.removeChild(xrRendererRef.current.domElement);
-      }
     }
-    xrSessionRef.current = null;
-    xrRendererRef.current = null;
-    xrSceneRef.current = null;
-    xrCameraRef.current = null;
-    xrGroupRef.current = null;
-    xrReticleRef.current = null;
+    xrSessionRef.current = null; xrRendererRef.current = null; xrSceneRef.current = null;
+    xrCameraRef.current = null; xrGroupRef.current = null; xrReticleRef.current = null;
     xrHitTestSourceRef.current = null;
-    setWebxrActive(false);
-    setWebxrPlaced(false);
-    setAppMode('surface');
+    setWebxrActive(false); setWebxrPlaced(false); setAppMode('surface');
   }, []);
 
   const stopWebXR = useCallback(() => {
-    if (xrSessionRef.current) {
-      try { xrSessionRef.current.end(); } catch (e) { cleanupWebXR(); }
-    } else {
-      cleanupWebXR();
-    }
+    if (xrSessionRef.current) { try { xrSessionRef.current.end(); } catch (e) { cleanupWebXR(); } }
+    else cleanupWebXR();
   }, [cleanupWebXR]);
-
-  // ==================== START WEBXR ====================
 
   const startWebXR = async () => {
     const xr = (navigator as any).xr;
-    if (!xr) {
-      alert('WebXR not available. Using Surface mode.');
-      setAppMode('surface');
-      return;
-    }
+    if (!xr) { alert('WebXR not available.'); setAppMode('surface'); return; }
     try {
-      const sessionInit: any = {
-        requiredFeatures: ['hit-test'],
-        optionalFeatures: ['dom-overlay'],
-      };
+      const sessionInit: any = { requiredFeatures: ['hit-test'], optionalFeatures: ['dom-overlay'] };
       const overlayEl = document.getElementById('ar-overlay');
-      if (overlayEl) {
-        sessionInit.domOverlay = { root: overlayEl };
-      }
+      if (overlayEl) sessionInit.domOverlay = { root: overlayEl };
       const session = await xr.requestSession('immersive-ar', sessionInit);
       xrSessionRef.current = session;
-
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setPixelRatio(window.devicePixelRatio);
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.xr.enabled = true;
-      renderer.xr.setReferenceSpaceType('local');
+      renderer.xr.enabled = true; renderer.xr.setReferenceSpaceType('local');
       xrRendererRef.current = renderer;
-
-      if (xrContainerRef.current) {
-        xrContainerRef.current.appendChild(renderer.domElement);
-      }
+      if (xrContainerRef.current) xrContainerRef.current.appendChild(renderer.domElement);
       await renderer.xr.setSession(session);
-
-      const scene = new THREE.Scene();
-      xrSceneRef.current = scene;
+      const scene = new THREE.Scene(); xrSceneRef.current = scene;
       scene.add(new THREE.AmbientLight(0xffffff, 0.7));
       const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      dirLight.position.set(5, 10, 7);
-      dirLight.castShadow = true;
-      scene.add(dirLight);
+      dirLight.position.set(5, 10, 7); dirLight.castShadow = true; scene.add(dirLight);
       const backLight = new THREE.DirectionalLight(0xffffff, 0.3);
-      backLight.position.set(-5, 5, -5);
-      scene.add(backLight);
-
+      backLight.position.set(-5, 5, -5); scene.add(backLight);
       const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 100);
       xrCameraRef.current = camera;
-
-      const group = new THREE.Group();
-      group.visible = false;
-      scene.add(group);
-      xrGroupRef.current = group;
-
-      const reticleGeo = new THREE.RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2);
-      const reticleMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-      const reticle = new THREE.Mesh(reticleGeo, reticleMat);
-      reticle.matrixAutoUpdate = false;
-      reticle.visible = false;
-      scene.add(reticle);
-      xrReticleRef.current = reticle;
-
-      const dotGeo = new THREE.CircleGeometry(0.02, 16).rotateX(-Math.PI / 2);
-      const dotMesh = new THREE.Mesh(dotGeo, new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
-      dotMesh.position.y = 0.001;
-      reticle.add(dotMesh);
-
-      const pulseGeo = new THREE.RingGeometry(0.11, 0.12, 32).rotateX(-Math.PI / 2);
-      const pulseMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.4 });
-      const pulseRing = new THREE.Mesh(pulseGeo, pulseMat);
-      pulseRing.position.y = 0.001;
-      reticle.add(pulseRing);
-
+      const group = new THREE.Group(); group.visible = false; scene.add(group); xrGroupRef.current = group;
+      const reticle = new THREE.Mesh(
+        new THREE.RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2),
+        new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+      );
+      reticle.matrixAutoUpdate = false; reticle.visible = false; scene.add(reticle); xrReticleRef.current = reticle;
+      reticle.add(new THREE.Mesh(new THREE.CircleGeometry(0.02, 16).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x00ff00 })));
       const viewerSpace = await session.requestReferenceSpace('viewer');
       const hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
       xrHitTestSourceRef.current = hitTestSource;
-
       session.addEventListener('select', () => {
         if (xrReticleRef.current?.visible && xrGroupRef.current && !xrGroupRef.current.visible) {
           xrGroupRef.current.position.setFromMatrixPosition(xrReticleRef.current.matrix);
-          xrGroupRef.current.visible = true;
-          xrGroupRef.current.scale.setScalar(0.3 * zoomLevel);
-          xrReticleRef.current.visible = false;
-          setWebxrPlaced(true);
+          xrGroupRef.current.visible = true; xrGroupRef.current.scale.setScalar(0.3 * zoomLevel);
+          xrReticleRef.current.visible = false; setWebxrPlaced(true);
         }
       });
-
-      session.addEventListener('end', () => {
-        cleanupWebXR();
-      });
-
-      renderer.setAnimationLoop((_timestamp: number, frame: any) => {
+      session.addEventListener('end', () => cleanupWebXR());
+      renderer.setAnimationLoop((_ts: number, frame: any) => {
         if (frame && xrHitTestSourceRef.current && xrGroupRef.current && !xrGroupRef.current.visible) {
           const refSpace = renderer.xr.getReferenceSpace();
           if (refSpace) {
             const results = frame.getHitTestResults(xrHitTestSourceRef.current);
             if (results.length > 0) {
-              const hit = results[0];
-              const pose = hit.getPose(refSpace);
-              if (pose && xrReticleRef.current) {
-                xrReticleRef.current.visible = true;
-                xrReticleRef.current.matrix.fromArray(pose.transform.matrix);
-              }
-            } else if (xrReticleRef.current) {
-              xrReticleRef.current.visible = false;
-            }
+              const pose = results[0].getPose(refSpace);
+              if (pose && xrReticleRef.current) { xrReticleRef.current.visible = true; xrReticleRef.current.matrix.fromArray(pose.transform.matrix); }
+            } else if (xrReticleRef.current) xrReticleRef.current.visible = false;
           }
         }
         renderer.render(scene, camera);
       });
-
-      setWebxrActive(true);
-      setWebxrPlaced(false);
-      setAppMode('webxr');
-    } catch (err: any) {
-      console.error('WebXR error:', err);
-      alert('WebXR failed: ' + (err.message || 'Unknown error') + '\nUsing Surface mode.');
-      setAppMode('surface');
-    }
+      setWebxrActive(true); setWebxrPlaced(false); setAppMode('webxr');
+    } catch (err: any) { console.error(err); alert('WebXR failed. Using Surface mode.'); setAppMode('surface'); }
   };
-
-  // ==================== WEBXR SCENE UPDATE ====================
 
   useEffect(() => {
     if (appMode !== 'webxr' || !webxrPlaced || !xrGroupRef.current) return;
-    buildSceneContent(xrGroupRef.current, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId);
-  }, [appMode, webxrPlaced, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId]);
+    buildSceneContent(xrGroupRef.current, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData);
+  }, [appMode, webxrPlaced, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData]);
 
   useEffect(() => {
-    if (xrGroupRef.current && webxrActive && webxrPlaced) {
-      xrGroupRef.current.scale.setScalar(0.3 * zoomLevel);
-    }
+    if (xrGroupRef.current && webxrActive && webxrPlaced) xrGroupRef.current.scale.setScalar(0.3 * zoomLevel);
   }, [zoomLevel, webxrActive, webxrPlaced]);
 
   const resetWebXRPlacement = useCallback(() => {
-    if (xrGroupRef.current) {
-      xrGroupRef.current.visible = false;
-    }
+    if (xrGroupRef.current) xrGroupRef.current.visible = false;
     setWebxrPlaced(false);
   }, []);
 
   // ==================== MODE SWITCHING ====================
 
   const switchToMode = useCallback((mode: AppMode) => {
-    if (appMode === 'webxr' && mode !== 'webxr') {
-      stopWebXR();
-    }
+    if (appMode === 'webxr' && mode !== 'webxr') stopWebXR();
     if (mode === 'webxr') {
-      if (!webxrSupported) {
-        alert('WebXR AR is not supported on this device.\nUsing Surface mode instead.');
-        mode = 'surface';
-      } else {
-        startWebXR();
-        return;
-      }
+      if (!webxrSupported) { alert('WebXR not supported. Using Surface mode.'); mode = 'surface'; }
+      else { startWebXR(); return; }
     }
     setAppMode(mode);
-    if (mode === 'surface') {
-      setDetectedPerson(null);
-      setPersonPosition(null);
-      setSurfacePlaced(false);
-      setSurfacePosition(null);
-    } else if (mode === 'person') {
-      setSurfacePlaced(false);
-      setSurfacePosition(null);
-    }
+    if (mode === 'surface') { setDetectedPerson(null); setPersonPosition(null); setSurfacePlaced(false); setSurfacePosition(null); }
+    else if (mode === 'person') { setSurfacePlaced(false); setSurfacePosition(null); }
   }, [appMode, webxrSupported, stopWebXR]);
 
   // ==================== SURFACE HANDLERS ====================
 
   const handleSurfaceTap = useCallback((e: React.MouseEvent) => {
     if (appMode !== 'surface' || surfacePlaced) return;
-    const clientX = e.clientX, clientY = e.clientY;
+    const { clientX, clientY } = e;
     if (clientY < 160 || clientY > window.innerHeight - 180) return;
     const vizWidth = Math.min(window.innerWidth - 20, 380);
     const vizHeight = currentStructure === 'stack' ? 300 : 220;
-    setSurfacePosition({
-      x: clientX - vizWidth / 2,
-      y: clientY - vizHeight / 2,
-      width: vizWidth,
-      height: vizHeight,
-    });
+    setSurfacePosition({ x: clientX - vizWidth / 2, y: clientY - vizHeight / 2, width: vizWidth, height: vizHeight });
     setSurfacePlaced(true);
   }, [appMode, surfacePlaced, currentStructure]);
 
   const handleDragStart = useCallback((e: React.TouchEvent | React.MouseEvent) => {
     if (appMode !== 'surface' || !surfacePlaced || !surfacePosition) return;
     let clientX: number, clientY: number;
-    if ('touches' in e) {
-      if (e.touches.length !== 1) return;
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
-    const viz = surfacePosition;
-    if (clientX >= viz.x && clientX <= viz.x + viz.width && clientY >= viz.y && clientY <= viz.y + viz.height) {
-      setIsDraggingSurface(true);
-      dragOffsetRef.current = { x: clientX - viz.x, y: clientY - viz.y };
+    if ('touches' in e) { if (e.touches.length !== 1) return; clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; }
+    else { clientX = e.clientX; clientY = e.clientY; }
+    const v = surfacePosition;
+    if (clientX >= v.x && clientX <= v.x + v.width && clientY >= v.y && clientY <= v.y + v.height) {
+      setIsDraggingSurface(true); dragOffsetRef.current = { x: clientX - v.x, y: clientY - v.y };
     }
   }, [appMode, surfacePlaced, surfacePosition]);
 
   const handleDragMove = useCallback((e: React.TouchEvent | React.MouseEvent) => {
     if (!isDraggingSurface || !surfacePosition) return;
     let clientX: number, clientY: number;
-    if ('touches' in e) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
-    setSurfacePosition(prev => prev ? {
-      ...prev,
-      x: clientX - dragOffsetRef.current.x,
-      y: clientY - dragOffsetRef.current.y,
-    } : null);
+    if ('touches' in e) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; }
+    else { clientX = e.clientX; clientY = e.clientY; }
+    setSurfacePosition(prev => prev ? { ...prev, x: clientX - dragOffsetRef.current.x, y: clientY - dragOffsetRef.current.y } : null);
   }, [isDraggingSurface, surfacePosition]);
 
-  const handleDragEnd = useCallback(() => {
-    setIsDraggingSurface(false);
-  }, []);
-
-  const resetSurfacePlacement = useCallback(() => {
-    setSurfacePlaced(false);
-    setSurfacePosition(null);
-  }, []);
-
-  // ==================== ACTIVE POSITION ====================
+  const handleDragEnd = useCallback(() => setIsDraggingSurface(false), []);
+  const resetSurfacePlacement = useCallback(() => { setSurfacePlaced(false); setSurfacePosition(null); }, []);
 
   const activePosition = appMode === 'person' ? personPosition : surfacePosition;
   const showVisualization = appMode === 'person' ? !!detectedPerson : appMode === 'surface' ? surfacePlaced : false;
   const showControls = showVisualization || (appMode === 'webxr' && webxrPlaced);
 
-  // ==================== ALL OPERATIONS ====================
+  // ==================== ARRAY OPERATIONS (ANIMATED) ====================
 
   const arrayAccess = async () => {
     if (isAnimating) return; setIsAnimating(true);
     const data = getArrayData(), index = Math.floor(Math.random() * data.length);
     setHighlightIndex(index);
-    setOperationMessage(`Accessing [${index}]: "${data[index].label}"`);
-    setCodeDisplay(`// O(1) Access\narray[${index}] → "${data[index].label}"`);
-    await delay(2000);
+    setOperationMessage(`Accessing [${index}]...`);
+    setCodeDisplay(`// O(1) Access\narray[${index}]`);
+    setAnimPhase('access-lift'); setAnimData({ index }); await delay(400);
+    setAnimPhase('access-bounce');
+    setOperationMessage(`Found: "${data[index].label}"`); await delay(900);
+    setAnimPhase('access-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({});
     setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
@@ -1965,15 +3641,15 @@ export default function Home() {
     const data = getArrayData(), insertIndex = Math.floor(Math.random() * (data.length + 1));
     setOperationMessage(`Inserting at [${insertIndex}]...`);
     setCodeDisplay(`// O(n) Insert\narray.splice(${insertIndex}, 0, item)`);
-    for (let i = data.length - 1; i >= insertIndex; i--) { setHighlightIndex(i); await delay(300); }
+    for (let i = data.length - 1; i >= insertIndex; i--) { setHighlightIndex(i); await delay(250); }
     (setArrayData as any)((prev: DataItem[]) => {
-      const arr = [...prev];
-      arr.splice(insertIndex, 0, { id: Date.now(), label: 'New', color: '#1abc9c' });
-      return arr;
+      const arr = [...prev]; arr.splice(insertIndex, 0, { id: Date.now(), label: 'New', color: '#1abc9c' }); return arr;
     });
     setHighlightIndex(insertIndex);
-    setOperationMessage('Inserted!');
-    await delay(1500);
+    setAnimPhase('insert-drop'); setAnimData({ index: insertIndex }); await delay(500);
+    setAnimPhase('insert-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({});
+    setOperationMessage('Inserted!'); await delay(800);
     setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
@@ -1981,12 +3657,15 @@ export default function Home() {
     if (isAnimating || getArrayData().length <= 2) return; setIsAnimating(true);
     const data = getArrayData(), deleteIndex = Math.floor(Math.random() * data.length);
     setHighlightIndex(deleteIndex);
-    setOperationMessage(`Deleting [${deleteIndex}]...`);
+    setOperationMessage(`Deleting [${deleteIndex}]: "${data[deleteIndex].label}"`);
     setCodeDisplay(`// O(n) Delete\narray.splice(${deleteIndex}, 1)`);
-    await delay(1000);
+    setAnimPhase('delete-lift'); setAnimData({ index: deleteIndex }); await delay(500);
+    setAnimPhase('delete-shrink'); await delay(500);
+    setHighlightIndex(null); setAnimPhase('delete-close'); setAnimData({ deleteIndex });
     (setArrayData as any)((prev: DataItem[]) => prev.filter((_: any, i: number) => i !== deleteIndex));
-    await delay(1500);
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+    await delay(500);
+    setAnimPhase(''); setAnimData({});
+    setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
   const arraySwap = async () => {
@@ -1998,29 +3677,30 @@ export default function Home() {
     setHighlightIndex(idx1); setHighlightIndex2(idx2);
     setOperationMessage(`Swapping [${idx1}] ↔ [${idx2}]`);
     setCodeDisplay('// O(1) Swap');
-    await delay(1500);
-    (setArrayData as any)((prev: DataItem[]) => {
-      const arr = [...prev];
-      [arr[idx1], arr[idx2]] = [arr[idx2], arr[idx1]];
-      return arr;
-    });
-    await delay(1000);
+    setAnimPhase('swap-lift'); setAnimData({ index1: idx1, index2: idx2 }); await delay(500);
+    setAnimPhase('swap-cross'); await delay(400);
+    (setArrayData as any)((prev: DataItem[]) => { const a = [...prev]; [a[idx1], a[idx2]] = [a[idx2], a[idx1]]; return a; });
+    setAnimPhase('swap-drop'); await delay(500);
+    setAnimPhase(''); setAnimData({});
     setHighlightIndex(null); setHighlightIndex2(null);
     setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
+
+  // ==================== LINKED LIST OPERATIONS (ANIMATED) ====================
 
   const linkedListInsertHead = async () => {
     if (isAnimating || getLinkedListData().length >= 5) return; setIsAnimating(true);
     setOperationMessage('Inserting at HEAD...');
     setCodeDisplay('// O(1)\nnewNode.next = head\nhead = newNode');
-    await delay(1000);
     const newItem: DataItem = linkedListEnv === 'people'
       ? { id: Date.now(), label: 'New', color: '#1abc9c', appearance: { skinTone: '#ffdbac', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#4a3728', hairStyle: 'short', gender: 'male' } }
       : { id: Date.now(), label: 'New', color: '#1abc9c' };
     (setLinkedListData as any)((prev: DataItem[]) => [newItem, ...prev]);
     setHighlightIndex(0);
-    setOperationMessage('Inserted at HEAD!');
-    await delay(1500);
+    setAnimPhase('ll-insert-head'); setAnimData({ index: 0 }); await delay(500);
+    setAnimPhase('ll-insert-head-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({});
+    setOperationMessage('Inserted at HEAD!'); await delay(1000);
     setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
@@ -2029,14 +3709,19 @@ export default function Home() {
     const data = getLinkedListData();
     setOperationMessage('Traversing to TAIL...');
     setCodeDisplay('// O(n) Traverse');
-    for (let i = 0; i < data.length; i++) { setHighlightIndex(i); await delay(400); }
+    for (let i = 0; i < data.length; i++) {
+      setHighlightIndex(i); setAnimPhase('ll-traverse'); setAnimData({ index: i }); await delay(350);
+    }
+    setAnimPhase(''); setAnimData({});
     const newItem: DataItem = linkedListEnv === 'people'
       ? { id: Date.now(), label: 'Last', color: '#e74c3c', appearance: { skinTone: '#8d5524', shirtColor: '#e74c3c', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } }
       : { id: Date.now(), label: 'New', color: '#e74c3c' };
     (setLinkedListData as any)((prev: DataItem[]) => [...prev, newItem]);
     setHighlightIndex(data.length);
-    setOperationMessage('Inserted at TAIL!');
-    await delay(1500);
+    setAnimPhase('ll-insert-tail'); setAnimData({ index: data.length }); await delay(500);
+    setAnimPhase('ll-insert-tail-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({});
+    setOperationMessage('Inserted at TAIL!'); await delay(1000);
     setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
@@ -2045,9 +3730,11 @@ export default function Home() {
     setHighlightIndex(0);
     setOperationMessage('Deleting HEAD...');
     setCodeDisplay('// O(1)\nhead = head.next');
-    await delay(1500);
+    setAnimPhase('ll-delete-lift'); setAnimData({ index: 0 }); await delay(500);
+    setAnimPhase('ll-delete-shrink'); await delay(500);
     (setLinkedListData as any)((prev: DataItem[]) => prev.slice(1));
-    await delay(1000);
+    setAnimPhase(''); setAnimData({});
+    await delay(500);
     setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
@@ -2058,29 +3745,29 @@ export default function Home() {
       setHighlightIndex(i);
       setOperationMessage(`Visiting: ${data[i].label}`);
       setCodeDisplay(`// Node ${i}\ncurr = curr.next`);
-      await delay(600);
+      setAnimPhase('ll-traverse'); setAnimData({ index: i }); await delay(500);
     }
-    setOperationMessage(`Done! ${data.length} nodes`);
-    await delay(1500);
+    setAnimPhase(''); setAnimData({});
+    setOperationMessage(`Done! ${data.length} nodes`); await delay(1000);
     setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
+
+  // ==================== STACK OPERATIONS (ANIMATED) ====================
 
   const stackPush = async () => {
     if (isAnimating || getStackData().length >= 5) return; setIsAnimating(true);
     const data = getStackData();
     const labels = stackEnv === 'books' ? ['Physics', 'English', 'Art'] : stackEnv === 'plates' ? [`Plate ${data.length + 1}`] : [`Box ${String.fromCharCode(65 + data.length)}`];
     const colors = stackEnv === 'books' ? ['#9b59b6', '#e74c3c', '#1abc9c'] : ['#7f8c8d'];
-    const newItem = {
-      id: Date.now(),
-      label: labels[Math.floor(Math.random() * labels.length)],
-      color: colors[Math.floor(Math.random() * colors.length)]
-    };
+    const newItem = { id: Date.now(), label: labels[Math.floor(Math.random() * labels.length)], color: colors[Math.floor(Math.random() * colors.length)] };
     setOperationMessage(`Pushing "${newItem.label}"...`);
     setCodeDisplay(`// O(1) LIFO\nstack.push("${newItem.label}")`);
-    await delay(500);
     (setStackData as any)((prev: DataItem[]) => [...prev, newItem]);
     setHighlightIndex(data.length);
-    await delay(1500);
+    setAnimPhase('stack-push-drop'); setAnimData({ index: data.length }); await delay(500);
+    setAnimPhase('stack-push-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({});
+    setOperationMessage('Pushed!'); await delay(800);
     setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
@@ -2090,9 +3777,11 @@ export default function Home() {
     setHighlightIndex(data.length - 1);
     setOperationMessage(`Popping "${topItem.label}"...`);
     setCodeDisplay(`// O(1) LIFO\nstack.pop() → "${topItem.label}"`);
-    await delay(1500);
+    setAnimPhase('stack-pop-lift'); setAnimData({ index: data.length - 1 }); await delay(500);
+    setAnimPhase('stack-pop-fly'); await delay(500);
     (setStackData as any)((prev: DataItem[]) => prev.slice(0, -1));
-    await delay(1000);
+    setAnimPhase(''); setAnimData({});
+    await delay(500);
     setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
@@ -2100,11 +3789,17 @@ export default function Home() {
     if (isAnimating || getStackData().length === 0) return; setIsAnimating(true);
     const data = getStackData(), topItem = data[data.length - 1];
     setHighlightIndex(data.length - 1);
-    setOperationMessage(`TOP: "${topItem.label}"`);
-    setCodeDisplay(`// O(1)\nstack.peek() → "${topItem.label}"`);
-    await delay(2000);
+    setOperationMessage(`Peeking TOP...`);
+    setCodeDisplay(`// O(1)\nstack.peek()`);
+    setAnimPhase('stack-peek-lift'); setAnimData({ index: data.length - 1 }); await delay(400);
+    setAnimPhase('stack-peek-open');
+    setOperationMessage(`TOP: "${topItem.label}"`); await delay(1200);
+    setAnimPhase('stack-peek-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({});
     setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
+
+  // ==================== QUEUE OPERATIONS (ANIMATED) ====================
 
   const queueEnqueue = async () => {
     if (isAnimating || getQueueData().length >= 5) return; setIsAnimating(true);
@@ -2114,10 +3809,12 @@ export default function Home() {
       : { id: Date.now(), label: queueEnv === 'tollgate' ? 'New Car' : `T-00${data.length + 1}`, color: '#1abc9c' };
     setOperationMessage(`Enqueue: "${newItem.label}"...`);
     setCodeDisplay(`// O(1) FIFO\nqueue.enqueue("${newItem.label}")`);
-    await delay(500);
     (setQueueData as any)((prev: DataItem[]) => [...prev, newItem]);
     setHighlightIndex(data.length);
-    await delay(1500);
+    setAnimPhase('queue-enqueue-enter'); setAnimData({ index: data.length }); await delay(500);
+    setAnimPhase('queue-enqueue-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({});
+    setOperationMessage('Enqueued!'); await delay(800);
     setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
@@ -2127,9 +3824,11 @@ export default function Home() {
     setHighlightIndex(0);
     setOperationMessage(`Dequeue: "${frontItem.label}"...`);
     setCodeDisplay(`// O(1) FIFO\nqueue.dequeue() → "${frontItem.label}"`);
-    await delay(1500);
+    setAnimPhase('queue-dequeue-exit'); setAnimData({ index: 0 }); await delay(600);
+    setAnimPhase('queue-dequeue-gone'); await delay(400);
     (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
-    await delay(1000);
+    setAnimPhase(''); setAnimData({});
+    await delay(500);
     setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
@@ -2139,7 +3838,8 @@ export default function Home() {
     setHighlightIndex(0);
     setOperationMessage(`FRONT: "${frontItem.label}"`);
     setCodeDisplay(`// O(1)\nqueue.front() → "${frontItem.label}"`);
-    await delay(2000);
+    setAnimPhase('queue-front-peek'); setAnimData({ index: 0 }); await delay(1500);
+    setAnimPhase(''); setAnimData({});
     setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
@@ -2171,301 +3871,146 @@ export default function Home() {
         : [{ id: 'tollgate', icon: '🚗', label: 'Toll' }, { id: 'tickets', icon: '🎫', label: 'Tickets' }, { id: 'students', icon: '🧑‍🎓', label: 'Students' }];
 
   return (
-    <div
-      id="ar-overlay"
-      style={{ position: 'fixed', inset: 0, background: '#000', overflow: 'hidden' }}
+    <div id="ar-overlay" style={{ position: 'fixed', inset: 0, background: '#000', overflow: 'hidden' }}
       onClick={appMode === 'surface' && !surfacePlaced ? handleSurfaceTap : undefined}
       onTouchStart={appMode === 'surface' && surfacePlaced ? handleDragStart : undefined}
       onTouchMove={appMode === 'surface' && isDraggingSurface ? handleDragMove : undefined}
       onTouchEnd={appMode === 'surface' ? handleDragEnd : undefined}
       onMouseDown={appMode === 'surface' && surfacePlaced ? handleDragStart : undefined}
       onMouseMove={appMode === 'surface' && isDraggingSurface ? handleDragMove : undefined}
-      onMouseUp={appMode === 'surface' ? handleDragEnd : undefined}
-    >
-      {!webxrActive && (
-        <video ref={videoRef} playsInline muted autoPlay style={{
-          position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'
-        }} />
-      )}
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
+      onMouseUp={appMode === 'surface' ? handleDragEnd : undefined}>
 
-      <div ref={xrContainerRef} style={{
-        position: 'fixed', inset: 0,
-        zIndex: webxrActive ? 1 : -1,
-        pointerEvents: 'none',
-      }} />
+      {!webxrActive && <video ref={videoRef} playsInline muted autoPlay style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+      <div ref={xrContainerRef} style={{ position: 'fixed', inset: 0, zIndex: webxrActive ? 1 : -1, pointerEvents: 'none' }} />
 
       {!webxrActive && showVisualization && activePosition && (
-        <Visualization3D
-          position={activePosition}
-          data={currentData}
-          highlightIndex={highlightIndex}
-          highlightIndex2={highlightIndex2}
-          structure={currentStructure}
-          environment={currentEnvId}
-          zoomLevel={zoomLevel}
-          setZoomLevel={setZoomLevel}
-          isSurfaceMode={appMode === 'surface'}
-        />
+        <Visualization3D position={activePosition} data={currentData} highlightIndex={highlightIndex} highlightIndex2={highlightIndex2}
+          structure={currentStructure} environment={currentEnvId} zoomLevel={zoomLevel} setZoomLevel={setZoomLevel}
+          isSurfaceMode={appMode === 'surface'} animPhase={animPhase} animData={animData} />
       )}
 
       {!webxrActive && appMode === 'surface' && surfacePlaced && surfacePosition && (
-        <div style={{
-          position: 'absolute',
-          left: surfacePosition.x + 40,
-          top: surfacePosition.y + surfacePosition.height,
-          width: surfacePosition.width - 80,
-          height: 25,
-          background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.1) 60%, transparent 100%)',
-          borderRadius: '50%',
-          zIndex: 49,
-          pointerEvents: 'none',
-        }} />
+        <div style={{ position: 'absolute', left: surfacePosition.x + 40, top: surfacePosition.y + surfacePosition.height, width: surfacePosition.width - 80, height: 25,
+          background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.1) 60%, transparent 100%)', borderRadius: '50%', zIndex: 49, pointerEvents: 'none' }} />
       )}
 
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: 10, zIndex: 100 }}>
+        {!webxrActive && <button onClick={switchCamera} style={{ position: 'absolute', top: 10, right: 10, width: 50, height: 50, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 24, zIndex: 200 }}>🔄</button>}
 
-        {!webxrActive && (
-          <button onClick={switchCamera} style={{
-            position: 'absolute', top: 10, right: 10, width: 50, height: 50,
-            borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)',
-            background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 24, zIndex: 200,
-          }}>🔄</button>
-        )}
-
-        <div style={{
-          position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
-          display: 'flex', background: 'rgba(0,0,0,0.8)', borderRadius: 25, padding: 3,
-          border: '1px solid rgba(255,255,255,0.2)', zIndex: 200,
-        }}>
-          <button onClick={() => switchToMode('person')} style={{
-            padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20,
-            background: appMode === 'person' ? '#667eea' : 'transparent',
-            color: 'white', opacity: appMode === 'person' ? 1 : 0.5, cursor: 'pointer',
-            transition: 'all 0.3s',
-          }}>🧑 Person</button>
-          <button onClick={() => switchToMode('surface')} style={{
-            padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20,
-            background: appMode === 'surface' ? '#00b894' : 'transparent',
-            color: 'white', opacity: appMode === 'surface' ? 1 : 0.5, cursor: 'pointer',
-            transition: 'all 0.3s',
-          }}>📱 Surface</button>
-          <button onClick={() => switchToMode('webxr')} style={{
-            padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20,
-            background: appMode === 'webxr' ? '#e17055' : 'transparent',
-            color: 'white',
-            opacity: appMode === 'webxr' ? 1 : webxrSupported ? 0.5 : 0.25,
-            cursor: webxrSupported ? 'pointer' : 'not-allowed',
-            transition: 'all 0.3s',
-          }}>🌐 WebXR{!webxrSupported && ' ✗'}</button>
+        <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', display: 'flex', background: 'rgba(0,0,0,0.8)', borderRadius: 25, padding: 3, border: '1px solid rgba(255,255,255,0.2)', zIndex: 200 }}>
+          <button onClick={() => switchToMode('person')} style={{ padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20, background: appMode === 'person' ? '#667eea' : 'transparent', color: 'white', opacity: appMode === 'person' ? 1 : 0.5, cursor: 'pointer' }}>🧑 Person</button>
+          <button onClick={() => switchToMode('surface')} style={{ padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20, background: appMode === 'surface' ? '#00b894' : 'transparent', color: 'white', opacity: appMode === 'surface' ? 1 : 0.5, cursor: 'pointer' }}>📱 Surface</button>
+          <button onClick={() => switchToMode('webxr')} style={{ padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20, background: appMode === 'webxr' ? '#e17055' : 'transparent', color: 'white', opacity: appMode === 'webxr' ? 1 : webxrSupported ? 0.5 : 0.25, cursor: webxrSupported ? 'pointer' : 'not-allowed' }}>🌐 WebXR{!webxrSupported && ' ✗'}</button>
         </div>
 
         {showControls && (
           <div style={{ position: 'absolute', top: 50, left: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <button onPointerDown={zoomIn} style={{
-              width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff',
-              background: '#667eea', color: 'white', fontSize: 28, fontWeight: 'bold',
-            }}>+</button>
-            <div style={{
-              width: 50, height: 50, borderRadius: '50%', background: '#000',
-              border: '3px solid #0f0', color: '#0f0', fontSize: 12,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>{Math.round(zoomLevel * 100)}%</div>
-            <button onPointerDown={zoomOut} style={{
-              width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff',
-              background: '#f5576c', color: 'white', fontSize: 32, fontWeight: 'bold',
-            }}>−</button>
-            <button onPointerDown={resetZoom} style={{
-              width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff',
-              background: '#4facfe', color: 'white', fontSize: 20,
-            }}>⟲</button>
+            <button onPointerDown={zoomIn} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#667eea', color: 'white', fontSize: 28, fontWeight: 'bold' }}>+</button>
+            <div style={{ width: 50, height: 50, borderRadius: '50%', background: '#000', border: '3px solid #0f0', color: '#0f0', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{Math.round(zoomLevel * 100)}%</div>
+            <button onPointerDown={zoomOut} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#f5576c', color: 'white', fontSize: 32, fontWeight: 'bold' }}>−</button>
+            <button onPointerDown={resetZoom} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#4facfe', color: 'white', fontSize: 20 }}>⟲</button>
           </div>
         )}
 
-        <div style={{
-          position: 'absolute', top: 48, left: '50%', transform: 'translateX(-50%)',
-          display: 'flex', gap: 4, background: 'rgba(0,0,0,0.8)', padding: 4, borderRadius: 25,
-        }}>
+        <div style={{ position: 'absolute', top: 48, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 4, background: 'rgba(0,0,0,0.8)', padding: 4, borderRadius: 25 }}>
           {(['array', 'linkedlist', 'stack', 'queue'] as DataStructure[]).map(s => (
-            <button key={s} onClick={() => {
-              if (!isAnimating) {
-                setCurrentStructure(s);
-                if (appMode === 'surface') {
-                  setSurfacePlaced(false);
-                  setSurfacePosition(null);
-                }
-              }
-            }} style={{
-              padding: '8px 12px', fontSize: 11, border: 'none', borderRadius: 20,
-              background: currentStructure === s ? '#667eea' : 'transparent',
-              color: 'white', opacity: currentStructure === s ? 1 : 0.6,
-            }}>
-              {{ array: '📊', linkedlist: '🔗', stack: '📚', queue: '🚗' }[s]}
-              {currentStructure === s && ' ' + { array: 'Array', linkedlist: 'List', stack: 'Stack', queue: 'Queue' }[s]}
+            <button key={s} onClick={() => { if (!isAnimating) { setCurrentStructure(s); if (appMode === 'surface') { setSurfacePlaced(false); setSurfacePosition(null); } } }}
+              style={{ padding: '8px 12px', fontSize: 11, border: 'none', borderRadius: 20, background: currentStructure === s ? '#667eea' : 'transparent', color: 'white', opacity: currentStructure === s ? 1 : 0.6 }}>
+              {{ array: '📊', linkedlist: '🔗', stack: '📚', queue: '🚗' }[s]}{currentStructure === s && ' ' + { array: 'Array', linkedlist: 'List', stack: 'Stack', queue: 'Queue' }[s]}
             </button>
           ))}
         </div>
 
         {showControls && (
-          <div style={{
-            position: 'absolute', top: 90, left: '50%', transform: 'translateX(-50%)',
-            display: 'flex', gap: 4, background: 'rgba(0,0,0,0.7)', padding: 4, borderRadius: 20,
-          }}>
+          <div style={{ position: 'absolute', top: 90, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 4, background: 'rgba(0,0,0,0.7)', padding: 4, borderRadius: 20 }}>
             {envTabs.map(e => (
-              <button key={e.id} onClick={() => !isAnimating && (setCurrentEnv as any)(e.id)} style={{
-                padding: '6px 12px', fontSize: 11, border: 'none', borderRadius: 15,
-                background: currentEnvId === e.id ? '#00b894' : 'transparent',
-                color: 'white', opacity: currentEnvId === e.id ? 1 : 0.6,
-              }}>{e.icon} {e.label}</button>
+              <button key={e.id} onClick={() => !isAnimating && (setCurrentEnv as any)(e.id)}
+                style={{ padding: '6px 12px', fontSize: 11, border: 'none', borderRadius: 15, background: currentEnvId === e.id ? '#00b894' : 'transparent', color: 'white', opacity: currentEnvId === e.id ? 1 : 0.6 }}>
+                {e.icon} {e.label}
+              </button>
             ))}
           </div>
         )}
 
-        {operationMessage && (
-          <div style={{
-            position: 'absolute', top: 128, left: '50%', transform: 'translateX(-50%)',
-            background: 'rgba(0,0,0,0.9)', color: '#0f0', padding: '10px 20px',
-            borderRadius: 15, fontSize: 14, border: '1px solid #0f0', whiteSpace: 'nowrap',
-          }}>⚡ {operationMessage}</div>
-        )}
-        {codeDisplay && (
-          <div style={{
-            position: 'absolute', top: 168, left: '50%', transform: 'translateX(-50%)',
-            background: '#1e1e1e', color: '#0f0', padding: '10px 15px', borderRadius: 10,
-            fontSize: 10, fontFamily: 'monospace', whiteSpace: 'pre-wrap', border: '1px solid #444',
-          }}>{codeDisplay}</div>
-        )}
-
-        {webxrActive && (
-          <button onClick={stopWebXR} style={{
-            position: 'absolute', top: 10, right: 10, padding: '10px 18px',
-            background: '#e74c3c', color: 'white', border: 'none', borderRadius: 20,
-            fontSize: 13, fontWeight: 'bold', zIndex: 300,
-          }}>✕ Exit AR</button>
-        )}
+        {operationMessage && <div style={{ position: 'absolute', top: 128, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.9)', color: '#0f0', padding: '10px 20px', borderRadius: 15, fontSize: 14, border: '1px solid #0f0', whiteSpace: 'nowrap' }}>⚡ {operationMessage}</div>}
+        {codeDisplay && <div style={{ position: 'absolute', top: 168, left: '50%', transform: 'translateX(-50%)', background: '#1e1e1e', color: '#0f0', padding: '10px 15px', borderRadius: 10, fontSize: 10, fontFamily: 'monospace', whiteSpace: 'pre-wrap', border: '1px solid #444' }}>{codeDisplay}</div>}
+        {webxrActive && <button onClick={stopWebXR} style={{ position: 'absolute', top: 10, right: 10, padding: '10px 18px', background: '#e74c3c', color: 'white', border: 'none', borderRadius: 20, fontSize: 13, fontWeight: 'bold', zIndex: 300 }}>✕ Exit AR</button>}
       </div>
 
       {showControls && (
-        <div style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0,
-          padding: '20px 10px 30px',
-          background: 'linear-gradient(to top, rgba(0,0,0,0.95), transparent)',
-          zIndex: 100,
-        }}>
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '20px 10px 30px', background: 'linear-gradient(to top, rgba(0,0,0,0.95), transparent)', zIndex: 100 }}>
           {appMode === 'surface' && surfacePlaced && (
             <div style={{ textAlign: 'center', marginBottom: 10 }}>
-              <button onClick={resetSurfacePlacement} style={{
-                padding: '8px 20px', fontSize: 12, fontWeight: 'bold',
-                border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20,
-                background: 'rgba(255,255,255,0.1)', color: 'white',
-              }}>📍 Reposition</button>
+              <button onClick={resetSurfacePlacement} style={{ padding: '8px 20px', fontSize: 12, fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, background: 'rgba(255,255,255,0.1)', color: 'white' }}>📍 Reposition</button>
               <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginLeft: 10 }}>or drag to move</span>
             </div>
           )}
           {appMode === 'webxr' && webxrPlaced && (
             <div style={{ textAlign: 'center', marginBottom: 10 }}>
-              <button onClick={resetWebXRPlacement} style={{
-                padding: '8px 20px', fontSize: 12, fontWeight: 'bold',
-                border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20,
-                background: 'rgba(255,255,255,0.1)', color: 'white',
-              }}>📍 Reposition on Floor</button>
+              <button onClick={resetWebXRPlacement} style={{ padding: '8px 20px', fontSize: 12, fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, background: 'rgba(255,255,255,0.1)', color: 'white' }}>📍 Reposition</button>
             </div>
           )}
-
           <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-            {currentStructure === 'array' && (
-              <>
-                <OpBtn onClick={arrayAccess} disabled={isAnimating} color="#f39c12" label="📍 Access" />
-                <OpBtn onClick={arrayInsert} disabled={isAnimating || getArrayData().length >= 6} color="#2ecc71" label="➕ Insert" />
-                <OpBtn onClick={arrayDelete} disabled={isAnimating || getArrayData().length <= 2} color="#e74c3c" label="➖ Delete" />
-                <OpBtn onClick={arraySwap} disabled={isAnimating} color="#9b59b6" label="🔀 Swap" />
-              </>
-            )}
-            {currentStructure === 'linkedlist' && (
-              <>
-                <OpBtn onClick={linkedListInsertHead} disabled={isAnimating || getLinkedListData().length >= 5} color="#2ecc71" label="⬅️ +Head" />
-                <OpBtn onClick={linkedListInsertTail} disabled={isAnimating || getLinkedListData().length >= 5} color="#3498db" label="➡️ +Tail" />
-                <OpBtn onClick={linkedListDeleteHead} disabled={isAnimating || getLinkedListData().length <= 2} color="#e74c3c" label="🗑️ -Head" />
-                <OpBtn onClick={linkedListTraverse} disabled={isAnimating} color="#9b59b6" label="🔍 Traverse" />
-              </>
-            )}
-            {currentStructure === 'stack' && (
-              <>
-                <OpBtn onClick={stackPush} disabled={isAnimating || getStackData().length >= 5} color="#2ecc71" label="⬆️ Push" />
-                <OpBtn onClick={stackPop} disabled={isAnimating || getStackData().length <= 1} color="#e74c3c" label="⬇️ Pop" />
-                <OpBtn onClick={stackPeek} disabled={isAnimating} color="#f39c12" label="👁️ Peek" />
-              </>
-            )}
-            {currentStructure === 'queue' && (
-              <>
-                <OpBtn onClick={queueEnqueue} disabled={isAnimating || getQueueData().length >= 5} color="#2ecc71" label="➕ Enqueue" />
-                <OpBtn onClick={queueDequeue} disabled={isAnimating || getQueueData().length <= 1} color="#e74c3c" label="➖ Dequeue" />
-                <OpBtn onClick={queueFront} disabled={isAnimating} color="#f39c12" label="👁️ Front" />
-              </>
-            )}
+            {currentStructure === 'array' && (<>
+              <OpBtn onClick={arrayAccess} disabled={isAnimating} color="#f39c12" label="📍 Access" />
+              <OpBtn onClick={arrayInsert} disabled={isAnimating || getArrayData().length >= 6} color="#2ecc71" label="➕ Insert" />
+              <OpBtn onClick={arrayDelete} disabled={isAnimating || getArrayData().length <= 2} color="#e74c3c" label="➖ Delete" />
+              <OpBtn onClick={arraySwap} disabled={isAnimating} color="#9b59b6" label="🔀 Swap" />
+            </>)}
+            {currentStructure === 'linkedlist' && (<>
+              <OpBtn onClick={linkedListInsertHead} disabled={isAnimating || getLinkedListData().length >= 5} color="#2ecc71" label="⬅️ +Head" />
+              <OpBtn onClick={linkedListInsertTail} disabled={isAnimating || getLinkedListData().length >= 5} color="#3498db" label="➡️ +Tail" />
+              <OpBtn onClick={linkedListDeleteHead} disabled={isAnimating || getLinkedListData().length <= 2} color="#e74c3c" label="🗑️ -Head" />
+              <OpBtn onClick={linkedListTraverse} disabled={isAnimating} color="#9b59b6" label="🔍 Traverse" />
+            </>)}
+            {currentStructure === 'stack' && (<>
+              <OpBtn onClick={stackPush} disabled={isAnimating || getStackData().length >= 5} color="#2ecc71" label="⬆️ Push" />
+              <OpBtn onClick={stackPop} disabled={isAnimating || getStackData().length <= 1} color="#e74c3c" label="⬇️ Pop" />
+              <OpBtn onClick={stackPeek} disabled={isAnimating} color="#f39c12" label="👁️ Peek" />
+            </>)}
+            {currentStructure === 'queue' && (<>
+              <OpBtn onClick={queueEnqueue} disabled={isAnimating || getQueueData().length >= 5} color="#2ecc71" label="➕ Enqueue" />
+              <OpBtn onClick={queueDequeue} disabled={isAnimating || getQueueData().length <= 1} color="#e74c3c" label="➖ Dequeue" />
+              <OpBtn onClick={queueFront} disabled={isAnimating} color="#f39c12" label="👁️ Front" />
+            </>)}
           </div>
-
           <div style={{ textAlign: 'center', marginTop: 10, color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>
             Size: {currentData.length}
             {appMode === 'surface' && <span style={{ marginLeft: 10, color: '#00b894' }}>📱 Surface</span>}
-            {appMode === 'webxr' && <span style={{ marginLeft: 10, color: '#e17055' }}>🌐 WebXR AR</span>}
+            {appMode === 'webxr' && <span style={{ marginLeft: 10, color: '#e17055' }}>🌐 WebXR</span>}
           </div>
         </div>
       )}
 
       {appMode === 'person' && !detectedPerson && !webxrActive && (
-        <div style={{
-          position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px',
-          borderRadius: 20, textAlign: 'center',
-        }}>
-          <div style={{ fontSize: 40 }}>🧑</div>
-          <div style={{ marginTop: 8 }}>Point camera at a person</div>
+        <div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}>
+          <div style={{ fontSize: 40 }}>🧑</div><div style={{ marginTop: 8 }}>Point camera at a person</div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 5 }}>or switch to Surface / WebXR →</div>
         </div>
       )}
-
       {appMode === 'surface' && !surfacePlaced && !webxrActive && (
-        <div style={{
-          position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px',
-          borderRadius: 20, textAlign: 'center',
-        }}>
-          <div style={{ fontSize: 40, animation: 'tapBounce 1.5s ease infinite' }}>👆</div>
-          <div style={{ marginTop: 8, fontWeight: 'bold' }}>Tap to Place</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 5 }}>
-            Tap anywhere on screen to place<br />your data structure
-          </div>
+        <div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}>
+          <div style={{ fontSize: 40, animation: 'tapBounce 1.5s ease infinite' }}>👆</div><div style={{ marginTop: 8, fontWeight: 'bold' }}>Tap to Place</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 5 }}>Tap anywhere to place your data structure</div>
           <style>{`@keyframes tapBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }`}</style>
         </div>
       )}
-
       {appMode === 'webxr' && webxrActive && !webxrPlaced && (
-        <div style={{
-          position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px',
-          borderRadius: 20, textAlign: 'center',
-        }}>
+        <div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}>
           <div style={{ fontSize: 40, animation: 'xrPulse 2s ease infinite' }}>🌐</div>
           <div style={{ marginTop: 8, fontWeight: 'bold', color: '#00ff00' }}>Scanning for surfaces...</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 5 }}>
-            Point at a floor or table<br />Tap the green ring to place
-          </div>
-          <style>{`@keyframes xrPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } }`}</style>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 5 }}>Point at floor or table, tap to place</div>
+          <style>{`@keyframes xrPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); opacity: 0.7; } }`}</style>
         </div>
       )}
     </div>
   );
-} // ← THIS closes Home()
+}
 
 // ==================== OPERATION BUTTON ====================
 
-function OpBtn({ onClick, disabled, color, label }: {
-  onClick: () => void;
-  disabled: boolean;
-  color: string;
-  label: string;
-}) {
+function OpBtn({ onClick, disabled, color, label }: { onClick: () => void; disabled: boolean; color: string; label: string }) {
   return (
     <button onClick={onClick} disabled={disabled} style={{
       padding: '12px 18px', fontSize: 13, fontWeight: 'bold', border: 'none', borderRadius: 25,
@@ -2476,23 +4021,15 @@ function OpBtn({ onClick, disabled, color, label }: {
 
 // ==================== VISUALIZATION 3D ====================
 
-function Visualization3D({ position, data, highlightIndex, highlightIndex2, structure, environment, zoomLevel, setZoomLevel, isSurfaceMode }: {
-  position: Position;
-  data: DataItem[];
-  highlightIndex: number | null;
-  highlightIndex2: number | null;
-  structure: DataStructure;
-  environment: string;
-  zoomLevel: number;
-  setZoomLevel: (z: number) => void;
-  isSurfaceMode: boolean;
+function Visualization3D({ position, data, highlightIndex, highlightIndex2, structure, environment, zoomLevel, setZoomLevel, isSurfaceMode, animPhase, animData }: {
+  position: Position; data: DataItem[]; highlightIndex: number | null; highlightIndex2: number | null;
+  structure: DataStructure; environment: string; zoomLevel: number; setZoomLevel: (z: number) => void;
+  isSurfaceMode: boolean; animPhase: string; animData: Record<string, any>;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
   const groupRef = useRef<THREE.Group | null>(null);
   const rotationRef = useRef({ x: 0.15, y: 0 });
   const zoomRef = useRef(zoomLevel);
-
   useEffect(() => { zoomRef.current = zoomLevel; }, [zoomLevel]);
 
   const renderWidth = window.innerWidth;
@@ -2501,14 +4038,10 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
-
     const scene = new THREE.Scene();
-    sceneRef.current = scene;
-
     const camera = new THREE.PerspectiveCamera(50, renderWidth / renderHeight, 0.1, 1000);
     camera.position.set(0, structure === 'stack' ? 1.2 : 0.5, structure === 'stack' ? 5 : 4.5);
     camera.lookAt(0, 0, 0);
-
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -2517,84 +4050,35 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
     container.appendChild(renderer.domElement);
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    dirLight.position.set(5, 10, 7);
-    dirLight.castShadow = true;
-    scene.add(dirLight);
-
+    dirLight.position.set(5, 10, 7); dirLight.castShadow = true; scene.add(dirLight);
     const backLight = new THREE.DirectionalLight(0xffffff, 0.3);
-    backLight.position.set(-5, 5, -5);
-    scene.add(backLight);
-
+    backLight.position.set(-5, 5, -5); scene.add(backLight);
     const fillLight = new THREE.PointLight(0xffffff, 0.3);
-    fillLight.position.set(0, -3, 3);
-    scene.add(fillLight);
+    fillLight.position.set(0, -3, 3); scene.add(fillLight);
 
-    const group = new THREE.Group();
-    groupRef.current = group;
-    scene.add(group);
+    const group = new THREE.Group(); groupRef.current = group; scene.add(group);
 
-    let isDragging = false, lastX = 0, lastY = 0;
-    let pinchDist: number | null = null, pinchZoom = 1;
-
-    const getDist = (t: TouchList): number | null => {
-      if (t.length < 2) return null;
-      const dx = t[0].clientX - t[1].clientX;
-      const dy = t[0].clientY - t[1].clientY;
-      return Math.sqrt(dx * dx + dy * dy);
-    };
-
-    const onTS = (e: TouchEvent) => {
-      e.preventDefault();
-      if (e.touches.length === 2) { pinchDist = getDist(e.touches); pinchZoom = zoomRef.current; }
-      else if (e.touches.length === 1) { isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }
-    };
-    const onTM = (e: TouchEvent) => {
-      e.preventDefault();
-      if (e.touches.length === 2 && pinchDist !== null) {
-        const d = getDist(e.touches);
-        if (d) setZoomLevel(Math.max(0.1, pinchZoom * (d / pinchDist)));
-      } else if (e.touches.length === 1 && isDragging) {
-        rotationRef.current.y += (e.touches[0].clientX - lastX) * 0.01;
-        rotationRef.current.x += (e.touches[0].clientY - lastY) * 0.008;
-        lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
-      }
-    };
-    const onTE = (e: TouchEvent) => {
-      e.preventDefault();
-      if (e.touches.length < 2) pinchDist = null;
-      if (e.touches.length === 0) isDragging = false;
-    };
+    let isDragging = false, lastX = 0, lastY = 0, pinchDist: number | null = null, pinchZoom = 1;
+    const getDist = (t: TouchList): number | null => { if (t.length < 2) return null; const dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY; return Math.sqrt(dx * dx + dy * dy); };
+    const onTS = (e: TouchEvent) => { e.preventDefault(); if (e.touches.length === 2) { pinchDist = getDist(e.touches); pinchZoom = zoomRef.current; } else if (e.touches.length === 1) { isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; } };
+    const onTM = (e: TouchEvent) => { e.preventDefault(); if (e.touches.length === 2 && pinchDist !== null) { const d = getDist(e.touches); if (d) setZoomLevel(Math.max(0.1, pinchZoom * (d / pinchDist))); } else if (e.touches.length === 1 && isDragging) { rotationRef.current.y += (e.touches[0].clientX - lastX) * 0.01; rotationRef.current.x += (e.touches[0].clientY - lastY) * 0.008; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; } };
+    const onTE = (e: TouchEvent) => { e.preventDefault(); if (e.touches.length < 2) pinchDist = null; if (e.touches.length === 0) isDragging = false; };
     const onMD = (e: MouseEvent) => { isDragging = true; lastX = e.clientX; lastY = e.clientY; };
-    const onMM = (e: MouseEvent) => {
-      if (!isDragging) return;
-      rotationRef.current.y += (e.clientX - lastX) * 0.01;
-      rotationRef.current.x += (e.clientY - lastY) * 0.008;
-      lastX = e.clientX; lastY = e.clientY;
-    };
+    const onMM = (e: MouseEvent) => { if (!isDragging) return; rotationRef.current.y += (e.clientX - lastX) * 0.01; rotationRef.current.x += (e.clientY - lastY) * 0.008; lastX = e.clientX; lastY = e.clientY; };
     const onMU = () => { isDragging = false; };
-    const onWH = (e: WheelEvent) => {
-      e.preventDefault();
-      setZoomLevel(Math.max(0.1, zoomRef.current + (e.deltaY > 0 ? -0.15 : 0.15)));
-    };
+    const onWH = (e: WheelEvent) => { e.preventDefault(); setZoomLevel(Math.max(0.1, zoomRef.current + (e.deltaY > 0 ? -0.15 : 0.15))); };
 
     container.addEventListener('touchstart', onTS, { passive: false });
     container.addEventListener('touchmove', onTM, { passive: false });
     container.addEventListener('touchend', onTE, { passive: false });
-    container.addEventListener('mousedown', onMD);
-    container.addEventListener('mousemove', onMM);
-    container.addEventListener('mouseup', onMU);
-    container.addEventListener('mouseleave', onMU);
+    container.addEventListener('mousedown', onMD); container.addEventListener('mousemove', onMM);
+    container.addEventListener('mouseup', onMU); container.addEventListener('mouseleave', onMU);
     container.addEventListener('wheel', onWH, { passive: false });
 
     let animationId: number;
     const animate = () => {
-      if (groupRef.current) {
-        groupRef.current.rotation.x = rotationRef.current.x;
-        groupRef.current.rotation.y = rotationRef.current.y;
-        groupRef.current.scale.setScalar(zoomRef.current);
-      }
+      if (groupRef.current) { groupRef.current.rotation.x = rotationRef.current.x; groupRef.current.rotation.y = rotationRef.current.y; groupRef.current.scale.setScalar(zoomRef.current); }
       renderer.render(scene, camera);
       animationId = requestAnimationFrame(animate);
     };
@@ -2602,38 +4086,18 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
 
     return () => {
       cancelAnimationFrame(animationId);
-      container.removeEventListener('touchstart', onTS);
-      container.removeEventListener('touchmove', onTM);
-      container.removeEventListener('touchend', onTE);
-      container.removeEventListener('mousedown', onMD);
-      container.removeEventListener('mousemove', onMM);
-      container.removeEventListener('mouseup', onMU);
-      container.removeEventListener('mouseleave', onMU);
+      container.removeEventListener('touchstart', onTS); container.removeEventListener('touchmove', onTM); container.removeEventListener('touchend', onTE);
+      container.removeEventListener('mousedown', onMD); container.removeEventListener('mousemove', onMM); container.removeEventListener('mouseup', onMU); container.removeEventListener('mouseleave', onMU);
       container.removeEventListener('wheel', onWH);
-      renderer.dispose();
-      if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
+      renderer.dispose(); if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
     };
   }, [structure, renderWidth, renderHeight]);
 
   useEffect(() => {
     if (!groupRef.current) return;
-    buildSceneContent(groupRef.current, data, highlightIndex, highlightIndex2, structure, environment);
-  }, [data, highlightIndex, highlightIndex2, structure, environment]);
+    buildSceneContent(groupRef.current, data, highlightIndex, highlightIndex2, structure, environment, animPhase, animData);
+  }, [data, highlightIndex, highlightIndex2, structure, environment, animPhase, animData]);
 
-  return (
-    <div
-      ref={containerRef}
-      style={{
-        position: 'absolute',
-        left: 0,
-        top: 0,
-        width: '100vw',
-        height: '100vh',
-        zIndex: 50,
-        touchAction: 'none',
-        pointerEvents: 'auto',
-        overflow: 'visible',
-      }}
-    />
-  );
+  return <div ref={containerRef} style={{ position: 'absolute', left: 0, top: 0, width: '100vw', height: '100vh', zIndex: 50, touchAction: 'none', pointerEvents: 'auto', overflow: 'visible' }} />;
 }
+  
