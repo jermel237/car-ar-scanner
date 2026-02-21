@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -72,6 +73,7 @@ function createArrow(fromX: number, toX: number, isHighlighted: boolean): THREE.
   cone.rotation.z = -Math.PI / 2;
   arrow.add(cone);
 
+  // Glow line
   const glowPoints = [new THREE.Vector3(fromX + 0.35, midY, 0), new THREE.Vector3(toX - 0.35, midY, 0)];
   const glowGeo = new THREE.BufferGeometry().setFromPoints(glowPoints);
   const glowLine = new THREE.Line(glowGeo, new THREE.LineBasicMaterial({
@@ -91,14 +93,17 @@ function createChair(x: number): THREE.Group {
   const chair = new THREE.Group();
   const woodMat = new THREE.MeshStandardMaterial({ color: '#8b4513', roughness: 0.7 });
 
+  // Seat
   const seat = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.025, 0.22), woodMat);
   seat.position.y = -0.18;
   chair.add(seat);
 
+  // Back rest
   const back = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.18, 0.02), woodMat);
   back.position.set(0, -0.08, -0.1);
   chair.add(back);
 
+  // Back rest bars
   const barGeo = new THREE.CylinderGeometry(0.006, 0.006, 0.16, 6);
   [-0.06, 0, 0.06].forEach(bx => {
     const bar = new THREE.Mesh(barGeo, woodMat);
@@ -106,6 +111,7 @@ function createChair(x: number): THREE.Group {
     chair.add(bar);
   });
 
+  // Legs
   const legGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.12, 8);
   [[-0.08, -0.25, 0.08], [0.08, -0.25, 0.08], [-0.08, -0.25, -0.08], [0.08, -0.25, -0.08]].forEach(([lx, ly, lz]) => {
     const leg = new THREE.Mesh(legGeo, woodMat);
@@ -113,6 +119,7 @@ function createChair(x: number): THREE.Group {
     chair.add(leg);
   });
 
+  // Leg supports (cross bars)
   const supportGeo = new THREE.CylinderGeometry(0.005, 0.005, 0.14, 6);
   const support1 = new THREE.Mesh(supportGeo, woodMat);
   support1.rotation.z = Math.PI / 2;
@@ -127,7 +134,7 @@ function createChair(x: number): THREE.Group {
   return chair;
 }
 
-// ==================== GROCERY PRODUCT ====================
+// ==================== 7-ELEVEN GROCERY PRODUCT ====================
 
 function createGroceryBox(color: string, label: string, isHighlighted: boolean): THREE.Group {
   const product = new THREE.Group();
@@ -135,9 +142,12 @@ function createGroceryBox(color: string, label: string, isHighlighted: boolean):
   const boxHeight = 0.48;
   const boxDepth = 0.18;
 
+  // Main box body
   const bodyGeo = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
   const bodyMat = new THREE.MeshStandardMaterial({
-    color, roughness: 0.5, metalness: 0.05,
+    color,
+    roughness: 0.5,
+    metalness: 0.05,
     emissive: isHighlighted ? '#ffff00' : '#000000',
     emissiveIntensity: isHighlighted ? 0.4 : 0,
   });
@@ -146,66 +156,129 @@ function createGroceryBox(color: string, label: string, isHighlighted: boolean):
   body.castShadow = true;
   product.add(body);
 
+  // Front label
   const frontCanvas = document.createElement('canvas');
-  frontCanvas.width = 128; frontCanvas.height = 200;
+  frontCanvas.width = 128;
+  frontCanvas.height = 200;
   const fctx = frontCanvas.getContext('2d')!;
+
   const grad = fctx.createLinearGradient(0, 0, 0, 200);
-  grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.3, '#f8f8f8'); grad.addColorStop(1, '#e8e8e8');
-  fctx.fillStyle = grad; fctx.fillRect(4, 4, 120, 192);
-  fctx.strokeStyle = '#cccccc'; fctx.lineWidth = 2; fctx.strokeRect(4, 4, 120, 192);
-  fctx.fillStyle = color; fctx.fillRect(4, 4, 120, 45);
-  const icons: Record<string, string> = { 'Milk': '🥛', 'Bread': '🍞', 'Eggs': '🥚', 'Apple': '🍎', 'Juice': '🧃', 'New': '🆕' };
-  fctx.font = '42px Arial'; fctx.textAlign = 'center'; fctx.fillText(icons[label] || '📦', 64, 110);
-  fctx.fillStyle = '#2c3e50'; fctx.font = 'bold 20px Arial'; fctx.fillText(label, 64, 150);
+  grad.addColorStop(0, '#ffffff');
+  grad.addColorStop(0.3, '#f8f8f8');
+  grad.addColorStop(1, '#e8e8e8');
+  fctx.fillStyle = grad;
+  fctx.fillRect(4, 4, 120, 192);
+  fctx.strokeStyle = '#cccccc';
+  fctx.lineWidth = 2;
+  fctx.strokeRect(4, 4, 120, 192);
+
+  fctx.fillStyle = color;
+  fctx.fillRect(4, 4, 120, 45);
+
+  const icons: Record<string, string> = {
+    'Milk': '🥛', 'Bread': '🍞', 'Eggs': '🥚',
+    'Apple': '🍎', 'Juice': '🧃', 'New': '🆕'
+  };
+  fctx.font = '42px Arial';
+  fctx.textAlign = 'center';
+  fctx.fillText(icons[label] || '📦', 64, 110);
+
+  fctx.fillStyle = '#2c3e50';
+  fctx.font = 'bold 20px Arial';
+  fctx.fillText(label, 64, 150);
+
   fctx.fillStyle = '#000';
-  for (let i = 20; i < 108; i += 3) { fctx.fillRect(i, 175, 1.5, 12 + Math.random() * 6); }
-  fctx.fillStyle = '#666'; fctx.font = '10px Arial'; fctx.fillText('NET WT 500g', 64, 172);
+  for (let i = 20; i < 108; i += 3) {
+    fctx.fillRect(i, 175, 1.5, 12 + Math.random() * 6);
+  }
+  fctx.fillStyle = '#666';
+  fctx.font = '10px Arial';
+  fctx.fillText('NET WT 500g', 64, 172);
+
   const frontTex = new THREE.CanvasTexture(frontCanvas);
-  const frontLabel = new THREE.Mesh(new THREE.PlaneGeometry(boxWidth - 0.02, boxHeight - 0.02), new THREE.MeshBasicMaterial({ map: frontTex, transparent: true }));
+  const frontLabel = new THREE.Mesh(
+    new THREE.PlaneGeometry(boxWidth - 0.02, boxHeight - 0.02),
+    new THREE.MeshBasicMaterial({ map: frontTex, transparent: true })
+  );
   frontLabel.position.set(0, boxHeight / 2, boxDepth / 2 + 0.001);
   product.add(frontLabel);
 
+  // Side label
   const sideCanvas = document.createElement('canvas');
-  sideCanvas.width = 80; sideCanvas.height = 200;
+  sideCanvas.width = 80;
+  sideCanvas.height = 200;
   const sctx = sideCanvas.getContext('2d')!;
-  sctx.fillStyle = '#f5f5f5'; sctx.fillRect(0, 0, 80, 200);
-  sctx.fillStyle = color; sctx.fillRect(0, 0, 80, 30);
-  sctx.fillStyle = '#333'; sctx.font = '9px Arial'; sctx.textAlign = 'center';
-  sctx.fillText('Nutrition', 40, 50); sctx.fillText('Facts', 40, 62);
-  sctx.strokeStyle = '#ddd'; sctx.lineWidth = 0.5;
-  for (let y = 75; y < 180; y += 12) { sctx.beginPath(); sctx.moveTo(5, y); sctx.lineTo(75, y); sctx.stroke(); }
+  sctx.fillStyle = '#f5f5f5';
+  sctx.fillRect(0, 0, 80, 200);
+  sctx.fillStyle = color;
+  sctx.fillRect(0, 0, 80, 30);
+  sctx.fillStyle = '#333';
+  sctx.font = '9px Arial';
+  sctx.textAlign = 'center';
+  sctx.fillText('Nutrition', 40, 50);
+  sctx.fillText('Facts', 40, 62);
+  sctx.strokeStyle = '#ddd';
+  sctx.lineWidth = 0.5;
+  for (let y = 75; y < 180; y += 12) {
+    sctx.beginPath(); sctx.moveTo(5, y); sctx.lineTo(75, y); sctx.stroke();
+  }
+
   const sideTex = new THREE.CanvasTexture(sideCanvas);
-  const sideLabel = new THREE.Mesh(new THREE.PlaneGeometry(boxDepth - 0.02, boxHeight - 0.02), new THREE.MeshBasicMaterial({ map: sideTex, transparent: true }));
-  sideLabel.position.set(boxWidth / 2 + 0.001, boxHeight / 2, 0); sideLabel.rotation.y = Math.PI / 2;
+  const sideLabel = new THREE.Mesh(
+    new THREE.PlaneGeometry(boxDepth - 0.02, boxHeight - 0.02),
+    new THREE.MeshBasicMaterial({ map: sideTex, transparent: true })
+  );
+  sideLabel.position.set(boxWidth / 2 + 0.001, boxHeight / 2, 0);
+  sideLabel.rotation.y = Math.PI / 2;
   product.add(sideLabel);
 
+  // Top
   const topGeo = new THREE.PlaneGeometry(boxWidth, boxDepth);
   const topMat = new THREE.MeshStandardMaterial({ color, side: THREE.DoubleSide, roughness: 0.6 });
   const top = new THREE.Mesh(topGeo, topMat);
-  top.position.set(0, boxHeight + 0.001, 0); top.rotation.x = -Math.PI / 2;
+  top.position.set(0, boxHeight + 0.001, 0);
+  top.rotation.x = -Math.PI / 2;
   product.add(top);
 
+  // Price tag
   const tagCanvas = document.createElement('canvas');
-  tagCanvas.width = 64; tagCanvas.height = 32;
+  tagCanvas.width = 64;
+  tagCanvas.height = 32;
   const tctx = tagCanvas.getContext('2d')!;
-  tctx.fillStyle = '#ffeb3b'; tctx.fillRect(0, 0, 64, 32);
-  tctx.strokeStyle = '#f57f17'; tctx.lineWidth = 2; tctx.strokeRect(1, 1, 62, 30);
-  tctx.fillStyle = '#c62828'; tctx.font = 'bold 14px Arial'; tctx.textAlign = 'center';
-  const prices: Record<string, string> = { 'Milk': '$3.99', 'Bread': '$2.49', 'Eggs': '$4.99', 'Apple': '$1.29', 'Juice': '$5.49', 'New': '$0.99' };
+  tctx.fillStyle = '#ffeb3b';
+  tctx.fillRect(0, 0, 64, 32);
+  tctx.strokeStyle = '#f57f17';
+  tctx.lineWidth = 2;
+  tctx.strokeRect(1, 1, 62, 30);
+  tctx.fillStyle = '#c62828';
+  tctx.font = 'bold 14px Arial';
+  tctx.textAlign = 'center';
+  const prices: Record<string, string> = {
+    'Milk': '$3.99', 'Bread': '$2.49', 'Eggs': '$4.99',
+    'Apple': '$1.29', 'Juice': '$5.49', 'New': '$0.99'
+  };
   tctx.fillText(prices[label] || '$2.99', 32, 22);
+
   const tagTex = new THREE.CanvasTexture(tagCanvas);
-  const priceTag = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.07), new THREE.MeshBasicMaterial({ map: tagTex, transparent: true }));
+  const priceTag = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.14, 0.07),
+    new THREE.MeshBasicMaterial({ map: tagTex, transparent: true })
+  );
   priceTag.position.set(0, 0.02, boxDepth / 2 + 0.03);
   product.add(priceTag);
 
+  // Highlight
   if (isHighlighted) {
     const glowGeo = new THREE.BoxGeometry(boxWidth + 0.06, boxHeight + 0.06, boxDepth + 0.06);
     const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.15 });
-    const glow = new THREE.Mesh(glowGeo, glowMat); glow.position.y = boxHeight / 2;
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    glow.position.y = boxHeight / 2;
     product.add(glow);
+
     const arrowGeo = new THREE.ConeGeometry(0.06, 0.1, 8);
     const arrowMesh = new THREE.Mesh(arrowGeo, new THREE.MeshBasicMaterial({ color: '#ffff00' }));
-    arrowMesh.position.y = boxHeight + 0.15; arrowMesh.rotation.z = Math.PI;
+    arrowMesh.position.y = boxHeight + 0.15;
+    arrowMesh.rotation.z = Math.PI;
     product.add(arrowMesh);
   }
 
@@ -214,92 +287,220 @@ function createGroceryBox(color: string, label: string, isHighlighted: boolean):
 
 // ==================== ANIMATION HELPER ====================
 
-function applyItemAnimation(obj: THREE.Object3D, itemIndex: number, animPhase: string, animData: Record<string, any>, structure: DataStructure): void {
+function applyItemAnimation(
+  obj: THREE.Object3D,
+  itemIndex: number,
+  animPhase: string,
+  animData: Record<string, any>,
+  structure: DataStructure
+): void {
   if (!animPhase) return;
+
   const isTarget = animData.index === itemIndex;
   const isTarget1 = animData.index1 === itemIndex;
   const isTarget2 = animData.index2 === itemIndex;
 
   if (structure === 'array') {
-    if (animPhase === 'access-lift' && isTarget) { obj.position.y += 0.4; obj.rotation.z = 0.15; }
-    else if (animPhase === 'access-bounce' && isTarget) { obj.position.y += 0.28; obj.scale.multiplyScalar(1.2); obj.rotation.z = -0.1; }
-    else if (animPhase === 'access-settle' && isTarget) { obj.position.y += 0.08; }
-    else if (animPhase === 'insert-shift' && animData.insertIndex !== undefined && itemIndex >= animData.insertIndex) { obj.position.y += 0.06; }
-    else if (animPhase === 'insert-drop' && isTarget) { obj.position.y += 0.7; obj.scale.multiplyScalar(0.5); obj.rotation.z = 0.3; }
-    else if (animPhase === 'insert-settle' && isTarget) { obj.position.y += 0.15; obj.scale.multiplyScalar(1.1); }
-    else if (animPhase === 'delete-lift' && isTarget) { obj.position.y += 0.45; obj.rotation.z = 0.4; obj.scale.multiplyScalar(1.2); }
-    else if (animPhase === 'delete-shrink' && isTarget) { obj.position.y += 0.8; obj.scale.multiplyScalar(0.01); obj.rotation.z = 3.0; }
-    else if (animPhase === 'delete-close' && animData.deleteIndex !== undefined && itemIndex >= animData.deleteIndex) { obj.position.y += 0.06; }
-    else if (animPhase === 'swap-lift' && (isTarget1 || isTarget2)) { obj.position.y += 0.45; obj.rotation.z = isTarget1 ? 0.15 : -0.15; }
-    else if (animPhase === 'swap-cross' && (isTarget1 || isTarget2)) { obj.position.y += 0.5; obj.rotation.z = isTarget1 ? -0.2 : 0.2; }
-    else if (animPhase === 'swap-drop' && (isTarget1 || isTarget2)) { obj.position.y += 0.12; obj.scale.multiplyScalar(1.12); }
+    if (animPhase === 'access-lift' && isTarget) {
+      obj.position.y += 0.4;
+      obj.rotation.z = 0.15;
+    } else if (animPhase === 'access-bounce' && isTarget) {
+      obj.position.y += 0.28;
+      obj.scale.multiplyScalar(1.2);
+      obj.rotation.z = -0.1;
+    } else if (animPhase === 'access-settle' && isTarget) {
+      obj.position.y += 0.08;
+    } else if (animPhase === 'insert-shift' && animData.insertIndex !== undefined && itemIndex >= animData.insertIndex) {
+      obj.position.y += 0.06;
+    } else if (animPhase === 'insert-drop' && isTarget) {
+      obj.position.y += 0.7;
+      obj.scale.multiplyScalar(0.5);
+      obj.rotation.z = 0.3;
+    } else if (animPhase === 'insert-settle' && isTarget) {
+      obj.position.y += 0.15;
+      obj.scale.multiplyScalar(1.1);
+    } else if (animPhase === 'delete-lift' && isTarget) {
+      obj.position.y += 0.45;
+      obj.rotation.z = 0.4;
+      obj.scale.multiplyScalar(1.2);
+    } else if (animPhase === 'delete-shrink' && isTarget) {
+      obj.position.y += 0.8;
+      obj.scale.multiplyScalar(0.01);
+      obj.rotation.z = 3.0;
+    } else if (animPhase === 'delete-close' && animData.deleteIndex !== undefined && itemIndex >= animData.deleteIndex) {
+      obj.position.y += 0.06;
+    } else if (animPhase === 'swap-lift' && (isTarget1 || isTarget2)) {
+      obj.position.y += 0.45;
+      obj.rotation.z = isTarget1 ? 0.15 : -0.15;
+    } else if (animPhase === 'swap-cross' && (isTarget1 || isTarget2)) {
+      obj.position.y += 0.5;
+      obj.rotation.z = isTarget1 ? -0.2 : 0.2;
+    } else if (animPhase === 'swap-drop' && (isTarget1 || isTarget2)) {
+      obj.position.y += 0.12;
+      obj.scale.multiplyScalar(1.12);
+    }
   }
+
   if (structure === 'linkedlist') {
-    if (animPhase === 'll-insert-head' && isTarget) { obj.position.y += 0.5; obj.scale.multiplyScalar(0.6); obj.rotation.z = 0.2; }
-    else if (animPhase === 'll-insert-head-settle' && isTarget) { obj.position.y += 0.1; obj.scale.multiplyScalar(1.05); }
-    else if (animPhase === 'll-insert-tail' && isTarget) { obj.position.y += 0.5; obj.scale.multiplyScalar(0.6); }
-    else if (animPhase === 'll-insert-tail-settle' && isTarget) { obj.position.y += 0.1; obj.scale.multiplyScalar(1.05); }
-    else if (animPhase === 'll-delete-lift' && isTarget) { obj.position.y += 0.5; obj.rotation.z = 0.3; }
-    else if (animPhase === 'll-delete-shrink' && isTarget) { obj.position.y += 0.8; obj.scale.multiplyScalar(0.01); obj.rotation.z = 2.5; }
-    else if (animPhase === 'll-traverse' && isTarget) { obj.position.y += 0.2; obj.scale.multiplyScalar(1.15); }
+    if (animPhase === 'll-insert-head' && isTarget) {
+      obj.position.y += 0.5;
+      obj.scale.multiplyScalar(0.6);
+      obj.rotation.z = 0.2;
+    } else if (animPhase === 'll-insert-head-settle' && isTarget) {
+      obj.position.y += 0.1;
+      obj.scale.multiplyScalar(1.05);
+    } else if (animPhase === 'll-insert-tail' && isTarget) {
+      obj.position.y += 0.5;
+      obj.scale.multiplyScalar(0.6);
+    } else if (animPhase === 'll-insert-tail-settle' && isTarget) {
+      obj.position.y += 0.1;
+      obj.scale.multiplyScalar(1.05);
+    } else if (animPhase === 'll-delete-lift' && isTarget) {
+      obj.position.y += 0.5;
+      obj.rotation.z = 0.3;
+    } else if (animPhase === 'll-delete-shrink' && isTarget) {
+      obj.position.y += 0.8;
+      obj.scale.multiplyScalar(0.01);
+      obj.rotation.z = 2.5;
+    } else if (animPhase === 'll-traverse' && isTarget) {
+      obj.position.y += 0.2;
+      obj.scale.multiplyScalar(1.15);
+    }
   }
+
   if (structure === 'stack') {
-    if (animPhase === 'stack-push-drop' && isTarget) { obj.position.y += 0.6; obj.scale.multiplyScalar(0.7); obj.rotation.z = 0.2; }
-    else if (animPhase === 'stack-push-settle' && isTarget) { obj.position.y += 0.1; obj.scale.multiplyScalar(1.08); }
-    else if (animPhase === 'stack-pop-lift' && isTarget) { obj.position.y += 0.4; obj.rotation.z = -0.3; }
-    else if (animPhase === 'stack-pop-fly' && isTarget) { obj.position.y += 0.9; obj.scale.multiplyScalar(0.01); obj.rotation.z = 3.0; }
-    else if (animPhase === 'stack-peek-lift' && isTarget) { obj.position.y += 0.25; obj.rotation.z = 0.1; }
-    else if (animPhase === 'stack-peek-open' && isTarget) { obj.position.y += 0.3; obj.scale.multiplyScalar(1.15); }
-    else if (animPhase === 'stack-peek-settle' && isTarget) { obj.position.y += 0.08; }
+    if (animPhase === 'stack-push-drop' && isTarget) {
+      obj.position.y += 0.6;
+      obj.scale.multiplyScalar(0.7);
+      obj.rotation.z = 0.2;
+    } else if (animPhase === 'stack-push-settle' && isTarget) {
+      obj.position.y += 0.1;
+      obj.scale.multiplyScalar(1.08);
+    } else if (animPhase === 'stack-pop-lift' && isTarget) {
+      obj.position.y += 0.4;
+      obj.rotation.z = -0.3;
+    } else if (animPhase === 'stack-pop-fly' && isTarget) {
+      obj.position.y += 0.9;
+      obj.scale.multiplyScalar(0.01);
+      obj.rotation.z = 3.0;
+    } else if (animPhase === 'stack-peek-lift' && isTarget) {
+      obj.position.y += 0.25;
+      obj.rotation.z = 0.1;
+    } else if (animPhase === 'stack-peek-open' && isTarget) {
+      obj.position.y += 0.3;
+      obj.scale.multiplyScalar(1.15);
+    } else if (animPhase === 'stack-peek-settle' && isTarget) {
+      obj.position.y += 0.08;
+    }
   }
+
   if (structure === 'queue') {
-    if (animPhase === 'queue-enqueue-enter' && isTarget) { obj.position.x += 1.0; obj.scale.multiplyScalar(0.6); }
-    else if (animPhase === 'queue-enqueue-settle' && isTarget) { obj.position.x += 0.2; obj.scale.multiplyScalar(1.05); }
-    else if (animPhase === 'queue-dequeue-exit' && isTarget) { obj.position.x -= 0.8; obj.scale.multiplyScalar(0.8); obj.rotation.y = 0.3; }
-    else if (animPhase === 'queue-dequeue-gone' && isTarget) { obj.position.x -= 1.5; obj.scale.multiplyScalar(0.01); }
-    else if (animPhase === 'queue-front-peek' && isTarget) { obj.position.y += 0.2; obj.scale.multiplyScalar(1.15); }
+    if (animPhase === 'queue-enqueue-enter' && isTarget) {
+      obj.position.x += 1.0;
+      obj.scale.multiplyScalar(0.6);
+    } else if (animPhase === 'queue-enqueue-settle' && isTarget) {
+      obj.position.x += 0.2;
+      obj.scale.multiplyScalar(1.05);
+    } else if (animPhase === 'queue-dequeue-exit' && isTarget) {
+      obj.position.x -= 0.8;
+      obj.scale.multiplyScalar(0.8);
+      obj.rotation.y = 0.3;
+    } else if (animPhase === 'queue-dequeue-gone' && isTarget) {
+      obj.position.x -= 1.5;
+      obj.scale.multiplyScalar(0.01);
+    } else if (animPhase === 'queue-front-peek' && isTarget) {
+      obj.position.y += 0.2;
+      obj.scale.multiplyScalar(1.15);
+    }
   }
 }
 
-// ==================== HUMAN 3D ====================
+// ==================== END OF PART 1 ====================
+// ==================== PART 2: createHuman3D (IMPROVED) ====================
+// Place right after Part 1
 
 function createHuman3D(appearance: HumanAppearance, name: string, isHighlighted: boolean): THREE.Group {
   const human = new THREE.Group();
   const hlEmit = isHighlighted ? 0.4 : 0;
 
+  // ===== HEAD =====
   const headGroup = new THREE.Group();
+
+  // Head shape (slightly oval)
   const headGeo = new THREE.SphereGeometry(0.09, 32, 32);
-  const headMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.7, emissive: isHighlighted ? '#ffff00' : '#000', emissiveIntensity: hlEmit * 0.3 });
+  const headMat = new THREE.MeshStandardMaterial({
+    color: appearance.skinTone,
+    roughness: 0.7,
+    emissive: isHighlighted ? '#ffff00' : '#000',
+    emissiveIntensity: hlEmit * 0.3,
+  });
   const head = new THREE.Mesh(headGeo, headMat);
   head.scale.set(1, 1.08, 0.95);
   headGroup.add(head);
 
+  // ===== HAIR =====
   if (appearance.hairStyle !== 'bald') {
-    const hairMat = new THREE.MeshStandardMaterial({ color: appearance.hairColor, roughness: 0.8 });
+    const hairMat = new THREE.MeshStandardMaterial({
+      color: appearance.hairColor,
+      roughness: 0.8,
+    });
+
     if (appearance.hairStyle === 'long') {
+      // Top hair cap
       const topHairGeo = new THREE.SphereGeometry(0.095, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.55);
-      const topHair = new THREE.Mesh(topHairGeo, hairMat); topHair.position.y = 0.015; headGroup.add(topHair);
+      const topHair = new THREE.Mesh(topHairGeo, hairMat);
+      topHair.position.y = 0.015;
+      headGroup.add(topHair);
+
+      // Back flowing hair
       const backHairGeo = new THREE.CapsuleGeometry(0.04, 0.14, 8, 16);
-      const backHair = new THREE.Mesh(backHairGeo, hairMat); backHair.position.set(0, -0.08, -0.045); headGroup.add(backHair);
+      const backHair = new THREE.Mesh(backHairGeo, hairMat);
+      backHair.position.set(0, -0.08, -0.045);
+      headGroup.add(backHair);
+
+      // Side hair strands
       [-0.065, 0.065].forEach(x => {
         const sideHairGeo = new THREE.CapsuleGeometry(0.025, 0.08, 6, 12);
-        const sideHair = new THREE.Mesh(sideHairGeo, hairMat); sideHair.position.set(x, -0.04, -0.02); headGroup.add(sideHair);
+        const sideHair = new THREE.Mesh(sideHairGeo, hairMat);
+        sideHair.position.set(x, -0.04, -0.02);
+        headGroup.add(sideHair);
       });
+
+      // Bangs
       if (appearance.gender === 'female') {
         const bangsGeo = new THREE.BoxGeometry(0.14, 0.025, 0.04);
-        const bangs = new THREE.Mesh(bangsGeo, hairMat); bangs.position.set(0, 0.065, 0.065); bangs.rotation.x = 0.2; headGroup.add(bangs);
+        const bangs = new THREE.Mesh(bangsGeo, hairMat);
+        bangs.position.set(0, 0.065, 0.065);
+        bangs.rotation.x = 0.2;
+        headGroup.add(bangs);
       }
     } else {
+      // Short hair cap
       const shortHairGeo = new THREE.SphereGeometry(0.093, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.4);
-      const shortHair = new THREE.Mesh(shortHairGeo, hairMat); shortHair.position.y = 0.015; headGroup.add(shortHair);
-      const fadeMat = new THREE.MeshStandardMaterial({ color: appearance.hairColor, roughness: 0.9, transparent: true, opacity: 0.7 });
+      const shortHair = new THREE.Mesh(shortHairGeo, hairMat);
+      shortHair.position.y = 0.015;
+      headGroup.add(shortHair);
+
+      // Side fade (slightly darker)
+      const fadeMat = new THREE.MeshStandardMaterial({
+        color: appearance.hairColor,
+        roughness: 0.9,
+        transparent: true,
+        opacity: 0.7,
+      });
       [-0.082, 0.082].forEach(x => {
         const fadeGeo = new THREE.SphereGeometry(0.03, 12, 12);
-        const fade = new THREE.Mesh(fadeGeo, fadeMat); fade.position.set(x, 0.02, 0); fade.scale.set(0.4, 0.8, 0.7); headGroup.add(fade);
+        const fade = new THREE.Mesh(fadeGeo, fadeMat);
+        fade.position.set(x, 0.02, 0);
+        fade.scale.set(0.4, 0.8, 0.7);
+        headGroup.add(fade);
       });
     }
   }
 
+  // ===== FACE DETAILS =====
+
+  // Eyes (with more detail)
   const eyeWhiteGeo = new THREE.SphereGeometry(0.014, 16, 16);
   const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 });
   const irisGeo = new THREE.SphereGeometry(0.008, 12, 12);
@@ -308,447 +509,1919 @@ function createHuman3D(appearance: HumanAppearance, name: string, isHighlighted:
   const pupilMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a' });
   const eyeShineGeo = new THREE.SphereGeometry(0.002, 6, 6);
   const eyeShineMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+
   [-0.03, 0.03].forEach(x => {
-    const eyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat); eyeWhite.position.set(x, 0.012, 0.072); eyeWhite.scale.set(1, 0.75, 0.5); headGroup.add(eyeWhite);
-    const iris = new THREE.Mesh(irisGeo, irisMat); iris.position.set(x, 0.012, 0.082); headGroup.add(iris);
-    const pupil = new THREE.Mesh(pupilGeo, pupilMat); pupil.position.set(x, 0.012, 0.086); headGroup.add(pupil);
-    const shine = new THREE.Mesh(eyeShineGeo, eyeShineMat); shine.position.set(x + 0.003, 0.016, 0.087); headGroup.add(shine);
+    // Eye white
+    const eyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+    eyeWhite.position.set(x, 0.012, 0.072);
+    eyeWhite.scale.set(1, 0.75, 0.5);
+    headGroup.add(eyeWhite);
+
+    // Iris
+    const iris = new THREE.Mesh(irisGeo, irisMat);
+    iris.position.set(x, 0.012, 0.082);
+    headGroup.add(iris);
+
+    // Pupil
+    const pupil = new THREE.Mesh(pupilGeo, pupilMat);
+    pupil.position.set(x, 0.012, 0.086);
+    headGroup.add(pupil);
+
+    // Eye shine (reflection dot)
+    const shine = new THREE.Mesh(eyeShineGeo, eyeShineMat);
+    shine.position.set(x + 0.003, 0.016, 0.087);
+    headGroup.add(shine);
+
+    // Eyelid (top)
     const eyelidGeo = new THREE.SphereGeometry(0.016, 12, 12, 0, Math.PI * 2, 0, Math.PI * 0.3);
     const eyelidMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone });
-    const eyelid = new THREE.Mesh(eyelidGeo, eyelidMat); eyelid.position.set(x, 0.02, 0.07); eyelid.scale.set(1, 0.5, 0.5); headGroup.add(eyelid);
+    const eyelid = new THREE.Mesh(eyelidGeo, eyelidMat);
+    eyelid.position.set(x, 0.02, 0.07);
+    eyelid.scale.set(1, 0.5, 0.5);
+    headGroup.add(eyelid);
   });
 
+  // Eyebrows (thicker, more natural)
   const browMat = new THREE.MeshStandardMaterial({ color: appearance.hairColor });
   [-0.03, 0.03].forEach((x, i) => {
     const browGeo = new THREE.BoxGeometry(0.028, 0.006, 0.008);
-    const brow = new THREE.Mesh(browGeo, browMat); brow.position.set(x, 0.038, 0.072); brow.rotation.z = i === 0 ? -0.12 : 0.12; headGroup.add(brow);
+    const brow = new THREE.Mesh(browGeo, browMat);
+    brow.position.set(x, 0.038, 0.072);
+    brow.rotation.z = i === 0 ? -0.12 : 0.12;
+    headGroup.add(brow);
   });
 
+  // Nose (more 3D)
   const noseGroup = new THREE.Group();
+  const noseBridgeGeo = new THREE.BoxGeometry(0.012, 0.025, 0.015);
   const noseMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.8 });
-  const noseBridge = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.025, 0.015), noseMat); noseBridge.position.set(0, 0, 0.08); noseGroup.add(noseBridge);
-  const noseTip = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 8), noseMat); noseTip.position.set(0, -0.01, 0.085); noseTip.scale.set(1, 0.7, 0.8); noseGroup.add(noseTip);
+  const noseBridge = new THREE.Mesh(noseBridgeGeo, noseMat);
+  noseBridge.position.set(0, 0, 0.08);
+  noseGroup.add(noseBridge);
+
+  const noseTipGeo = new THREE.SphereGeometry(0.012, 8, 8);
+  const noseTip = new THREE.Mesh(noseTipGeo, noseMat);
+  noseTip.position.set(0, -0.01, 0.085);
+  noseTip.scale.set(1, 0.7, 0.8);
+  noseGroup.add(noseTip);
+
+  // Nostrils
+  const nostrilGeo = new THREE.SphereGeometry(0.004, 6, 6);
   const nostrilMat = new THREE.MeshStandardMaterial({ color: '#2c2c2c' });
-  [-0.007, 0.007].forEach(x => { const nostril = new THREE.Mesh(new THREE.SphereGeometry(0.004, 6, 6), nostrilMat); nostril.position.set(x, -0.015, 0.082); noseGroup.add(nostril); });
+  [-0.007, 0.007].forEach(x => {
+    const nostril = new THREE.Mesh(nostrilGeo, nostrilMat);
+    nostril.position.set(x, -0.015, 0.082);
+    noseGroup.add(nostril);
+  });
+
   headGroup.add(noseGroup);
 
+  // Mouth (more realistic)
   const mouthGroup = new THREE.Group();
+
+  // Upper lip
+  const upperLipGeo = new THREE.TorusGeometry(0.016, 0.003, 8, 16, Math.PI);
   const lipMat = new THREE.MeshStandardMaterial({ color: '#c0392b', roughness: 0.6 });
-  const upperLip = new THREE.Mesh(new THREE.TorusGeometry(0.016, 0.003, 8, 16, Math.PI), lipMat);
-  upperLip.position.set(0, -0.032, 0.075); upperLip.rotation.z = Math.PI; upperLip.scale.set(1, 0.5, 1); mouthGroup.add(upperLip);
+  const upperLip = new THREE.Mesh(upperLipGeo, lipMat);
+  upperLip.position.set(0, -0.032, 0.075);
+  upperLip.rotation.z = Math.PI;
+  upperLip.scale.set(1, 0.5, 1);
+  mouthGroup.add(upperLip);
+
+  // Lower lip
+  const lowerLipGeo = new THREE.TorusGeometry(0.014, 0.0035, 8, 16, Math.PI);
   const lowerLipMat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.5 });
-  const lowerLip = new THREE.Mesh(new THREE.TorusGeometry(0.014, 0.0035, 8, 16, Math.PI), lowerLipMat);
-  lowerLip.position.set(0, -0.038, 0.074); lowerLip.scale.set(1, 0.6, 1); mouthGroup.add(lowerLip);
+  const lowerLip = new THREE.Mesh(lowerLipGeo, lowerLipMat);
+  lowerLip.position.set(0, -0.038, 0.074);
+  lowerLip.scale.set(1, 0.6, 1);
+  mouthGroup.add(lowerLip);
+
   headGroup.add(mouthGroup);
 
+  // Ears (more detailed)
   const earMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.7 });
   [-0.087, 0.087].forEach(x => {
     const earGroup = new THREE.Group();
-    const outerEar = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), earMat); outerEar.scale.set(0.4, 0.85, 0.55); earGroup.add(outerEar);
-    const innerEarMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.5, emissive: '#331111', emissiveIntensity: 0.1 });
-    const innerEar = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 6), innerEarMat); innerEar.position.z = 0.003; innerEar.scale.set(0.3, 0.6, 0.3); earGroup.add(innerEar);
-    earGroup.position.set(x, 0, 0); headGroup.add(earGroup);
+
+    // Outer ear
+    const outerEarGeo = new THREE.SphereGeometry(0.018, 8, 8);
+    const outerEar = new THREE.Mesh(outerEarGeo, earMat);
+    outerEar.scale.set(0.4, 0.85, 0.55);
+    earGroup.add(outerEar);
+
+    // Inner ear
+    const innerEarGeo = new THREE.SphereGeometry(0.012, 6, 6);
+    const innerEarMat = new THREE.MeshStandardMaterial({
+      color: appearance.skinTone,
+      roughness: 0.5,
+      emissive: '#331111',
+      emissiveIntensity: 0.1,
+    });
+    const innerEar = new THREE.Mesh(innerEarGeo, innerEarMat);
+    innerEar.position.z = 0.003;
+    innerEar.scale.set(0.3, 0.6, 0.3);
+    earGroup.add(innerEar);
+
+    earGroup.position.set(x, 0, 0);
+    headGroup.add(earGroup);
   });
 
-  const chin = new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 12), new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.7 }));
-  chin.position.set(0, -0.06, 0.03); chin.scale.set(1, 0.5, 0.8); headGroup.add(chin);
+  // Chin definition
+  const chinGeo = new THREE.SphereGeometry(0.04, 12, 12);
+  const chinMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.7 });
+  const chin = new THREE.Mesh(chinGeo, chinMat);
+  chin.position.set(0, -0.06, 0.03);
+  chin.scale.set(1, 0.5, 0.8);
+  headGroup.add(chin);
 
-  const cheekMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.6, emissive: '#ff9999', emissiveIntensity: 0.05 });
+  // Cheeks (subtle)
+  const cheekGeo = new THREE.SphereGeometry(0.025, 8, 8);
+  const cheekMat = new THREE.MeshStandardMaterial({
+    color: appearance.skinTone,
+    roughness: 0.6,
+    emissive: '#ff9999',
+    emissiveIntensity: 0.05,
+  });
   [-0.05, 0.05].forEach(x => {
-    const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 8), cheekMat); cheek.position.set(x, -0.015, 0.06); cheek.scale.set(0.8, 0.6, 0.4); headGroup.add(cheek);
+    const cheek = new THREE.Mesh(cheekGeo, cheekMat);
+    cheek.position.set(x, -0.015, 0.06);
+    cheek.scale.set(0.8, 0.6, 0.4);
+    headGroup.add(cheek);
   });
 
-  headGroup.position.y = 0.32; human.add(headGroup);
+  headGroup.position.y = 0.32;
+  human.add(headGroup);
 
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.03, 0.045, 16), new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.7 }));
-  neck.position.y = 0.21; human.add(neck);
+  // ===== NECK =====
+  const neckGeo = new THREE.CylinderGeometry(0.024, 0.03, 0.045, 16);
+  const neckMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.7 });
+  const neck = new THREE.Mesh(neckGeo, neckMat);
+  neck.position.y = 0.21;
+  human.add(neck);
 
+  // ===== TORSO (shirt with collar) =====
   const torsoGroup = new THREE.Group();
-  const torsoMat = new THREE.MeshStandardMaterial({ color: appearance.shirtColor, roughness: 0.6, emissive: isHighlighted ? '#ffff00' : '#000', emissiveIntensity: hlEmit });
-  torsoGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.058, 0.17, 16), torsoMat));
-  const collarMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.4 });
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.012, 8, 16, Math.PI * 1.2), collarMat);
-  collar.position.set(0, 0.075, 0.02); collar.rotation.x = Math.PI / 2; collar.rotation.z = -Math.PI * 0.1; torsoGroup.add(collar);
-  const buttonMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 });
-  [0.04, 0, -0.04].forEach(y => { const button = new THREE.Mesh(new THREE.SphereGeometry(0.006, 8, 8), buttonMat); button.position.set(0, y, 0.06); torsoGroup.add(button); });
-  const shirtBottom = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.065, 0.02, 16), torsoMat); shirtBottom.position.y = -0.095; torsoGroup.add(shirtBottom);
-  torsoGroup.position.y = 0.11; human.add(torsoGroup);
 
+  // Main torso
+  const torsoGeo = new THREE.CylinderGeometry(0.075, 0.058, 0.17, 16);
+  const torsoMat = new THREE.MeshStandardMaterial({
+    color: appearance.shirtColor,
+    roughness: 0.6,
+    emissive: isHighlighted ? '#ffff00' : '#000',
+    emissiveIntensity: hlEmit,
+  });
+  const torso = new THREE.Mesh(torsoGeo, torsoMat);
+  torsoGroup.add(torso);
+
+  // Collar
+  const collarGeo = new THREE.TorusGeometry(0.055, 0.012, 8, 16, Math.PI * 1.2);
+  const collarMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.4 });
+  const collar = new THREE.Mesh(collarGeo, collarMat);
+  collar.position.set(0, 0.075, 0.02);
+  collar.rotation.x = Math.PI / 2;
+  collar.rotation.z = -Math.PI * 0.1;
+  torsoGroup.add(collar);
+
+  // Buttons (3 dots)
+  const buttonGeo = new THREE.SphereGeometry(0.006, 8, 8);
+  const buttonMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 });
+  [0.04, 0, -0.04].forEach(y => {
+    const button = new THREE.Mesh(buttonGeo, buttonMat);
+    button.position.set(0, y, 0.06);
+    torsoGroup.add(button);
+  });
+
+  // Shirt bottom (slight flare)
+  const shirtBottomGeo = new THREE.CylinderGeometry(0.06, 0.065, 0.02, 16);
+  const shirtBottom = new THREE.Mesh(shirtBottomGeo, torsoMat);
+  shirtBottom.position.y = -0.095;
+  torsoGroup.add(shirtBottom);
+
+  torsoGroup.position.y = 0.11;
+  human.add(torsoGroup);
+
+  // ===== ARMS (with better proportions) =====
   const armShirtMat = new THREE.MeshStandardMaterial({ color: appearance.shirtColor, roughness: 0.6 });
   const skinMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.7 });
+
   [-1, 1].forEach(side => {
     const armGroup = new THREE.Group();
-    armGroup.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.025, 12, 12), armShirtMat), { position: new THREE.Vector3(0, 0.04, 0) }));
-    armGroup.add(new THREE.Mesh(new THREE.CapsuleGeometry(0.016, 0.08, 8, 16), armShirtMat));
-    const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.016, 0.015, 12), armShirtMat); cuff.position.y = -0.05; armGroup.add(cuff);
-    const lowerArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.013, 0.065, 8, 16), skinMat); lowerArm.position.y = -0.1; armGroup.add(lowerArm);
-    const wrist = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.012, 0.01, 10), skinMat); wrist.position.y = -0.14; armGroup.add(wrist);
-    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.018, 12, 12), skinMat); hand.position.y = -0.155; hand.scale.set(0.65, 0.9, 0.45); armGroup.add(hand);
-    const thumb = new THREE.Mesh(new THREE.CapsuleGeometry(0.005, 0.015, 4, 8), skinMat); thumb.position.set(side * 0.012, -0.155, 0.01); thumb.rotation.z = side * 0.5; armGroup.add(thumb);
-    armGroup.position.set(side * 0.09, 0.1, 0); armGroup.rotation.z = side * 0.15; human.add(armGroup);
+
+    // Shoulder (round)
+    const shoulderGeo = new THREE.SphereGeometry(0.025, 12, 12);
+    const shoulder = new THREE.Mesh(shoulderGeo, armShirtMat);
+    shoulder.position.y = 0.04;
+    armGroup.add(shoulder);
+
+    // Upper arm (shirt sleeve)
+    const upperArmGeo = new THREE.CapsuleGeometry(0.016, 0.08, 8, 16);
+    const upperArm = new THREE.Mesh(upperArmGeo, armShirtMat);
+    armGroup.add(upperArm);
+
+    // Sleeve cuff
+    const cuffGeo = new THREE.CylinderGeometry(0.018, 0.016, 0.015, 12);
+    const cuff = new THREE.Mesh(cuffGeo, armShirtMat);
+    cuff.position.y = -0.05;
+    armGroup.add(cuff);
+
+    // Lower arm (skin)
+    const lowerArmGeo = new THREE.CapsuleGeometry(0.013, 0.065, 8, 16);
+    const lowerArm = new THREE.Mesh(lowerArmGeo, skinMat);
+    lowerArm.position.y = -0.1;
+    armGroup.add(lowerArm);
+
+    // Wrist
+    const wristGeo = new THREE.CylinderGeometry(0.013, 0.012, 0.01, 10);
+    const wrist = new THREE.Mesh(wristGeo, skinMat);
+    wrist.position.y = -0.14;
+    armGroup.add(wrist);
+
+    // Hand
+    const handGeo = new THREE.SphereGeometry(0.018, 12, 12);
+    const hand = new THREE.Mesh(handGeo, skinMat);
+    hand.position.y = -0.155;
+    hand.scale.set(0.65, 0.9, 0.45);
+    armGroup.add(hand);
+
+    // Thumb
+    const thumbGeo = new THREE.CapsuleGeometry(0.005, 0.015, 4, 8);
+    const thumb = new THREE.Mesh(thumbGeo, skinMat);
+    thumb.position.set(side * 0.012, -0.155, 0.01);
+    thumb.rotation.z = side * 0.5;
+    armGroup.add(thumb);
+
+    armGroup.position.set(side * 0.09, 0.1, 0);
+    armGroup.rotation.z = side * 0.15;
+    human.add(armGroup);
   });
 
-  const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.055, 0.018, 16), new THREE.MeshStandardMaterial({ color: '#2c2c2c', roughness: 0.4, metalness: 0.3 }));
-  belt.position.y = 0.025; human.add(belt);
-  const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.015, 0.008), new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.8, roughness: 0.2 }));
-  buckle.position.set(0, 0.025, 0.055); human.add(buckle);
+  // ===== BELT =====
+  const beltGeo = new THREE.CylinderGeometry(0.058, 0.055, 0.018, 16);
+  const beltMat = new THREE.MeshStandardMaterial({ color: '#2c2c2c', roughness: 0.4, metalness: 0.3 });
+  const belt = new THREE.Mesh(beltGeo, beltMat);
+  belt.position.y = 0.025;
+  human.add(belt);
 
-  const hips = new THREE.Mesh(new THREE.CylinderGeometry(0.057, 0.052, 0.04, 16), new THREE.MeshStandardMaterial({ color: appearance.pantsColor, roughness: 0.7 }));
-  hips.position.y = 0.005; human.add(hips);
+  // Belt buckle
+  const buckleGeo = new THREE.BoxGeometry(0.02, 0.015, 0.008);
+  const buckleMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.8, roughness: 0.2 });
+  const buckle = new THREE.Mesh(buckleGeo, buckleMat);
+  buckle.position.set(0, 0.025, 0.055);
+  human.add(buckle);
 
+  // ===== HIPS / PANTS TOP =====
+  const hipsGeo = new THREE.CylinderGeometry(0.057, 0.052, 0.04, 16);
+  const hipsMat = new THREE.MeshStandardMaterial({ color: appearance.pantsColor, roughness: 0.7 });
+  const hips = new THREE.Mesh(hipsGeo, hipsMat);
+  hips.position.y = 0.005;
+  human.add(hips);
+
+  // ===== LEGS (with knees) =====
   const legMat = new THREE.MeshStandardMaterial({ color: appearance.pantsColor, roughness: 0.7 });
+
   [-0.03, 0.03].forEach(x => {
     const legGroup = new THREE.Group();
-    legGroup.add(new THREE.Mesh(new THREE.CapsuleGeometry(0.022, 0.055, 8, 16), legMat));
-    const knee = new THREE.Mesh(new THREE.SphereGeometry(0.022, 10, 10), legMat); knee.position.y = -0.04; legGroup.add(knee);
-    const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.018, 0.05, 8, 16), legMat); shin.position.y = -0.085; legGroup.add(shin);
-    const ankle = new THREE.Mesh(new THREE.SphereGeometry(0.016, 8, 8), legMat); ankle.position.y = -0.115; legGroup.add(ankle);
-    legGroup.position.set(x, -0.05, 0); human.add(legGroup);
+
+    // Upper leg (thigh)
+    const thighGeo = new THREE.CapsuleGeometry(0.022, 0.055, 8, 16);
+    const thigh = new THREE.Mesh(thighGeo, legMat);
+    legGroup.add(thigh);
+
+    // Knee joint
+    const kneeGeo = new THREE.SphereGeometry(0.022, 10, 10);
+    const knee = new THREE.Mesh(kneeGeo, legMat);
+    knee.position.y = -0.04;
+    legGroup.add(knee);
+
+    // Lower leg (shin)
+    const shinGeo = new THREE.CapsuleGeometry(0.018, 0.05, 8, 16);
+    const shin = new THREE.Mesh(shinGeo, legMat);
+    shin.position.y = -0.085;
+    legGroup.add(shin);
+
+    // Ankle
+    const ankleGeo = new THREE.SphereGeometry(0.016, 8, 8);
+    const ankle = new THREE.Mesh(ankleGeo, legMat);
+    ankle.position.y = -0.115;
+    legGroup.add(ankle);
+
+    legGroup.position.set(x, -0.05, 0);
+    human.add(legGroup);
   });
 
+  // ===== SHOES (detailed) =====
   const shoeMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.5, metalness: 0.1 });
   const soleMat = new THREE.MeshStandardMaterial({ color: '#333333', roughness: 0.8 });
+
   [-0.03, 0.03].forEach(x => {
     const shoeGroup = new THREE.Group();
-    shoeGroup.add(new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.018, 0.05), shoeMat));
-    const toe = new THREE.Mesh(new THREE.SphereGeometry(0.017, 8, 8), shoeMat); toe.position.set(0, -0.003, 0.02); toe.scale.set(1, 0.5, 0.8); shoeGroup.add(toe);
-    const sole = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.006, 0.052), soleMat); sole.position.y = -0.012; shoeGroup.add(sole);
-    const lace = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.002, 0.025), new THREE.MeshStandardMaterial({ color: '#ffffff' })); lace.position.set(0, 0.01, 0); shoeGroup.add(lace);
-    shoeGroup.position.set(x, -0.155, 0.008); human.add(shoeGroup);
+
+    // Shoe body
+    const shoeBodyGeo = new THREE.BoxGeometry(0.035, 0.018, 0.05);
+    const shoeBody = new THREE.Mesh(shoeBodyGeo, shoeMat);
+    shoeGroup.add(shoeBody);
+
+    // Shoe toe (rounded front)
+    const toeGeo = new THREE.SphereGeometry(0.017, 8, 8);
+    const toe = new THREE.Mesh(toeGeo, shoeMat);
+    toe.position.set(0, -0.003, 0.02);
+    toe.scale.set(1, 0.5, 0.8);
+    shoeGroup.add(toe);
+
+    // Sole
+    const soleGeo = new THREE.BoxGeometry(0.036, 0.006, 0.052);
+    const sole = new THREE.Mesh(soleGeo, soleMat);
+    sole.position.y = -0.012;
+    shoeGroup.add(sole);
+
+    // Lace detail
+    const laceGeo = new THREE.BoxGeometry(0.008, 0.002, 0.025);
+    const laceMat = new THREE.MeshStandardMaterial({ color: '#ffffff' });
+    const lace = new THREE.Mesh(laceGeo, laceMat);
+    lace.position.set(0, 0.01, 0);
+    shoeGroup.add(lace);
+
+    shoeGroup.position.set(x, -0.155, 0.008);
+    human.add(shoeGroup);
   });
 
-  const labelCanvas = document.createElement('canvas'); labelCanvas.width = 200; labelCanvas.height = 48;
+  // ===== NAME LABEL =====
+  const labelCanvas = document.createElement('canvas');
+  labelCanvas.width = 200;
+  labelCanvas.height = 48;
   const lctx = labelCanvas.getContext('2d')!;
-  if (isHighlighted) { lctx.fillStyle = '#ffff00'; lctx.beginPath(); lctx.roundRect(0, 0, 200, 48, 12); lctx.fill(); lctx.fillStyle = '#000'; }
-  else { lctx.fillStyle = 'rgba(0,0,0,0.85)'; lctx.beginPath(); lctx.roundRect(0, 0, 200, 48, 12); lctx.fill(); lctx.strokeStyle = 'rgba(255,255,255,0.3)'; lctx.lineWidth = 2; lctx.beginPath(); lctx.roundRect(1, 1, 198, 46, 12); lctx.stroke(); lctx.fillStyle = '#ffffff'; }
-  lctx.font = 'bold 24px Arial'; lctx.textAlign = 'center'; lctx.fillText(name, 100, 34);
-  const labelTex = new THREE.CanvasTexture(labelCanvas);
-  const labelSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex, transparent: true }));
-  labelSprite.position.y = 0.5; labelSprite.scale.set(0.35, 0.09, 1); human.add(labelSprite);
 
   if (isHighlighted) {
-    const ring = new THREE.Mesh(new THREE.RingGeometry(0.08, 0.13, 32), new THREE.MeshBasicMaterial({ color: '#ffff00', side: THREE.DoubleSide, transparent: true, opacity: 0.7 }));
-    ring.position.y = -0.16; ring.rotation.x = -Math.PI / 2; human.add(ring);
-    const arrowMesh = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.08, 8), new THREE.MeshBasicMaterial({ color: '#ffff00' }));
-    arrowMesh.position.y = 0.58; arrowMesh.rotation.z = Math.PI; human.add(arrowMesh);
+    lctx.fillStyle = '#ffff00';
+    lctx.beginPath();
+    lctx.roundRect(0, 0, 200, 48, 12);
+    lctx.fill();
+    lctx.fillStyle = '#000';
+  } else {
+    lctx.fillStyle = 'rgba(0,0,0,0.85)';
+    lctx.beginPath();
+    lctx.roundRect(0, 0, 200, 48, 12);
+    lctx.fill();
+    lctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    lctx.lineWidth = 2;
+    lctx.beginPath();
+    lctx.roundRect(1, 1, 198, 46, 12);
+    lctx.stroke();
+    lctx.fillStyle = '#ffffff';
+  }
+  lctx.font = 'bold 24px Arial';
+  lctx.textAlign = 'center';
+  lctx.fillText(name, 100, 34);
+
+  const labelTex = new THREE.CanvasTexture(labelCanvas);
+  const labelSprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({ map: labelTex, transparent: true })
+  );
+  labelSprite.position.y = 0.5;
+  labelSprite.scale.set(0.35, 0.09, 1);
+  human.add(labelSprite);
+
+  // ===== HIGHLIGHT EFFECTS =====
+  if (isHighlighted) {
+    // Ground ring
+    const ringGeo = new THREE.RingGeometry(0.08, 0.13, 32);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: '#ffff00',
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.7,
+    });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.position.y = -0.16;
+    ring.rotation.x = -Math.PI / 2;
+    human.add(ring);
+
+    // Floating arrow above name
+    const arrowGeo = new THREE.ConeGeometry(0.04, 0.08, 8);
+    const arrowMat = new THREE.MeshBasicMaterial({ color: '#ffff00' });
+    const arrowMesh = new THREE.Mesh(arrowGeo, arrowMat);
+    arrowMesh.position.y = 0.58;
+    arrowMesh.rotation.z = Math.PI;
+    human.add(arrowMesh);
   }
 
   return human;
 }
 
-// ==================== CLIPBOARD ====================
+// ==================== END OF PART 2 ====================
+// ==================== PART 3: Improved Clipboard + Train + Domino + Book ====================
+// Place right after Part 2
+
+// ==================== CLIPBOARD (To-Do — Flat with Checks & Script) ====================
 
 function createClipboard(label: string, color: string, isHighlighted: boolean): THREE.Group {
   const clipboard = new THREE.Group();
-  clipboard.add(new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.52, 0.018), new THREE.MeshStandardMaterial({ color: '#6d4c2a', roughness: 0.65, emissive: isHighlighted ? '#ffff00' : '#000', emissiveIntensity: isHighlighted ? 0.25 : 0 })));
-  const edge = new THREE.Mesh(new THREE.BoxGeometry(0.41, 0.53, 0.01), new THREE.MeshStandardMaterial({ color: '#4a3520', roughness: 0.8 })); edge.position.z = -0.01; clipboard.add(edge);
-  const clipMat = new THREE.MeshStandardMaterial({ color: '#8a8a8a', metalness: 0.9, roughness: 0.2 });
-  const clipBase = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.04, 0.025), clipMat); clipBase.position.set(0, 0.28, 0.015); clipboard.add(clipBase);
-  const clipLever = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.015, 0.03), clipMat); clipLever.position.set(0, 0.3, 0.03); clipLever.rotation.x = -0.3; clipboard.add(clipLever);
-  const spring = new THREE.Mesh(new THREE.TorusGeometry(0.008, 0.002, 6, 12, Math.PI), clipMat); spring.position.set(0, 0.285, 0.025); spring.rotation.y = Math.PI / 2; clipboard.add(spring);
 
-  const paperCanvas = document.createElement('canvas'); paperCanvas.width = 200; paperCanvas.height = 300;
-  const pctx = paperCanvas.getContext('2d')!;
-  pctx.fillStyle = '#fefef6'; pctx.fillRect(0, 0, 200, 300);
-  pctx.strokeStyle = '#f0ede4'; pctx.lineWidth = 0.5;
-  for (let y = 0; y < 300; y += 3) { pctx.beginPath(); pctx.moveTo(0, y); pctx.lineTo(200, y); pctx.stroke(); }
-  pctx.fillStyle = color; pctx.fillRect(0, 0, 200, 38);
-  pctx.fillStyle = '#ffffff'; pctx.font = 'bold 18px Arial'; pctx.textAlign = 'center'; pctx.fillText('TO-DO: ' + label, 100, 27);
-  const tasks = [{ text: 'Review notes', done: true }, { text: 'Complete homework', done: true }, { text: 'Practice coding', done: isHighlighted }, { text: 'Read chapter 5', done: false }, { text: 'Submit project', done: false }, { text: 'Study for exam', done: false }, { text: 'Group meeting', done: false }, { text: 'Lab report', done: false }];
-  tasks.forEach((task, i) => {
-    const y = 55 + i * 22;
-    pctx.strokeStyle = '#d4d0c8'; pctx.beginPath(); pctx.moveTo(12, y + 16); pctx.lineTo(188, y + 16); pctx.stroke();
-    pctx.strokeStyle = '#666'; pctx.lineWidth = 1.5; pctx.strokeRect(14, y, 14, 14);
-    if (task.done) {
-      pctx.strokeStyle = '#27ae60'; pctx.lineWidth = 2.5; pctx.beginPath(); pctx.moveTo(16, y + 7); pctx.lineTo(20, y + 12); pctx.lineTo(27, y + 3); pctx.stroke();
-      pctx.fillStyle = '#999'; pctx.font = '12px Arial'; pctx.textAlign = 'left'; pctx.fillText(task.text, 34, y + 12);
-      pctx.strokeStyle = '#999'; pctx.lineWidth = 1; pctx.beginPath(); pctx.moveTo(34, y + 8); pctx.lineTo(34 + pctx.measureText(task.text).width, y + 8); pctx.stroke();
-    } else { pctx.fillStyle = '#2c3e50'; pctx.font = '12px Arial'; pctx.textAlign = 'left'; pctx.fillText(task.text, 34, y + 12); }
+  // Wooden board (thinner, more flat)
+  const boardGeo = new THREE.BoxGeometry(0.4, 0.52, 0.018);
+  const boardMat = new THREE.MeshStandardMaterial({
+    color: '#6d4c2a',
+    roughness: 0.65,
+    emissive: isHighlighted ? '#ffff00' : '#000',
+    emissiveIntensity: isHighlighted ? 0.25 : 0,
   });
-  pctx.fillStyle = '#aaa'; pctx.font = '10px Arial'; pctx.textAlign = 'center'; pctx.fillText('Page 1 of 1', 100, 285);
-  pctx.strokeStyle = '#e74c3c'; pctx.lineWidth = 1; pctx.beginPath(); pctx.moveTo(10, 40); pctx.lineTo(10, 290); pctx.stroke();
-  const paper = new THREE.Mesh(new THREE.PlaneGeometry(0.36, 0.48), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(paperCanvas) })); paper.position.z = 0.011; clipboard.add(paper);
-  clipboard.add(Object.assign(new THREE.Mesh(new THREE.PlaneGeometry(0.37, 0.49), new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.08 })), { position: new THREE.Vector3(0, 0, 0.009) }));
+  clipboard.add(new THREE.Mesh(boardGeo, boardMat));
 
+  // Board edge (dark rim)
+  const edgeGeo = new THREE.BoxGeometry(0.41, 0.53, 0.01);
+  const edgeMat = new THREE.MeshStandardMaterial({ color: '#4a3520', roughness: 0.8 });
+  const edge = new THREE.Mesh(edgeGeo, edgeMat);
+  edge.position.z = -0.01;
+  clipboard.add(edge);
+
+  // Metal clip at top
+  const clipBaseGeo = new THREE.BoxGeometry(0.14, 0.04, 0.025);
+  const clipMat = new THREE.MeshStandardMaterial({ color: '#8a8a8a', metalness: 0.9, roughness: 0.2 });
+  const clipBase = new THREE.Mesh(clipBaseGeo, clipMat);
+  clipBase.position.set(0, 0.28, 0.015);
+  clipboard.add(clipBase);
+
+  // Clip lever
+  const clipLeverGeo = new THREE.BoxGeometry(0.08, 0.015, 0.03);
+  const clipLever = new THREE.Mesh(clipLeverGeo, clipMat);
+  clipLever.position.set(0, 0.3, 0.03);
+  clipLever.rotation.x = -0.3;
+  clipboard.add(clipLever);
+
+  // Clip spring
+  const springGeo = new THREE.TorusGeometry(0.008, 0.002, 6, 12, Math.PI);
+  const spring = new THREE.Mesh(springGeo, clipMat);
+  spring.position.set(0, 0.285, 0.025);
+  spring.rotation.y = Math.PI / 2;
+  clipboard.add(spring);
+
+  // Paper sheet
+  const paperCanvas = document.createElement('canvas');
+  paperCanvas.width = 200;
+  paperCanvas.height = 300;
+  const pctx = paperCanvas.getContext('2d')!;
+
+  // Paper background
+  pctx.fillStyle = '#fefef6';
+  pctx.fillRect(0, 0, 200, 300);
+
+  // Slight paper texture (subtle lines)
+  pctx.strokeStyle = '#f0ede4';
+  pctx.lineWidth = 0.5;
+  for (let y = 0; y < 300; y += 3) {
+    pctx.beginPath();
+    pctx.moveTo(0, y);
+    pctx.lineTo(200, y);
+    pctx.stroke();
+  }
+
+  // Color header band
+  pctx.fillStyle = color;
+  pctx.fillRect(0, 0, 200, 38);
+
+  // Title text on header
+  pctx.fillStyle = '#ffffff';
+  pctx.font = 'bold 18px Arial';
+  pctx.textAlign = 'center';
+  pctx.fillText('TO-DO: ' + label, 100, 27);
+
+  // Ruled lines
+  pctx.strokeStyle = '#d4d0c8';
+  pctx.lineWidth = 0.8;
+  const lineStartY = 55;
+  const lineSpacing = 22;
+  const tasks = [
+    { text: 'Review notes', done: true },
+    { text: 'Complete homework', done: true },
+    { text: 'Practice coding', done: isHighlighted },
+    { text: 'Read chapter 5', done: false },
+    { text: 'Submit project', done: false },
+    { text: 'Study for exam', done: false },
+    { text: 'Group meeting', done: false },
+    { text: 'Lab report', done: false },
+  ];
+
+  tasks.forEach((task, i) => {
+    const y = lineStartY + i * lineSpacing;
+
+    // Ruled line
+    pctx.strokeStyle = '#d4d0c8';
+    pctx.beginPath();
+    pctx.moveTo(12, y + 16);
+    pctx.lineTo(188, y + 16);
+    pctx.stroke();
+
+    // Checkbox
+    pctx.strokeStyle = '#666';
+    pctx.lineWidth = 1.5;
+    pctx.strokeRect(14, y, 14, 14);
+
+    if (task.done) {
+      // Checkmark
+      pctx.strokeStyle = '#27ae60';
+      pctx.lineWidth = 2.5;
+      pctx.beginPath();
+      pctx.moveTo(16, y + 7);
+      pctx.lineTo(20, y + 12);
+      pctx.lineTo(27, y + 3);
+      pctx.stroke();
+
+      // Strikethrough text
+      pctx.fillStyle = '#999';
+      pctx.font = '12px Arial';
+      pctx.textAlign = 'left';
+      pctx.fillText(task.text, 34, y + 12);
+      pctx.strokeStyle = '#999';
+      pctx.lineWidth = 1;
+      pctx.beginPath();
+      pctx.moveTo(34, y + 8);
+      pctx.lineTo(34 + pctx.measureText(task.text).width, y + 8);
+      pctx.stroke();
+    } else {
+      // Normal text
+      pctx.fillStyle = '#2c3e50';
+      pctx.font = '12px Arial';
+      pctx.textAlign = 'left';
+      pctx.fillText(task.text, 34, y + 12);
+    }
+  });
+
+  // Page number at bottom
+  pctx.fillStyle = '#aaa';
+  pctx.font = '10px Arial';
+  pctx.textAlign = 'center';
+  pctx.fillText('Page 1 of 1', 100, 285);
+
+  // Red margin line
+  pctx.strokeStyle = '#e74c3c';
+  pctx.lineWidth = 1;
+  pctx.beginPath();
+  pctx.moveTo(10, 40);
+  pctx.lineTo(10, 290);
+  pctx.stroke();
+
+  const paperTex = new THREE.CanvasTexture(paperCanvas);
+  const paper = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.36, 0.48),
+    new THREE.MeshBasicMaterial({ map: paperTex })
+  );
+  paper.position.z = 0.011;
+  clipboard.add(paper);
+
+  // Paper edge shadow
+  const shadowGeo = new THREE.PlaneGeometry(0.37, 0.49);
+  const shadowMat = new THREE.MeshBasicMaterial({
+    color: '#000000',
+    transparent: true,
+    opacity: 0.08,
+  });
+  const shadow = new THREE.Mesh(shadowGeo, shadowMat);
+  shadow.position.z = 0.009;
+  clipboard.add(shadow);
+
+  // Pencil resting on clipboard
   const pencilGroup = new THREE.Group();
-  pencilGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.18, 6), new THREE.MeshStandardMaterial({ color: '#f4d03f' })));
-  const pencilTip = new THREE.Mesh(new THREE.ConeGeometry(0.006, 0.02, 6), new THREE.MeshStandardMaterial({ color: '#f5deb3' })); pencilTip.position.y = -0.1; pencilGroup.add(pencilTip);
-  const pencilLead = new THREE.Mesh(new THREE.ConeGeometry(0.002, 0.008, 6), new THREE.MeshStandardMaterial({ color: '#333' })); pencilLead.position.y = -0.114; pencilGroup.add(pencilLead);
-  const eraser = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.006, 0.015, 6), new THREE.MeshStandardMaterial({ color: '#e88b8b' })); eraser.position.y = 0.098; pencilGroup.add(eraser);
-  pencilGroup.position.set(0.12, -0.05, 0.02); pencilGroup.rotation.z = 0.8; clipboard.add(pencilGroup);
+  const pencilBodyGeo = new THREE.CylinderGeometry(0.006, 0.006, 0.18, 6);
+  const pencilMat = new THREE.MeshStandardMaterial({ color: '#f4d03f' });
+  const pencilBody = new THREE.Mesh(pencilBodyGeo, pencilMat);
+  pencilGroup.add(pencilBody);
 
-  if (isHighlighted) { clipboard.add(new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.56, 0.04), new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 }))); }
+  const pencilTipGeo = new THREE.ConeGeometry(0.006, 0.02, 6);
+  const pencilTipMat = new THREE.MeshStandardMaterial({ color: '#f5deb3' });
+  const pencilTip = new THREE.Mesh(pencilTipGeo, pencilTipMat);
+  pencilTip.position.y = -0.1;
+  pencilGroup.add(pencilTip);
+
+  const pencilLeadGeo = new THREE.ConeGeometry(0.002, 0.008, 6);
+  const pencilLeadMat = new THREE.MeshStandardMaterial({ color: '#333' });
+  const pencilLead = new THREE.Mesh(pencilLeadGeo, pencilLeadMat);
+  pencilLead.position.y = -0.114;
+  pencilGroup.add(pencilLead);
+
+  const eraserGeo = new THREE.CylinderGeometry(0.007, 0.006, 0.015, 6);
+  const eraserMat = new THREE.MeshStandardMaterial({ color: '#e88b8b' });
+  const eraser = new THREE.Mesh(eraserGeo, eraserMat);
+  eraser.position.y = 0.098;
+  pencilGroup.add(eraser);
+
+  pencilGroup.position.set(0.12, -0.05, 0.02);
+  pencilGroup.rotation.z = 0.8;
+  clipboard.add(pencilGroup);
+
+  // Highlight glow
+  if (isHighlighted) {
+    const glowGeo = new THREE.BoxGeometry(0.44, 0.56, 0.04);
+    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 });
+    clipboard.add(new THREE.Mesh(glowGeo, glowMat));
+  }
+
   return clipboard;
 }
 
-// ==================== TRAIN CAR ====================
+// ==================== TRAIN CAR (More Realistic) ====================
 
 function createTrainCar(isEngine: boolean, color: string, label: string, isHighlighted: boolean): THREE.Group {
   const train = new THREE.Group();
-  const bodyMat = new THREE.MeshStandardMaterial({ color, metalness: 0.35, roughness: 0.6, emissive: isHighlighted ? '#ffff00' : '#000', emissiveIntensity: isHighlighted ? 0.4 : 0 });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.34, 0.3), bodyMat); body.position.y = 0.12; train.add(body);
-  const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.71, 0.025, 0.305), new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.5 })); stripe.position.y = 0.18; train.add(stripe);
-  const roofMat = new THREE.MeshStandardMaterial({ color: '#1a1a2e', metalness: 0.4 });
-  train.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.04, 0.26), roofMat), { position: new THREE.Vector3(0, 0.31, 0) }));
-  const roofCurve = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.64, 16, 1, false, 0, Math.PI), roofMat);
-  roofCurve.position.y = 0.31; roofCurve.rotation.z = Math.PI / 2; roofCurve.scale.y = 0.25; train.add(roofCurve);
-  train.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.04, 0.24), new THREE.MeshStandardMaterial({ color: '#111111', metalness: 0.6 })), { position: new THREE.Vector3(0, -0.06, 0) }));
 
+  // Main body (rounded edges feel)
+  const bodyGeo = new THREE.BoxGeometry(0.7, 0.34, 0.3);
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.35,
+    roughness: 0.6,
+    emissive: isHighlighted ? '#ffff00' : '#000',
+    emissiveIntensity: isHighlighted ? 0.4 : 0,
+  });
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.position.y = 0.12;
+  train.add(body);
+
+  // Body stripe (decorative line)
+  const stripeGeo = new THREE.BoxGeometry(0.71, 0.025, 0.305);
+  const stripeMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.5 });
+  const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+  stripe.position.y = 0.18;
+  train.add(stripe);
+
+  // Roof (curved look)
+  const roofGeo = new THREE.BoxGeometry(0.64, 0.04, 0.26);
+  const roofMat = new THREE.MeshStandardMaterial({ color: '#1a1a2e', metalness: 0.4 });
+  const roof = new THREE.Mesh(roofGeo, roofMat);
+  roof.position.y = 0.31;
+  train.add(roof);
+
+  // Roof curve
+  const roofCurveGeo = new THREE.CylinderGeometry(0.13, 0.13, 0.64, 16, 1, false, 0, Math.PI);
+  const roofCurve = new THREE.Mesh(roofCurveGeo, roofMat);
+  roofCurve.position.y = 0.31;
+  roofCurve.rotation.z = Math.PI / 2;
+  roofCurve.scale.y = 0.25;
+  train.add(roofCurve);
+
+  // Undercarriage
+  const underGeo = new THREE.BoxGeometry(0.65, 0.04, 0.24);
+  const underMat = new THREE.MeshStandardMaterial({ color: '#111111', metalness: 0.6 });
+  const under = new THREE.Mesh(underGeo, underMat);
+  under.position.y = -0.06;
+  train.add(under);
+
+  // Wheels (detailed)
+  const wheelGeo = new THREE.CylinderGeometry(0.058, 0.058, 0.025, 24);
   const wheelMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', metalness: 0.7, roughness: 0.3 });
+  const hubCapGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.028, 16);
   const hubCapMat = new THREE.MeshStandardMaterial({ color: '#d4d4d4', metalness: 0.9, roughness: 0.1 });
+  const wheelRimGeo = new THREE.TorusGeometry(0.055, 0.005, 8, 24);
   const wheelRimMat = new THREE.MeshStandardMaterial({ color: '#888', metalness: 0.8 });
-  [[-0.22, -0.06, 0.15], [0.22, -0.06, 0.15], [-0.22, -0.06, -0.15], [0.22, -0.06, -0.15]].forEach(([wx, wy, wz]) => {
-    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.058, 0.025, 24), wheelMat); wheel.rotation.x = Math.PI / 2; wheel.position.set(wx, wy, wz); train.add(wheel);
-    const hubCap = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.028, 16), hubCapMat); hubCap.rotation.x = Math.PI / 2; hubCap.position.set(wx, wy, wz); train.add(hubCap);
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.005, 8, 24), wheelRimMat); rim.position.set(wx, wy, wz > 0 ? wz + 0.013 : wz - 0.013); rim.rotation.x = Math.PI / 2; train.add(rim);
+
+  const wheelPositions: [number, number, number][] = [
+    [-0.22, -0.06, 0.15], [0.22, -0.06, 0.15],
+    [-0.22, -0.06, -0.15], [0.22, -0.06, -0.15],
+  ];
+  wheelPositions.forEach(([wx, wy, wz]) => {
+    const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+    wheel.rotation.x = Math.PI / 2;
+    wheel.position.set(wx, wy, wz);
+    train.add(wheel);
+
+    const hubCap = new THREE.Mesh(hubCapGeo, hubCapMat);
+    hubCap.rotation.x = Math.PI / 2;
+    hubCap.position.set(wx, wy, wz);
+    train.add(hubCap);
+
+    const rim = new THREE.Mesh(wheelRimGeo, wheelRimMat);
+    rim.position.set(wx, wy, wz > 0 ? wz + 0.013 : wz - 0.013);
+    rim.rotation.x = Math.PI / 2;
+    train.add(rim);
+
+    // Wheel spokes
+    const spokeGeo = new THREE.BoxGeometry(0.003, 0.09, 0.003);
+    const spokeMat = new THREE.MeshStandardMaterial({ color: '#999' });
     [0, Math.PI / 3, Math.PI * 2 / 3].forEach(angle => {
-      const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.003, 0.09, 0.003), new THREE.MeshStandardMaterial({ color: '#999' }));
-      spoke.position.set(wx, wy, wz > 0 ? wz + 0.013 : wz - 0.013); spoke.rotation.z = angle; train.add(spoke);
+      const spoke = new THREE.Mesh(spokeGeo, spokeMat);
+      spoke.position.set(wx, wy, wz > 0 ? wz + 0.013 : wz - 0.013);
+      spoke.rotation.z = angle;
+      train.add(spoke);
     });
   });
 
+  // Windows
   if (!isEngine) {
-    const windowMat = new THREE.MeshStandardMaterial({ color: '#87ceeb', side: THREE.DoubleSide, metalness: 0.4, roughness: 0.2 });
+    const windowGeo = new THREE.PlaneGeometry(0.09, 0.08);
+    const windowMat = new THREE.MeshStandardMaterial({
+      color: '#87ceeb',
+      side: THREE.DoubleSide,
+      metalness: 0.4,
+      roughness: 0.2,
+    });
     const windowFrameMat = new THREE.MeshStandardMaterial({ color: '#555', metalness: 0.6 });
+
     [-0.2, 0, 0.2].forEach(x => {
-      train.add(Object.assign(new THREE.Mesh(new THREE.PlaneGeometry(0.09, 0.08), windowMat), { position: new THREE.Vector3(x, 0.17, 0.152) }));
-      train.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.09, 0.005), windowFrameMat), { position: new THREE.Vector3(x, 0.17, 0.153) }));
-      train.add(Object.assign(new THREE.Mesh(new THREE.PlaneGeometry(0.09, 0.08), windowMat), { position: new THREE.Vector3(x, 0.17, -0.152) }));
+      // Front windows
+      const wF = new THREE.Mesh(windowGeo, windowMat);
+      wF.position.set(x, 0.17, 0.152);
+      train.add(wF);
+
+      // Window frame front
+      const frameFGeo = new THREE.BoxGeometry(0.1, 0.09, 0.005);
+      const frameF = new THREE.Mesh(frameFGeo, windowFrameMat);
+      frameF.position.set(x, 0.17, 0.153);
+      train.add(frameF);
+
+      // Back windows
+      const wB = new THREE.Mesh(windowGeo, windowMat);
+      wB.position.set(x, 0.17, -0.152);
+      train.add(wB);
     });
   }
 
+  // Engine specific parts
   if (isEngine) {
-    const boiler = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.13, 0.28, 24), new THREE.MeshStandardMaterial({ color: '#b71c1c', metalness: 0.45, roughness: 0.5 }));
-    boiler.rotation.z = Math.PI / 2; boiler.position.set(0.5, 0.12, 0); train.add(boiler);
+    // Boiler (main cylinder)
+    const boilerGeo = new THREE.CylinderGeometry(0.12, 0.13, 0.28, 24);
+    const boilerMat = new THREE.MeshStandardMaterial({ color: '#b71c1c', metalness: 0.45, roughness: 0.5 });
+    const boiler = new THREE.Mesh(boilerGeo, boilerMat);
+    boiler.rotation.z = Math.PI / 2;
+    boiler.position.set(0.5, 0.12, 0);
+    train.add(boiler);
+
+    // Boiler bands (metal rings)
+    const bandGeo = new THREE.TorusGeometry(0.132, 0.008, 8, 24);
     const bandMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.8 });
-    [0.38, 0.48, 0.58].forEach(x => { const band = new THREE.Mesh(new THREE.TorusGeometry(0.132, 0.008, 8, 24), bandMat); band.position.set(x, 0.12, 0); band.rotation.y = Math.PI / 2; train.add(band); });
-    train.add(Object.assign(new THREE.Mesh(new THREE.CircleGeometry(0.12, 24), new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.6, side: THREE.DoubleSide })), { position: new THREE.Vector3(0.64, 0.12, 0), rotation: new THREE.Euler(0, Math.PI / 2, 0) }));
-    const headlight = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.04, 16), new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.7 }));
-    headlight.position.set(0.66, 0.2, 0); headlight.rotation.z = Math.PI / 2; train.add(headlight);
-    train.add(Object.assign(new THREE.Mesh(new THREE.CircleGeometry(0.025, 16), new THREE.MeshBasicMaterial({ color: '#ffffcc' })), { position: new THREE.Vector3(0.68, 0.2, 0), rotation: new THREE.Euler(0, Math.PI / 2, 0) }));
-    const chimneyMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', metalness: 0.5 });
-    train.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.045, 0.16, 12), chimneyMat), { position: new THREE.Vector3(0.2, 0.4, 0) }));
-    train.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.035, 0.02, 12), chimneyMat), { position: new THREE.Vector3(0.2, 0.49, 0) }));
-    const smokeMat = new THREE.MeshBasicMaterial({ color: '#bdc3c7', transparent: true, opacity: 0.35 });
-    [{ y: 0.55, s: 0.04 }, { y: 0.62, s: 0.055 }, { y: 0.7, s: 0.07 }, { y: 0.8, s: 0.08 }].forEach(({ y, s }) => {
-      const smoke = new THREE.Mesh(new THREE.SphereGeometry(s, 8, 8), smokeMat); smoke.position.set(0.2 + (y - 0.55) * 0.3, y, (Math.random() - 0.5) * 0.08); train.add(smoke);
+    [0.38, 0.48, 0.58].forEach(x => {
+      const band = new THREE.Mesh(bandGeo, bandMat);
+      band.position.set(x, 0.12, 0);
+      band.rotation.y = Math.PI / 2;
+      train.add(band);
     });
-    const catcherGroup = new THREE.Group(); catcherGroup.add(new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.25), new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.6 })));
-    [-0.08, 0.08].forEach(z => { const bar = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, 0.015), new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.6 })); bar.position.set(0.02, -0.03, z); bar.rotation.y = z > 0 ? 0.3 : -0.3; catcherGroup.add(bar); });
-    catcherGroup.position.set(0.68, -0.02, 0); train.add(catcherGroup);
-    train.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#c0392b', metalness: 0.5 })), { position: new THREE.Vector3(0.42, 0.25, 0) }));
+
+    // Boiler front plate
+    const frontPlateGeo = new THREE.CircleGeometry(0.12, 24);
+    const frontPlateMat = new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.6, side: THREE.DoubleSide });
+    const frontPlate = new THREE.Mesh(frontPlateGeo, frontPlateMat);
+    frontPlate.position.set(0.64, 0.12, 0);
+    frontPlate.rotation.y = Math.PI / 2;
+    train.add(frontPlate);
+
+    // Headlight
+    const headlightGeo = new THREE.CylinderGeometry(0.03, 0.035, 0.04, 16);
+    const headlightMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.7 });
+    const headlight = new THREE.Mesh(headlightGeo, headlightMat);
+    headlight.position.set(0.66, 0.2, 0);
+    headlight.rotation.z = Math.PI / 2;
+    train.add(headlight);
+
+    // Headlight lens
+    const lensGeo = new THREE.CircleGeometry(0.025, 16);
+    const lensMat = new THREE.MeshBasicMaterial({ color: '#ffffcc' });
+    const lens = new THREE.Mesh(lensGeo, lensMat);
+    lens.position.set(0.68, 0.2, 0);
+    lens.rotation.y = Math.PI / 2;
+    train.add(lens);
+
+    // Chimney (smokestack)
+    const chimneyGeo = new THREE.CylinderGeometry(0.03, 0.045, 0.16, 12);
+    const chimneyMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', metalness: 0.5 });
+    const chimney = new THREE.Mesh(chimneyGeo, chimneyMat);
+    chimney.position.set(0.2, 0.4, 0);
+    train.add(chimney);
+
+    // Chimney cap
+    const capGeo = new THREE.CylinderGeometry(0.045, 0.035, 0.02, 12);
+    const cap = new THREE.Mesh(capGeo, chimneyMat);
+    cap.position.set(0.2, 0.49, 0);
+    train.add(cap);
+
+    // Smoke puffs (3D spheres)
+    const smokeMat = new THREE.MeshBasicMaterial({ color: '#bdc3c7', transparent: true, opacity: 0.35 });
+    [
+      { y: 0.55, s: 0.04 },
+      { y: 0.62, s: 0.055 },
+      { y: 0.7, s: 0.07 },
+      { y: 0.8, s: 0.08 },
+    ].forEach(({ y, s }) => {
+      const smokeGeo = new THREE.SphereGeometry(s, 8, 8);
+      const smoke = new THREE.Mesh(smokeGeo, smokeMat);
+      smoke.position.set(0.2 + (y - 0.55) * 0.3, y, (Math.random() - 0.5) * 0.08);
+      train.add(smoke);
+    });
+
+    // Cow catcher (front guard)
+    const catcherGroup = new THREE.Group();
+    const catcherMat = new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.6 });
+    const catcherBaseGeo = new THREE.BoxGeometry(0.06, 0.1, 0.25);
+    const catcherBase = new THREE.Mesh(catcherBaseGeo, catcherMat);
+    catcherGroup.add(catcherBase);
+
+    // V-shape bars
+    [-0.08, 0.08].forEach(z => {
+      const barGeo = new THREE.BoxGeometry(0.08, 0.04, 0.015);
+      const bar = new THREE.Mesh(barGeo, catcherMat);
+      bar.position.set(0.02, -0.03, z);
+      bar.rotation.y = z > 0 ? 0.3 : -0.3;
+      catcherGroup.add(bar);
+    });
+
+    catcherGroup.position.set(0.68, -0.02, 0);
+    train.add(catcherGroup);
+
+    // Steam dome
+    const domeGeo = new THREE.SphereGeometry(0.04, 12, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+    const domeMat = new THREE.MeshStandardMaterial({ color: '#c0392b', metalness: 0.5 });
+    const dome = new THREE.Mesh(domeGeo, domeMat);
+    dome.position.set(0.42, 0.25, 0);
+    train.add(dome);
   }
 
+  // Coupling hooks (both sides)
+  const hookGeo = new THREE.BoxGeometry(0.04, 0.025, 0.025);
   const hookMat = new THREE.MeshStandardMaterial({ color: '#666', metalness: 0.8, roughness: 0.2 });
   [-0.37, 0.37].forEach(x => {
-    train.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.025, 0.025), hookMat), { position: new THREE.Vector3(x, 0.02, 0) }));
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.015, 0.004, 6, 12), hookMat); ring.position.set(x > 0 ? x + 0.03 : x - 0.03, 0.02, 0); ring.rotation.y = Math.PI / 2; train.add(ring);
+    const hook = new THREE.Mesh(hookGeo, hookMat);
+    hook.position.set(x, 0.02, 0);
+    train.add(hook);
+
+    // Hook ring
+    const ringGeo = new THREE.TorusGeometry(0.015, 0.004, 6, 12);
+    const ring = new THREE.Mesh(ringGeo, hookMat);
+    ring.position.set(x > 0 ? x + 0.03 : x - 0.03, 0.02, 0);
+    ring.rotation.y = Math.PI / 2;
+    train.add(ring);
   });
 
-  const canvas = document.createElement('canvas'); canvas.width = 160; canvas.height = 48;
+  // Label
+  const canvas = document.createElement('canvas');
+  canvas.width = 160;
+  canvas.height = 48;
   const ctx = canvas.getContext('2d')!;
-  ctx.fillStyle = isHighlighted ? 'rgba(255,255,0,0.9)' : 'rgba(0,0,0,0.7)'; ctx.beginPath(); ctx.roundRect(0, 0, 160, 48, 10); ctx.fill();
-  ctx.fillStyle = isHighlighted ? '#000' : '#fff'; ctx.font = 'bold 26px Arial'; ctx.textAlign = 'center'; ctx.fillText(label, 80, 34);
-  const labelSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true }));
-  labelSprite.position.y = 0.5; labelSprite.scale.set(0.45, 0.14, 1); train.add(labelSprite);
+  ctx.fillStyle = isHighlighted ? 'rgba(255,255,0,0.9)' : 'rgba(0,0,0,0.7)';
+  ctx.beginPath();
+  ctx.roundRect(0, 0, 160, 48, 10);
+  ctx.fill();
+  ctx.fillStyle = isHighlighted ? '#000' : '#fff';
+  ctx.font = 'bold 26px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, 80, 34);
+  const labelTex = new THREE.CanvasTexture(canvas);
+  const labelSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex, transparent: true }));
+  labelSprite.position.y = 0.5;
+  labelSprite.scale.set(0.45, 0.14, 1);
+  train.add(labelSprite);
 
-  if (isHighlighted) { const glow = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.4, 0.35), new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.1 })); glow.position.y = 0.12; train.add(glow); }
+  // Highlight
+  if (isHighlighted) {
+    const glowGeo = new THREE.BoxGeometry(0.75, 0.4, 0.35);
+    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.1 });
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    glow.position.y = 0.12;
+    train.add(glow);
+  }
+
   return train;
 }
 
-// ==================== DOMINO ====================
+// ==================== DOMINO (Improved) ====================
 
 function createDomino(value: string, isHighlighted: boolean): THREE.Group {
   const domino = new THREE.Group();
-  domino.add(new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.48, 0.07), new THREE.MeshStandardMaterial({ color: isHighlighted ? '#1abc9c' : '#f5f0e8', roughness: 0.4, metalness: 0.05, emissive: isHighlighted ? '#1abc9c' : '#000', emissiveIntensity: isHighlighted ? 0.25 : 0 })));
-  const border = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.49, 0.06), new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.5 })); border.position.z = -0.01; domino.add(border);
-  const groove = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.012, 0.015), new THREE.MeshStandardMaterial({ color: '#2c3e50', roughness: 0.3 })); groove.position.z = 0.03; domino.add(groove);
-  [[-0.09, 0.21], [0.09, 0.21], [-0.09, -0.21], [0.09, -0.21]].forEach(([x, y]) => { domino.add(Object.assign(new THREE.Mesh(new THREE.CircleGeometry(0.008, 8), new THREE.MeshBasicMaterial({ color: '#c0392b', side: THREE.DoubleSide })), { position: new THREE.Vector3(x, y, 0.036) })); });
+
+  // Main tile (thicker, more solid)
+  const tileGeo = new THREE.BoxGeometry(0.24, 0.48, 0.07);
+  const tileMat = new THREE.MeshStandardMaterial({
+    color: isHighlighted ? '#1abc9c' : '#f5f0e8',
+    roughness: 0.4,
+    metalness: 0.05,
+    emissive: isHighlighted ? '#1abc9c' : '#000',
+    emissiveIntensity: isHighlighted ? 0.25 : 0,
+  });
+  domino.add(new THREE.Mesh(tileGeo, tileMat));
+
+  // Rounded edge effect (border)
+  const borderGeo = new THREE.BoxGeometry(0.25, 0.49, 0.06);
+  const borderMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.5 });
+  const border = new THREE.Mesh(borderGeo, borderMat);
+  border.position.z = -0.01;
+  domino.add(border);
+
+  // Center dividing line (recessed groove)
+  const grooveGeo = new THREE.BoxGeometry(0.2, 0.012, 0.015);
+  const grooveMat = new THREE.MeshStandardMaterial({ color: '#2c3e50', roughness: 0.3 });
+  const groove = new THREE.Mesh(grooveGeo, grooveMat);
+  groove.position.z = 0.03;
+  domino.add(groove);
+
+  // Decorative corner dots
+  const cornerDotGeo = new THREE.CircleGeometry(0.008, 8);
+  const cornerDotMat = new THREE.MeshBasicMaterial({ color: '#c0392b', side: THREE.DoubleSide });
+  [[-0.09, 0.21], [0.09, 0.21], [-0.09, -0.21], [0.09, -0.21]].forEach(([x, y]) => {
+    const cornerDot = new THREE.Mesh(cornerDotGeo, cornerDotMat);
+    cornerDot.position.set(x, y, 0.036);
+    domino.add(cornerDot);
+  });
+
+  // Dots based on value
   const val = parseInt(value) || 1;
-  const dotMat = new THREE.MeshStandardMaterial({ color: isHighlighted ? '#fff' : '#1a1a1a', roughness: 0.3, metalness: 0.1 });
-  const dotPositions: Record<number, [number, number][]> = { 1: [[0, 0.14]], 2: [[-0.05, 0.2], [0.05, 0.08]], 3: [[-0.05, 0.2], [0, 0.14], [0.05, 0.08]], 4: [[-0.05, 0.2], [0.05, 0.2], [-0.05, 0.08], [0.05, 0.08]] };
+  const dotGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.015, 16);
+  const dotMat = new THREE.MeshStandardMaterial({
+    color: isHighlighted ? '#fff' : '#1a1a1a',
+    roughness: 0.3,
+    metalness: 0.1,
+  });
+
+  // Dot positions for top half
+  const dotPositions: Record<number, [number, number][]> = {
+    1: [[0, 0.14]],
+    2: [[-0.05, 0.2], [0.05, 0.08]],
+    3: [[-0.05, 0.2], [0, 0.14], [0.05, 0.08]],
+    4: [[-0.05, 0.2], [0.05, 0.2], [-0.05, 0.08], [0.05, 0.08]],
+  };
+
   const topDots = dotPositions[Math.min(val, 4)] || dotPositions[1];
+
+  // Top half dots
   topDots.forEach(([x, y]) => {
-    const dot = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.015, 16), dotMat); dot.position.set(x, y, 0.028); dot.rotation.x = Math.PI / 2; domino.add(dot);
-    domino.add(Object.assign(new THREE.Mesh(new THREE.CircleGeometry(0.022, 12), new THREE.MeshBasicMaterial({ color: '#ddd', side: THREE.DoubleSide })), { position: new THREE.Vector3(x, y, 0.035) }));
+    const dot = new THREE.Mesh(dotGeo, dotMat);
+    dot.position.set(x, y, 0.028);
+    dot.rotation.x = Math.PI / 2;
+    domino.add(dot);
+
+    // Dot recess
+    const recessGeo = new THREE.CircleGeometry(0.022, 12);
+    const recessMat = new THREE.MeshBasicMaterial({ color: '#ddd', side: THREE.DoubleSide });
+    const recess = new THREE.Mesh(recessGeo, recessMat);
+    recess.position.set(x, y, 0.035);
+    domino.add(recess);
   });
+
+  // Bottom half dots (mirrored)
   topDots.forEach(([x, y]) => {
-    const dot = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.015, 16), dotMat); dot.position.set(-x, -y, 0.028); dot.rotation.x = Math.PI / 2; domino.add(dot);
-    domino.add(Object.assign(new THREE.Mesh(new THREE.CircleGeometry(0.022, 12), new THREE.MeshBasicMaterial({ color: '#ddd', side: THREE.DoubleSide })), { position: new THREE.Vector3(-x, -y, 0.035) }));
+    const dot = new THREE.Mesh(dotGeo, dotMat);
+    dot.position.set(-x, -y, 0.028);
+    dot.rotation.x = Math.PI / 2;
+    domino.add(dot);
+
+    const recessGeo = new THREE.CircleGeometry(0.022, 12);
+    const recessMat = new THREE.MeshBasicMaterial({ color: '#ddd', side: THREE.DoubleSide });
+    const recess = new THREE.Mesh(recessGeo, recessMat);
+    recess.position.set(-x, -y, 0.035);
+    domino.add(recess);
   });
-  const numCanvas = document.createElement('canvas'); numCanvas.width = 32; numCanvas.height = 32;
-  const nctx = numCanvas.getContext('2d')!; nctx.fillStyle = isHighlighted ? '#fff' : '#666'; nctx.font = 'bold 20px Arial'; nctx.textAlign = 'center'; nctx.fillText(value, 16, 24);
-  const numSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(numCanvas), transparent: true })); numSprite.position.set(0.14, 0, 0); numSprite.scale.set(0.08, 0.08, 1); domino.add(numSprite);
-  if (isHighlighted) { domino.add(new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.52, 0.03), new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.2 }))); }
+
+  // Value number (small, on side)
+  const numCanvas = document.createElement('canvas');
+  numCanvas.width = 32;
+  numCanvas.height = 32;
+  const nctx = numCanvas.getContext('2d')!;
+  nctx.fillStyle = isHighlighted ? '#fff' : '#666';
+  nctx.font = 'bold 20px Arial';
+  nctx.textAlign = 'center';
+  nctx.fillText(value, 16, 24);
+  const numTex = new THREE.CanvasTexture(numCanvas);
+  const numSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: numTex, transparent: true }));
+  numSprite.position.set(0.14, 0, 0);
+  numSprite.scale.set(0.08, 0.08, 1);
+  domino.add(numSprite);
+
+  // Highlight glow
+  if (isHighlighted) {
+    const glowGeo = new THREE.BoxGeometry(0.28, 0.52, 0.03);
+    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.2 });
+    domino.add(new THREE.Mesh(glowGeo, glowMat));
+  }
+
   return domino;
 }
 
-// ==================== BOOK ====================
+// ==================== BOOK (More Realistic) ====================
 
 function createBook(label: string, color: string, isHighlighted: boolean): THREE.Group {
   const book = new THREE.Group();
-  book.add(new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.075, 0.4), new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.05, emissive: isHighlighted ? '#ffff00' : '#000', emissiveIntensity: isHighlighted ? 0.3 : 0 })));
+
+  // Cover (hardback)
+  const coverGeo = new THREE.BoxGeometry(0.58, 0.075, 0.4);
+  const coverMat = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.5,
+    metalness: 0.05,
+    emissive: isHighlighted ? '#ffff00' : '#000',
+    emissiveIntensity: isHighlighted ? 0.3 : 0,
+  });
+  book.add(new THREE.Mesh(coverGeo, coverMat));
+
+  // Cover emboss edges
+  const topEdgeGeo = new THREE.BoxGeometry(0.58, 0.003, 0.4);
   const edgeMat = new THREE.MeshStandardMaterial({ color, roughness: 0.3, metalness: 0.15 });
-  book.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.003, 0.4), edgeMat), { position: new THREE.Vector3(0, 0.039, 0) }));
-  book.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.003, 0.4), edgeMat), { position: new THREE.Vector3(0, -0.039, 0) }));
-  const pages = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.06, 0.37), new THREE.MeshStandardMaterial({ color: '#f5f0e0', roughness: 0.9 })); pages.position.x = 0.015; book.add(pages);
-  const plCanvas = document.createElement('canvas'); plCanvas.width = 16; plCanvas.height = 128;
-  const plctx = plCanvas.getContext('2d')!; plctx.fillStyle = '#f5f0e0'; plctx.fillRect(0, 0, 16, 128);
-  for (let y = 0; y < 128; y += 2) { plctx.fillStyle = y % 4 === 0 ? '#e8e0d0' : '#f0e8d8'; plctx.fillRect(0, y, 16, 1); }
-  const pageSide = new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.37), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(plCanvas) })); pageSide.position.set(0.29, 0, 0); pageSide.rotation.y = Math.PI / 2; book.add(pageSide);
-  book.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.08, 0.4), new THREE.MeshStandardMaterial({ color: new THREE.Color(color).multiplyScalar(0.7), roughness: 0.4 })), { position: new THREE.Vector3(-0.3, 0, 0) }));
+  const topEdge = new THREE.Mesh(topEdgeGeo, edgeMat);
+  topEdge.position.y = 0.039;
+  book.add(topEdge);
+  const bottomEdge = new THREE.Mesh(topEdgeGeo, edgeMat);
+  bottomEdge.position.y = -0.039;
+  book.add(bottomEdge);
+
+  // Pages (visible from side, cream colored)
+  const pagesGeo = new THREE.BoxGeometry(0.54, 0.06, 0.37);
+  const pagesMat = new THREE.MeshStandardMaterial({ color: '#f5f0e0', roughness: 0.9 });
+  const pages = new THREE.Mesh(pagesGeo, pagesMat);
+  pages.position.x = 0.015;
+  book.add(pages);
+
+  // Page lines (visible from side)
+  const pageLinesCanvas = document.createElement('canvas');
+  pageLinesCanvas.width = 16;
+  pageLinesCanvas.height = 128;
+  const plctx = pageLinesCanvas.getContext('2d')!;
+  plctx.fillStyle = '#f5f0e0';
+  plctx.fillRect(0, 0, 16, 128);
+  for (let y = 0; y < 128; y += 2) {
+    plctx.fillStyle = y % 4 === 0 ? '#e8e0d0' : '#f0e8d8';
+    plctx.fillRect(0, y, 16, 1);
+  }
+  const pageLinesTex = new THREE.CanvasTexture(pageLinesCanvas);
+  const pageSide = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.06, 0.37),
+    new THREE.MeshBasicMaterial({ map: pageLinesTex })
+  );
+  pageSide.position.set(0.29, 0, 0);
+  pageSide.rotation.y = Math.PI / 2;
+  book.add(pageSide);
+
+  // Spine (rounded look)
+  const spineGeo = new THREE.BoxGeometry(0.025, 0.08, 0.4);
+  const spineMat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(color).multiplyScalar(0.7),
+    roughness: 0.4,
+  });
+  const spine = new THREE.Mesh(spineGeo, spineMat);
+  spine.position.x = -0.3;
+  book.add(spine);
+
+  // Spine ridges
+  const ridgeGeo = new THREE.BoxGeometry(0.003, 0.082, 0.01);
   const ridgeMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.6 });
-  [-0.15, -0.05, 0.05, 0.15].forEach(z => { book.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.003, 0.082, 0.01), ridgeMat), { position: new THREE.Vector3(-0.313, 0, z) })); });
-  const spCanvas = document.createElement('canvas'); spCanvas.width = 32; spCanvas.height = 160;
-  const spctx = spCanvas.getContext('2d')!; spctx.fillStyle = '#ffd700'; spctx.save(); spctx.translate(16, 80); spctx.rotate(-Math.PI / 2); spctx.font = 'bold 18px serif'; spctx.textAlign = 'center'; spctx.fillText(label, 0, 6); spctx.restore();
-  const spLabel = new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.35), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(spCanvas), transparent: true })); spLabel.position.set(-0.314, 0, 0); spLabel.rotation.y = -Math.PI / 2; book.add(spLabel);
-  const cvCanvas = document.createElement('canvas'); cvCanvas.width = 200; cvCanvas.height = 160;
-  const cvctx = cvCanvas.getContext('2d')!; cvctx.strokeStyle = '#ffd700'; cvctx.lineWidth = 4; cvctx.strokeRect(10, 10, 180, 140); cvctx.lineWidth = 1; cvctx.strokeRect(18, 18, 164, 124);
-  cvctx.fillStyle = '#ffd700'; cvctx.font = 'bold 28px serif'; cvctx.textAlign = 'center'; cvctx.fillText(label, 100, 85); cvctx.font = '14px serif'; cvctx.fillText('TEXTBOOK', 100, 110);
-  cvctx.lineWidth = 2; cvctx.beginPath(); cvctx.moveTo(50, 55); cvctx.lineTo(150, 55); cvctx.stroke();
-  const cvLabel = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.3), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cvCanvas), transparent: true })); cvLabel.position.y = 0.039; cvLabel.rotation.x = -Math.PI / 2; book.add(cvLabel);
-  book.add(Object.assign(new THREE.Mesh(new THREE.PlaneGeometry(0.015, 0.12), new THREE.MeshStandardMaterial({ color: '#e74c3c', side: THREE.DoubleSide, roughness: 0.6 })), { position: new THREE.Vector3(0.1, 0, 0.2), rotation: new THREE.Euler(0.1, 0, 0) }));
-  if (isHighlighted) { book.add(new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.1, 0.44), new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 }))); }
+  [-0.15, -0.05, 0.05, 0.15].forEach(z => {
+    const ridge = new THREE.Mesh(ridgeGeo, ridgeMat);
+    ridge.position.set(-0.313, 0, z);
+    book.add(ridge);
+  });
+
+  // Spine text
+  const spineCanvas = document.createElement('canvas');
+  spineCanvas.width = 32;
+  spineCanvas.height = 160;
+  const sctx = spineCanvas.getContext('2d')!;
+  sctx.fillStyle = '#ffd700';
+  sctx.save();
+  sctx.translate(16, 80);
+  sctx.rotate(-Math.PI / 2);
+  sctx.font = 'bold 18px serif';
+  sctx.textAlign = 'center';
+  sctx.fillText(label, 0, 6);
+  sctx.restore();
+  const spineTex = new THREE.CanvasTexture(spineCanvas);
+  const spineLabel = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.06, 0.35),
+    new THREE.MeshBasicMaterial({ map: spineTex, transparent: true })
+  );
+  spineLabel.position.set(-0.314, 0, 0);
+  spineLabel.rotation.y = -Math.PI / 2;
+  book.add(spineLabel);
+
+  // Cover title
+  const coverCanvas = document.createElement('canvas');
+  coverCanvas.width = 200;
+  coverCanvas.height = 160;
+  const cctx = coverCanvas.getContext('2d')!;
+
+  // Gold border
+  cctx.strokeStyle = '#ffd700';
+  cctx.lineWidth = 4;
+  cctx.strokeRect(10, 10, 180, 140);
+
+  // Inner border
+  cctx.strokeStyle = '#ffd700';
+  cctx.lineWidth = 1;
+  cctx.strokeRect(18, 18, 164, 124);
+
+  // Title
+  cctx.fillStyle = '#ffd700';
+  cctx.font = 'bold 28px serif';
+  cctx.textAlign = 'center';
+  cctx.fillText(label, 100, 85);
+
+  // Subtitle
+  cctx.font = '14px serif';
+  cctx.fillText('TEXTBOOK', 100, 110);
+
+  // Decorative line
+  cctx.strokeStyle = '#ffd700';
+  cctx.lineWidth = 2;
+  cctx.beginPath();
+  cctx.moveTo(50, 55);
+  cctx.lineTo(150, 55);
+  cctx.stroke();
+
+  const coverTex = new THREE.CanvasTexture(coverCanvas);
+  const coverLabel = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.4, 0.3),
+    new THREE.MeshBasicMaterial({ map: coverTex, transparent: true })
+  );
+  coverLabel.position.y = 0.039;
+  coverLabel.rotation.x = -Math.PI / 2;
+  book.add(coverLabel);
+
+  // Bookmark ribbon
+  const ribbonGeo = new THREE.PlaneGeometry(0.015, 0.12);
+  const ribbonMat = new THREE.MeshStandardMaterial({
+    color: '#e74c3c',
+    side: THREE.DoubleSide,
+    roughness: 0.6,
+  });
+  const ribbon = new THREE.Mesh(ribbonGeo, ribbonMat);
+  ribbon.position.set(0.1, 0, 0.2);
+  ribbon.rotation.x = 0.1;
+  book.add(ribbon);
+
+  // Highlight
+  if (isHighlighted) {
+    const glowGeo = new THREE.BoxGeometry(0.62, 0.1, 0.44);
+    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 });
+    book.add(new THREE.Mesh(glowGeo, glowMat));
+  }
+
   return book;
 }
 
-// ==================== PLATE ====================
+// ==================== END OF PART 3 ====================
+// ==================== PART 4: Improved Plate + Box + Car + Ticket ====================
+// Place right after Part 3
+
+// ==================== PLATE (Cafeteria with Food) ====================
 
 function createPlate(label: string, isHighlighted: boolean): THREE.Group {
   const plate = new THREE.Group();
-  plate.add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.27, 0.02, 36), new THREE.MeshStandardMaterial({ color: '#f8f8f0', roughness: 0.25, metalness: 0.08, emissive: isHighlighted ? '#ffff00' : '#000', emissiveIntensity: isHighlighted ? 0.2 : 0 })));
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.29, 0.014, 12, 36), new THREE.MeshStandardMaterial({ color: '#e8e8e0', roughness: 0.3, metalness: 0.1 })); rim.rotation.x = Math.PI / 2; rim.position.y = 0.01; plate.add(rim);
-  const iRingMat = new THREE.MeshStandardMaterial({ color: '#2980b9', roughness: 0.4 });
-  const iRing = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.008, 8, 32), iRingMat); iRing.rotation.x = Math.PI / 2; iRing.position.y = 0.012; plate.add(iRing);
-  const oRing = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.005, 8, 32), iRingMat); oRing.rotation.x = Math.PI / 2; oRing.position.y = 0.012; plate.add(oRing);
-  const cCanvas = document.createElement('canvas'); cCanvas.width = 128; cCanvas.height = 128;
-  const cctx = cCanvas.getContext('2d')!; cctx.fillStyle = '#2980b9';
-  for (let a = 0; a < 8; a++) { const angle = (a / 8) * Math.PI * 2; cctx.beginPath(); cctx.ellipse(64 + Math.cos(angle) * 25, 64 + Math.sin(angle) * 25, 8, 4, angle, 0, Math.PI * 2); cctx.fill(); }
-  cctx.beginPath(); cctx.arc(64, 64, 6, 0, Math.PI * 2); cctx.fill();
-  const cDesign = new THREE.Mesh(new THREE.CircleGeometry(0.1, 24), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cCanvas), transparent: true, side: THREE.DoubleSide })); cDesign.rotation.x = -Math.PI / 2; cDesign.position.y = 0.012; plate.add(cDesign);
-  const pNum = parseInt(label.replace(/\D/g, '')) || 1;
-  if (pNum % 3 === 1) {
-    plate.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#f5f5dc', roughness: 0.9 })), { position: new THREE.Vector3(-0.06, 0.013, 0) }));
-    const chicken = new THREE.Mesh(new THREE.CapsuleGeometry(0.025, 0.06, 6, 12), new THREE.MeshStandardMaterial({ color: '#d4a054', roughness: 0.7 })); chicken.position.set(0.06, 0.035, 0.02); chicken.rotation.z = 0.4; plate.add(chicken);
-    for (let i = 0; i < 6; i++) { plate.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 8), new THREE.MeshStandardMaterial({ color: '#27ae60', roughness: 0.6 })), { position: new THREE.Vector3(0.02 + Math.random() * 0.06 - 0.03, 0.02, -0.06 + Math.random() * 0.04) })); }
-  } else if (pNum % 3 === 2) {
-    for (let i = 0; i < 8; i++) { const n = new THREE.Mesh(new THREE.TorusGeometry(0.04 + Math.random() * 0.03, 0.004, 6, 16), new THREE.MeshStandardMaterial({ color: '#f0d58c', roughness: 0.7 })); n.position.set((Math.random() - 0.5) * 0.06, 0.02 + i * 0.003, (Math.random() - 0.5) * 0.06); n.rotation.set(Math.random() * 0.5, Math.random() * Math.PI, 0); plate.add(n); }
-    const sauce = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#c0392b', roughness: 0.5 })); sauce.position.set(0, 0.035, 0); sauce.scale.set(1.2, 0.6, 1.2); plate.add(sauce);
-    plate.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(0.025, 10, 10), new THREE.MeshStandardMaterial({ color: '#8b4513', roughness: 0.6 })), { position: new THREE.Vector3(0.02, 0.04, 0.01) }));
-  } else {
-    for (let i = 0; i < 5; i++) { const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 6), new THREE.MeshStandardMaterial({ color: '#2ecc71', roughness: 0.7 })); leaf.position.set((Math.random() - 0.5) * 0.1, 0.02, (Math.random() - 0.5) * 0.1); leaf.scale.set(1.2, 0.4, 1); leaf.rotation.y = Math.random() * Math.PI; plate.add(leaf); }
-    for (let i = 0; i < 3; i++) { plate.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.006, 12), new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.5 })), { position: new THREE.Vector3(-0.02 + i * 0.035, 0.03, -0.02 + i * 0.01) })); }
-    for (let i = 0; i < 3; i++) { const ch = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.015, 0.015), new THREE.MeshStandardMaterial({ color: '#f1c40f', roughness: 0.6 })); ch.position.set(0.04 + Math.random() * 0.04, 0.025, (Math.random() - 0.5) * 0.06); ch.rotation.y = Math.random() * 0.5; plate.add(ch); }
+
+  // Main plate disc (wider, more realistic)
+  const plateGeo = new THREE.CylinderGeometry(0.3, 0.27, 0.02, 36);
+  const plateMat = new THREE.MeshStandardMaterial({
+    color: '#f8f8f0',
+    roughness: 0.25,
+    metalness: 0.08,
+    emissive: isHighlighted ? '#ffff00' : '#000',
+    emissiveIntensity: isHighlighted ? 0.2 : 0,
+  });
+  plate.add(new THREE.Mesh(plateGeo, plateMat));
+
+  // Plate rim (raised edge)
+  const rimGeo = new THREE.TorusGeometry(0.29, 0.014, 12, 36);
+  const rimMat = new THREE.MeshStandardMaterial({
+    color: '#e8e8e0',
+    roughness: 0.3,
+    metalness: 0.1,
+  });
+  const rim = new THREE.Mesh(rimGeo, rimMat);
+  rim.rotation.x = Math.PI / 2;
+  rim.position.y = 0.01;
+  plate.add(rim);
+
+  // Inner decorative ring (blue band like china plate)
+  const innerRingGeo = new THREE.TorusGeometry(0.2, 0.008, 8, 32);
+  const innerRingMat = new THREE.MeshStandardMaterial({ color: '#2980b9', roughness: 0.4 });
+  const innerRing = new THREE.Mesh(innerRingGeo, innerRingMat);
+  innerRing.rotation.x = Math.PI / 2;
+  innerRing.position.y = 0.012;
+  plate.add(innerRing);
+
+  // Second decorative ring
+  const outerRingGeo = new THREE.TorusGeometry(0.25, 0.005, 8, 32);
+  const outerRing = new THREE.Mesh(outerRingGeo, innerRingMat);
+  outerRing.rotation.x = Math.PI / 2;
+  outerRing.position.y = 0.012;
+  plate.add(outerRing);
+
+  // Plate center design (flower pattern)
+  const centerCanvas = document.createElement('canvas');
+  centerCanvas.width = 128;
+  centerCanvas.height = 128;
+  const cctx = centerCanvas.getContext('2d')!;
+
+  // Draw decorative pattern
+  cctx.fillStyle = '#2980b9';
+  for (let a = 0; a < 8; a++) {
+    const angle = (a / 8) * Math.PI * 2;
+    const px = 64 + Math.cos(angle) * 25;
+    const py = 64 + Math.sin(angle) * 25;
+    cctx.beginPath();
+    cctx.ellipse(px, py, 8, 4, angle, 0, Math.PI * 2);
+    cctx.fill();
   }
-  if (isHighlighted) { plate.add(new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.03, 32), new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.15 }))); }
+  // Center dot
+  cctx.beginPath();
+  cctx.arc(64, 64, 6, 0, Math.PI * 2);
+  cctx.fill();
+
+  const centerTex = new THREE.CanvasTexture(centerCanvas);
+  const centerDesign = new THREE.Mesh(
+    new THREE.CircleGeometry(0.1, 24),
+    new THREE.MeshBasicMaterial({ map: centerTex, transparent: true, side: THREE.DoubleSide })
+  );
+  centerDesign.rotation.x = -Math.PI / 2;
+  centerDesign.position.y = 0.012;
+  plate.add(centerDesign);
+
+  // ===== FOOD ON PLATE =====
+  const plateNum = parseInt(label.replace(/\D/g, '')) || 1;
+
+  // Different food based on plate number
+  if (plateNum % 3 === 1) {
+    // Rice mound
+    const riceGeo = new THREE.SphereGeometry(0.06, 12, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+    const riceMat = new THREE.MeshStandardMaterial({ color: '#f5f5dc', roughness: 0.9 });
+    const rice = new THREE.Mesh(riceGeo, riceMat);
+    rice.position.set(-0.06, 0.013, 0);
+    plate.add(rice);
+
+    // Chicken leg
+    const chickenGeo = new THREE.CapsuleGeometry(0.025, 0.06, 6, 12);
+    const chickenMat = new THREE.MeshStandardMaterial({ color: '#d4a054', roughness: 0.7 });
+    const chicken = new THREE.Mesh(chickenGeo, chickenMat);
+    chicken.position.set(0.06, 0.035, 0.02);
+    chicken.rotation.z = 0.4;
+    plate.add(chicken);
+
+    // Chicken bone
+    const boneGeo = new THREE.CylinderGeometry(0.004, 0.004, 0.04, 6);
+    const boneMat = new THREE.MeshStandardMaterial({ color: '#f0e6d0' });
+    const bone = new THREE.Mesh(boneGeo, boneMat);
+    bone.position.set(0.06, 0.035, 0.02);
+    bone.rotation.z = 0.4;
+    bone.rotation.x = Math.PI / 2;
+    plate.add(bone);
+
+    // Vegetables (green peas)
+    const peaMat = new THREE.MeshStandardMaterial({ color: '#27ae60', roughness: 0.6 });
+    for (let i = 0; i < 6; i++) {
+      const peaGeo = new THREE.SphereGeometry(0.012, 8, 8);
+      const pea = new THREE.Mesh(peaGeo, peaMat);
+      pea.position.set(
+        0.02 + Math.random() * 0.06 - 0.03,
+        0.02,
+        -0.06 + Math.random() * 0.04
+      );
+      plate.add(pea);
+    }
+  } else if (plateNum % 3 === 2) {
+    // Spaghetti
+    const spaghettiMat = new THREE.MeshStandardMaterial({ color: '#f0d58c', roughness: 0.7 });
+    for (let i = 0; i < 8; i++) {
+      const noodleGeo = new THREE.TorusGeometry(0.04 + Math.random() * 0.03, 0.004, 6, 16);
+      const noodle = new THREE.Mesh(noodleGeo, spaghettiMat);
+      noodle.position.set(
+        (Math.random() - 0.5) * 0.06,
+        0.02 + i * 0.003,
+        (Math.random() - 0.5) * 0.06
+      );
+      noodle.rotation.x = Math.random() * 0.5;
+      noodle.rotation.y = Math.random() * Math.PI;
+      plate.add(noodle);
+    }
+
+    // Sauce
+    const sauceGeo = new THREE.SphereGeometry(0.04, 8, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+    const sauceMat = new THREE.MeshStandardMaterial({ color: '#c0392b', roughness: 0.5 });
+    const sauce = new THREE.Mesh(sauceGeo, sauceMat);
+    sauce.position.set(0, 0.035, 0);
+    sauce.scale.set(1.2, 0.6, 1.2);
+    plate.add(sauce);
+
+    // Meatball
+    const meatballGeo = new THREE.SphereGeometry(0.025, 10, 10);
+    const meatballMat = new THREE.MeshStandardMaterial({ color: '#8b4513', roughness: 0.6 });
+    const meatball = new THREE.Mesh(meatballGeo, meatballMat);
+    meatball.position.set(0.02, 0.04, 0.01);
+    plate.add(meatball);
+  } else {
+    // Salad
+    const lettuceMat = new THREE.MeshStandardMaterial({ color: '#2ecc71', roughness: 0.7 });
+    for (let i = 0; i < 5; i++) {
+      const leafGeo = new THREE.SphereGeometry(0.03, 6, 6);
+      const leaf = new THREE.Mesh(leafGeo, lettuceMat);
+      leaf.position.set(
+        (Math.random() - 0.5) * 0.1,
+        0.02,
+        (Math.random() - 0.5) * 0.1
+      );
+      leaf.scale.set(1.2, 0.4, 1);
+      leaf.rotation.y = Math.random() * Math.PI;
+      plate.add(leaf);
+    }
+
+    // Tomato slices
+    const tomatoMat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.5 });
+    for (let i = 0; i < 3; i++) {
+      const tomatoGeo = new THREE.CylinderGeometry(0.018, 0.018, 0.006, 12);
+      const tomato = new THREE.Mesh(tomatoGeo, tomatoMat);
+      tomato.position.set(
+        -0.02 + i * 0.035,
+        0.03,
+        -0.02 + i * 0.01
+      );
+      plate.add(tomato);
+    }
+
+    // Cheese cubes
+    const cheeseMat = new THREE.MeshStandardMaterial({ color: '#f1c40f', roughness: 0.6 });
+    for (let i = 0; i < 3; i++) {
+      const cheeseGeo = new THREE.BoxGeometry(0.015, 0.015, 0.015);
+      const cheese = new THREE.Mesh(cheeseGeo, cheeseMat);
+      cheese.position.set(
+        0.04 + Math.random() * 0.04,
+        0.025,
+        (Math.random() - 0.5) * 0.06
+      );
+      cheese.rotation.y = Math.random() * 0.5;
+      plate.add(cheese);
+    }
+  }
+
+  // Highlight
+  if (isHighlighted) {
+    const glowGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.03, 32);
+    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.15 });
+    plate.add(new THREE.Mesh(glowGeo, glowMat));
+  }
+
   return plate;
 }
 
-// ==================== CARDBOARD BOX ====================
+// ==================== CARDBOARD BOX (with Openable Peek) ====================
 
 function createCardboardBox(label: string, color: string, isHighlighted: boolean, isOpen?: boolean): THREE.Group {
   const box = new THREE.Group();
-  box.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.36, 0.42), new THREE.MeshStandardMaterial({ color, roughness: 0.85, emissive: isHighlighted ? '#ffff00' : '#000', emissiveIntensity: isHighlighted ? 0.3 : 0 })), { castShadow: true }));
-  const creaseMat = new THREE.MeshStandardMaterial({ color: '#7a5530', roughness: 0.9 });
-  [[-0.255, 0, 0.205], [0.255, 0, 0.205], [-0.255, 0, -0.205], [0.255, 0, -0.205]].forEach(([x, y, z]) => { box.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.36, 0.012), creaseMat), { position: new THREE.Vector3(x, y, z) })); });
-  const flapMat = new THREE.MeshStandardMaterial({ color, roughness: 0.85, side: THREE.DoubleSide });
-  const fAngle = isOpen ? -1.2 : 0;
-  const ff = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.15, 0.01), flapMat); ff.position.set(0, 0.18 + (isOpen ? 0.06 : 0), 0.21); ff.rotation.x = fAngle; box.add(ff);
-  const bf = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.15, 0.01), flapMat); bf.position.set(0, 0.18 + (isOpen ? 0.06 : 0), -0.21); bf.rotation.x = -fAngle; box.add(bf);
-  const lf = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.15, 0.42), flapMat); lf.position.set(-0.26, 0.18 + (isOpen ? 0.04 : 0), 0); lf.rotation.z = isOpen ? 0.8 : 0; box.add(lf);
-  const rf = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.15, 0.42), flapMat); rf.position.set(0.26, 0.18 + (isOpen ? 0.04 : 0), 0); rf.rotation.z = isOpen ? -0.8 : 0; box.add(rf);
-  if (isOpen) {
-    const ib = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.4), new THREE.MeshStandardMaterial({ color: '#a0734a', side: THREE.DoubleSide, roughness: 0.9 })); ib.rotation.x = -Math.PI / 2; ib.position.y = -0.17; box.add(ib);
-    const i1 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.1), new THREE.MeshStandardMaterial({ color: '#3498db', roughness: 0.6 })); i1.position.set(-0.1, -0.05, 0); i1.rotation.y = 0.2; box.add(i1);
-    const i2 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.12, 12), new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.5 })); i2.position.set(0.08, -0.03, 0.05); box.add(i2);
-    const gl = new THREE.PointLight(0xffff00, 0.5, 0.5); box.add(gl);
+
+  // Main body
+  const bodyGeo = new THREE.BoxGeometry(0.52, 0.36, 0.42);
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.85,
+    emissive: isHighlighted ? '#ffff00' : '#000',
+    emissiveIntensity: isHighlighted ? 0.3 : 0,
+  });
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.castShadow = true;
+  box.add(body);
+
+  // Cardboard texture (subtle lines)
+  const texCanvas = document.createElement('canvas');
+  texCanvas.width = 128;
+  texCanvas.height = 128;
+  const tctx = texCanvas.getContext('2d')!;
+  tctx.fillStyle = color;
+  tctx.fillRect(0, 0, 128, 128);
+  // Corrugation lines
+  tctx.strokeStyle = 'rgba(0,0,0,0.08)';
+  tctx.lineWidth = 1;
+  for (let y = 0; y < 128; y += 4) {
+    tctx.beginPath();
+    tctx.moveTo(0, y);
+    tctx.lineTo(128, y);
+    tctx.stroke();
   }
-  if (!isOpen) { const tape = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.005, 0.44), new THREE.MeshStandardMaterial({ color: '#d4a574', transparent: true, opacity: 0.7, roughness: 0.3 })); tape.position.y = 0.183; box.add(tape); }
-  const lbCanvas = document.createElement('canvas'); lbCanvas.width = 160; lbCanvas.height = 100;
-  const lbctx = lbCanvas.getContext('2d')!; lbctx.fillStyle = '#ffffff'; lbctx.fillRect(0, 0, 160, 100); lbctx.strokeStyle = '#333'; lbctx.lineWidth = 2; lbctx.strokeRect(2, 2, 156, 96);
-  lbctx.fillStyle = '#e74c3c'; lbctx.fillRect(5, 5, 150, 25); lbctx.fillStyle = '#fff'; lbctx.font = 'bold 16px Arial'; lbctx.textAlign = 'center'; lbctx.fillText('⚠ FRAGILE ⚠', 80, 24);
-  lbctx.fillStyle = '#000'; lbctx.font = 'bold 26px Arial'; lbctx.fillText(label, 80, 62); lbctx.fillStyle = '#666'; lbctx.font = '10px Arial'; lbctx.fillText('HANDLE WITH CARE', 80, 82); lbctx.fillStyle = '#333'; lbctx.font = '14px Arial'; lbctx.fillText('↑ THIS SIDE UP ↑', 80, 95);
-  box.add(Object.assign(new THREE.Mesh(new THREE.PlaneGeometry(0.38, 0.24), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(lbCanvas) })), { position: new THREE.Vector3(0, 0, 0.212) }));
-  [-0.261, 0.261].forEach(x => { const h = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.008, 6, 12, Math.PI), new THREE.MeshStandardMaterial({ color: '#5d3a1a', roughness: 0.8 })); h.position.set(x, 0.05, 0); h.rotation.y = Math.PI / 2; h.rotation.z = Math.PI; box.add(h); });
-  if (isHighlighted) { box.add(new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.4, 0.46), new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 }))); }
+
+  // Corner edges (darker brown creases)
+  const creaseMat = new THREE.MeshStandardMaterial({ color: '#7a5530', roughness: 0.9 });
+  const vCreaseGeo = new THREE.BoxGeometry(0.012, 0.36, 0.012);
+  [[-0.255, 0, 0.205], [0.255, 0, 0.205], [-0.255, 0, -0.205], [0.255, 0, -0.205]].forEach(([x, y, z]) => {
+    const crease = new THREE.Mesh(vCreaseGeo, creaseMat);
+    crease.position.set(x, y, z);
+    box.add(crease);
+  });
+
+  // ===== FLAPS (open when peeking) =====
+  const flapMat = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.85,
+    side: THREE.DoubleSide,
+  });
+
+  const flapAngle = isOpen ? -1.2 : 0;
+
+  // Front flap
+  const frontFlapGeo = new THREE.BoxGeometry(0.52, 0.15, 0.01);
+  const frontFlap = new THREE.Mesh(frontFlapGeo, flapMat);
+  frontFlap.position.set(0, 0.18 + (isOpen ? 0.06 : 0), 0.21);
+  frontFlap.rotation.x = flapAngle;
+  box.add(frontFlap);
+
+  // Back flap
+  const backFlap = new THREE.Mesh(frontFlapGeo, flapMat);
+  backFlap.position.set(0, 0.18 + (isOpen ? 0.06 : 0), -0.21);
+  backFlap.rotation.x = -flapAngle;
+  box.add(backFlap);
+
+  // Side flaps
+  const sideFlapGeo = new THREE.BoxGeometry(0.01, 0.15, 0.42);
+  const leftFlap = new THREE.Mesh(sideFlapGeo, flapMat);
+  leftFlap.position.set(-0.26, 0.18 + (isOpen ? 0.04 : 0), 0);
+  leftFlap.rotation.z = isOpen ? 0.8 : 0;
+  box.add(leftFlap);
+
+  const rightFlap = new THREE.Mesh(sideFlapGeo, flapMat);
+  rightFlap.position.set(0.26, 0.18 + (isOpen ? 0.04 : 0), 0);
+  rightFlap.rotation.z = isOpen ? -0.8 : 0;
+  box.add(rightFlap);
+
+  // Inside visible when open
+  if (isOpen) {
+    // Inside color (darker)
+    const insideGeo = new THREE.PlaneGeometry(0.5, 0.4);
+    const insideMat = new THREE.MeshStandardMaterial({
+      color: '#a0734a',
+      side: THREE.DoubleSide,
+      roughness: 0.9,
+    });
+    const insideBottom = new THREE.Mesh(insideGeo, insideMat);
+    insideBottom.rotation.x = -Math.PI / 2;
+    insideBottom.position.y = -0.17;
+    box.add(insideBottom);
+
+    // Items peeking inside
+    const itemGeo = new THREE.BoxGeometry(0.12, 0.1, 0.1);
+    const itemMat = new THREE.MeshStandardMaterial({ color: '#3498db', roughness: 0.6 });
+    const item1 = new THREE.Mesh(itemGeo, itemMat);
+    item1.position.set(-0.1, -0.05, 0);
+    item1.rotation.y = 0.2;
+    box.add(item1);
+
+    const item2Geo = new THREE.CylinderGeometry(0.04, 0.04, 0.12, 12);
+    const item2Mat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.5 });
+    const item2 = new THREE.Mesh(item2Geo, item2Mat);
+    item2.position.set(0.08, -0.03, 0.05);
+    box.add(item2);
+
+    // Glow from inside
+    const glowInsideGeo = new THREE.PointLight(0xffff00, 0.5, 0.5);
+    glowInsideGeo.position.set(0, 0, 0);
+    box.add(glowInsideGeo);
+  }
+
+  // Packing tape
+  const tapeGeo = new THREE.BoxGeometry(0.08, 0.005, 0.44);
+  const tapeMat = new THREE.MeshStandardMaterial({
+    color: '#d4a574',
+    transparent: true,
+    opacity: 0.7,
+    roughness: 0.3,
+  });
+  if (!isOpen) {
+    const tape = new THREE.Mesh(tapeGeo, tapeMat);
+    tape.position.y = 0.183;
+    box.add(tape);
+  }
+
+  // Front label
+  const labelCanvas = document.createElement('canvas');
+  labelCanvas.width = 160;
+  labelCanvas.height = 100;
+  const lctx = labelCanvas.getContext('2d')!;
+
+  lctx.fillStyle = '#ffffff';
+  lctx.fillRect(0, 0, 160, 100);
+  lctx.strokeStyle = '#333';
+  lctx.lineWidth = 2;
+  lctx.strokeRect(2, 2, 156, 96);
+
+  // FRAGILE banner
+  lctx.fillStyle = '#e74c3c';
+  lctx.fillRect(5, 5, 150, 25);
+  lctx.fillStyle = '#fff';
+  lctx.font = 'bold 16px Arial';
+  lctx.textAlign = 'center';
+  lctx.fillText('⚠ FRAGILE ⚠', 80, 24);
+
+  // Box name
+  lctx.fillStyle = '#000';
+  lctx.font = 'bold 26px Arial';
+  lctx.fillText(label, 80, 62);
+
+  // Handle with care
+  lctx.fillStyle = '#666';
+  lctx.font = '10px Arial';
+  lctx.fillText('HANDLE WITH CARE', 80, 82);
+
+  // Up arrows
+  lctx.fillStyle = '#333';
+  lctx.font = '14px Arial';
+  lctx.fillText('↑ THIS SIDE UP ↑', 80, 95);
+
+  const labelTex = new THREE.CanvasTexture(labelCanvas);
+  const labelMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.38, 0.24),
+    new THREE.MeshBasicMaterial({ map: labelTex })
+  );
+  labelMesh.position.set(0, 0, 0.212);
+  box.add(labelMesh);
+
+  // Side handles (cutout look)
+  [-0.261, 0.261].forEach(x => {
+    const handleGeo = new THREE.TorusGeometry(0.04, 0.008, 6, 12, Math.PI);
+    const handleMat = new THREE.MeshStandardMaterial({ color: '#5d3a1a', roughness: 0.8 });
+    const handle = new THREE.Mesh(handleGeo, handleMat);
+    handle.position.set(x, 0.05, 0);
+    handle.rotation.y = Math.PI / 2;
+    handle.rotation.z = Math.PI;
+    box.add(handle);
+  });
+
+  // Highlight
+  if (isHighlighted) {
+    const glowGeo = new THREE.BoxGeometry(0.56, 0.4, 0.46);
+    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 });
+    box.add(new THREE.Mesh(glowGeo, glowMat));
+  }
+
   return box;
 }
 
-// ==================== CAR ====================
+// ==================== CAR (More Realistic + Animated Ready) ====================
 
 function createCar(color: string, label: string, isHighlighted: boolean): THREE.Group {
   const car = new THREE.Group();
-  const bodyMat = new THREE.MeshStandardMaterial({ color, metalness: 0.65, roughness: 0.35, emissive: isHighlighted ? '#ffff00' : '#000', emissiveIntensity: isHighlighted ? 0.3 : 0 });
-  car.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.16, 0.3), bodyMat), { position: new THREE.Vector3(0, 0.1, 0) }));
-  car.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.03, 0.31), new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.7 })), { position: new THREE.Vector3(0, 0.015, 0) }));
-  const hood = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.04, 0.28), bodyMat); hood.position.set(0.22, 0.2, 0); hood.rotation.z = -0.15; car.add(hood);
-  car.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.13, 0.26), new THREE.MeshStandardMaterial({ color, metalness: 0.6, roughness: 0.35 })), { position: new THREE.Vector3(-0.04, 0.24, 0) }));
-  car.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.015, 0.24), new THREE.MeshStandardMaterial({ color, metalness: 0.7, roughness: 0.3 })), { position: new THREE.Vector3(-0.04, 0.31, 0) }));
-  const glassMat = new THREE.MeshStandardMaterial({ color: '#87ceeb', metalness: 0.5, roughness: 0.1, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
-  const ws = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.11), glassMat); ws.position.set(0.11, 0.24, 0); ws.rotation.y = Math.PI / 2; ws.rotation.z = 0.25; car.add(ws);
-  const rw = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.11), glassMat); rw.position.set(-0.19, 0.24, 0); rw.rotation.y = Math.PI / 2; rw.rotation.z = -0.25; car.add(rw);
-  [-1, 1].forEach(side => { [-0.08, 0.03].forEach(x => { car.add(Object.assign(new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.08), glassMat), { position: new THREE.Vector3(x, 0.25, side * 0.131) })); }); });
-  [-0.131, 0.131].forEach(z => { car.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.13, 0.01), new THREE.MeshStandardMaterial({ color: '#1a1a1a' })), { position: new THREE.Vector3(-0.025, 0.24, z) })); });
+
+  // Lower body (wider, more car-shaped)
+  const bodyGeo = new THREE.BoxGeometry(0.6, 0.16, 0.3);
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.65,
+    roughness: 0.35,
+    emissive: isHighlighted ? '#ffff00' : '#000',
+    emissiveIntensity: isHighlighted ? 0.3 : 0,
+  });
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.position.y = 0.1;
+  car.add(body);
+
+  // Body contour (side skirt)
+  const skirtGeo = new THREE.BoxGeometry(0.58, 0.03, 0.31);
+  const skirtMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.7 });
+  const skirt = new THREE.Mesh(skirtGeo, skirtMat);
+  skirt.position.y = 0.015;
+  car.add(skirt);
+
+  // Hood (front slope)
+  const hoodGeo = new THREE.BoxGeometry(0.15, 0.04, 0.28);
+  const hood = new THREE.Mesh(hoodGeo, bodyMat);
+  hood.position.set(0.22, 0.2, 0);
+  hood.rotation.z = -0.15;
+  car.add(hood);
+
+  // Cabin (upper body with slope)
+  const cabinGeo = new THREE.BoxGeometry(0.28, 0.13, 0.26);
+  const cabinMat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.6,
+    roughness: 0.35,
+  });
+  const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+  cabin.position.set(-0.04, 0.24, 0);
+  car.add(cabin);
+
+  // Roof
+  const roofGeo = new THREE.BoxGeometry(0.25, 0.015, 0.24);
+  const roofMat = new THREE.MeshStandardMaterial({ color, metalness: 0.7, roughness: 0.3 });
+  const roof = new THREE.Mesh(roofGeo, roofMat);
+  roof.position.set(-0.04, 0.31, 0);
+  car.add(roof);
+
+  // Windshield
+  const windshieldGeo = new THREE.PlaneGeometry(0.24, 0.11);
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: '#87ceeb',
+    metalness: 0.5,
+    roughness: 0.1,
+    transparent: true,
+    opacity: 0.7,
+    side: THREE.DoubleSide,
+  });
+  const windshield = new THREE.Mesh(windshieldGeo, glassMat);
+  windshield.position.set(0.11, 0.24, 0);
+  windshield.rotation.y = Math.PI / 2;
+  windshield.rotation.z = 0.25;
+  car.add(windshield);
+
+  // Rear window
+  const rearWindow = new THREE.Mesh(windshieldGeo, glassMat);
+  rearWindow.position.set(-0.19, 0.24, 0);
+  rearWindow.rotation.y = Math.PI / 2;
+  rearWindow.rotation.z = -0.25;
+  car.add(rearWindow);
+
+  // Side windows (2 per side)
+  const sideWinGeo = new THREE.PlaneGeometry(0.1, 0.08);
+  [-1, 1].forEach(side => {
+    [-0.08, 0.03].forEach(x => {
+      const sw = new THREE.Mesh(sideWinGeo, glassMat);
+      sw.position.set(x, 0.25, side * 0.131);
+      car.add(sw);
+    });
+  });
+
+  // Window divider (B-pillar)
+  const pillarGeo = new THREE.BoxGeometry(0.015, 0.13, 0.01);
+  const pillarMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a' });
+  [-0.131, 0.131].forEach(z => {
+    const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+    pillar.position.set(-0.025, 0.24, z);
+    car.add(pillar);
+  });
+
+  // Wheels (detailed with tire tread)
+  const tireGeo = new THREE.TorusGeometry(0.05, 0.02, 12, 24);
   const tireMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.9 });
-  const rimMat2 = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.9, roughness: 0.1 });
-  [[-0.19, 0, 0.155], [0.19, 0, 0.155], [-0.19, 0, -0.155], [0.19, 0, -0.155]].forEach(([wx, wy, wz]) => {
-    car.add(Object.assign(new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.02, 12, 24), tireMat), { position: new THREE.Vector3(wx, wy, wz) }));
-    const rm = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.025, 16), rimMat2); rm.rotation.x = Math.PI / 2; rm.position.set(wx, wy, wz); car.add(rm);
-    const hb = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.028, 8), new THREE.MeshStandardMaterial({ color: '#888', metalness: 0.9 })); hb.rotation.x = Math.PI / 2; hb.position.set(wx, wy, wz); car.add(hb);
-    [0, Math.PI / 2.5, Math.PI / 1.25, Math.PI * 1.5 / 2.5, Math.PI * 2 / 1.25].forEach(angle => { const sp = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.05, 0.004), new THREE.MeshStandardMaterial({ color: '#ddd', metalness: 0.8 })); sp.position.set(wx, wy, wz > 0 ? wz + 0.014 : wz - 0.014); sp.rotation.z = angle; car.add(sp); });
+  const rimGeo = new THREE.CylinderGeometry(0.032, 0.032, 0.025, 16);
+  const rimMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.9, roughness: 0.1 });
+  const hubGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.028, 8);
+  const hubMat = new THREE.MeshStandardMaterial({ color: '#888', metalness: 0.9 });
+
+  const wheelPos: [number, number, number][] = [
+    [-0.19, 0.0, 0.155], [0.19, 0.0, 0.155],
+    [-0.19, 0.0, -0.155], [0.19, 0.0, -0.155],
+  ];
+  wheelPos.forEach(([wx, wy, wz]) => {
+    // Tire
+    const tire = new THREE.Mesh(tireGeo, tireMat);
+    tire.position.set(wx, wy, wz);
+    car.add(tire);
+
+    // Rim
+    const rim = new THREE.Mesh(rimGeo, rimMat);
+    rim.rotation.x = Math.PI / 2;
+    rim.position.set(wx, wy, wz);
+    car.add(rim);
+
+    // Hub
+    const hub = new THREE.Mesh(hubGeo, hubMat);
+    hub.rotation.x = Math.PI / 2;
+    hub.position.set(wx, wy, wz);
+    car.add(hub);
+
+    // Rim spokes
+    const spokeGeo = new THREE.BoxGeometry(0.004, 0.05, 0.004);
+    const spokeMat = new THREE.MeshStandardMaterial({ color: '#ddd', metalness: 0.8 });
+    [0, Math.PI / 2.5, Math.PI / 1.25, Math.PI * 1.5 / 2.5, Math.PI * 2 / 1.25].forEach(angle => {
+      const spoke = new THREE.Mesh(spokeGeo, spokeMat);
+      spoke.position.set(wx, wy, wz > 0 ? wz + 0.014 : wz - 0.014);
+      spoke.rotation.z = angle;
+      car.add(spoke);
+    });
   });
+
+  // Headlights (LED style)
+  const headlightGeo = new THREE.BoxGeometry(0.01, 0.04, 0.06);
+  const headlightMat = new THREE.MeshBasicMaterial({ color: '#ffffee' });
   [-0.1, 0.1].forEach(z => {
-    car.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.04, 0.06), new THREE.MeshBasicMaterial({ color: '#ffffee' })), { position: new THREE.Vector3(0.3, 0.1, z) }));
-    car.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.05, 0.07), new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.5 })), { position: new THREE.Vector3(0.298, 0.1, z) }));
+    const hl = new THREE.Mesh(headlightGeo, headlightMat);
+    hl.position.set(0.3, 0.1, z);
+    car.add(hl);
+
+    // Headlight housing
+    const housingGeo = new THREE.BoxGeometry(0.015, 0.05, 0.07);
+    const housingMat = new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.5 });
+    const housing = new THREE.Mesh(housingGeo, housingMat);
+    housing.position.set(0.298, 0.1, z);
+    car.add(housing);
   });
-  [-0.1, 0.1].forEach(z => { car.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.035, 0.05), new THREE.MeshBasicMaterial({ color: '#ff2222' })), { position: new THREE.Vector3(-0.3, 0.1, z) })); });
-  for (let z = -0.08; z <= 0.08; z += 0.02) { const gb = new THREE.Mesh(new THREE.PlaneGeometry(0.01, 0.06), new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.7, side: THREE.DoubleSide })); gb.position.set(0.301, 0.08, z); gb.rotation.y = Math.PI / 2; car.add(gb); }
+
+  // Tail lights
+  const tailGeo = new THREE.BoxGeometry(0.01, 0.035, 0.05);
+  const tailMat = new THREE.MeshBasicMaterial({ color: '#ff2222' });
+  [-0.1, 0.1].forEach(z => {
+    const tl = new THREE.Mesh(tailGeo, tailMat);
+    tl.position.set(-0.3, 0.1, z);
+    car.add(tl);
+  });
+
+  // Front grille
+  const grilleGeo = new THREE.PlaneGeometry(0.01, 0.06);
+  const grilleMat = new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.7, side: THREE.DoubleSide });
+  for (let z = -0.08; z <= 0.08; z += 0.02) {
+    const bar = new THREE.Mesh(grilleGeo, grilleMat);
+    bar.position.set(0.301, 0.08, z);
+    bar.rotation.y = Math.PI / 2;
+    car.add(bar);
+  }
+
+  // Side mirrors
   [-0.145, 0.145].forEach(z => {
-    car.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.015, 0.025), new THREE.MeshStandardMaterial({ color: '#333' })), { position: new THREE.Vector3(0.05, 0.2, z) }));
-    car.add(Object.assign(new THREE.Mesh(new THREE.PlaneGeometry(0.015, 0.012), glassMat), { position: new THREE.Vector3(0.05, 0.2, z > 0 ? z + 0.013 : z - 0.013) }));
+    const mirrorGeo = new THREE.BoxGeometry(0.02, 0.015, 0.025);
+    const mirrorMat = new THREE.MeshStandardMaterial({ color: '#333' });
+    const mirror = new THREE.Mesh(mirrorGeo, mirrorMat);
+    mirror.position.set(0.05, 0.2, z);
+    car.add(mirror);
+
+    const glassGeo = new THREE.PlaneGeometry(0.015, 0.012);
+    const mirrorGlass = new THREE.Mesh(glassGeo, glassMat);
+    mirrorGlass.position.set(0.05, 0.2, z > 0 ? z + 0.013 : z - 0.013);
+    car.add(mirrorGlass);
   });
-  const lpCanvas = document.createElement('canvas'); lpCanvas.width = 96; lpCanvas.height = 36;
-  const lpctx = lpCanvas.getContext('2d')!; lpctx.fillStyle = '#fff'; lpctx.fillRect(0, 0, 96, 36); lpctx.strokeStyle = '#333'; lpctx.lineWidth = 2; lpctx.strokeRect(1, 1, 94, 34);
-  lpctx.fillStyle = '#2c3e50'; lpctx.font = 'bold 16px Arial'; lpctx.textAlign = 'center'; lpctx.fillText(label, 48, 25);
-  car.add(Object.assign(new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.05), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(lpCanvas) })), { position: new THREE.Vector3(-0.301, 0.05, 0), rotation: new THREE.Euler(0, -Math.PI / 2, 0) }));
-  const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.015, 0.06, 10), new THREE.MeshStandardMaterial({ color: '#555', metalness: 0.8, roughness: 0.3 })); exhaust.position.set(-0.28, -0.02, 0.1); exhaust.rotation.z = Math.PI / 2; car.add(exhaust);
-  if (isHighlighted) { const gl = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.35, 0.35), new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.1 })); gl.position.y = 0.15; car.add(gl); }
+
+  // License plate
+  const plateCanvas = document.createElement('canvas');
+  plateCanvas.width = 96;
+  plateCanvas.height = 36;
+  const pctx = plateCanvas.getContext('2d')!;
+  pctx.fillStyle = '#fff';
+  pctx.fillRect(0, 0, 96, 36);
+  pctx.strokeStyle = '#333';
+  pctx.lineWidth = 2;
+  pctx.strokeRect(1, 1, 94, 34);
+  pctx.fillStyle = '#2c3e50';
+  pctx.font = 'bold 16px Arial';
+  pctx.textAlign = 'center';
+  pctx.fillText(label, 48, 25);
+  const plateTex = new THREE.CanvasTexture(plateCanvas);
+  const plateMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.14, 0.05),
+    new THREE.MeshBasicMaterial({ map: plateTex })
+  );
+  plateMesh.position.set(-0.301, 0.05, 0);
+  plateMesh.rotation.y = -Math.PI / 2;
+  car.add(plateMesh);
+
+  // Exhaust pipe
+  const exhaustGeo = new THREE.CylinderGeometry(0.012, 0.015, 0.06, 10);
+  const exhaustMat = new THREE.MeshStandardMaterial({ color: '#555', metalness: 0.8, roughness: 0.3 });
+  const exhaust = new THREE.Mesh(exhaustGeo, exhaustMat);
+  exhaust.position.set(-0.28, -0.02, 0.1);
+  exhaust.rotation.z = Math.PI / 2;
+  car.add(exhaust);
+
+  // Highlight
+  if (isHighlighted) {
+    const glowGeo = new THREE.BoxGeometry(0.65, 0.35, 0.35);
+    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.1 });
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    glow.position.y = 0.15;
+    car.add(glow);
+  }
+
   return car;
 }
 
-// ==================== TICKET ====================
+// ==================== TICKET (Processing Line Style) ====================
 
 function createTicket(label: string, color: string, isHighlighted: boolean): THREE.Group {
   const ticket = new THREE.Group();
-  ticket.add(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.24, 0.015), new THREE.MeshStandardMaterial({ color, roughness: 0.4, emissive: isHighlighted ? '#ffff00' : '#000', emissiveIntensity: isHighlighted ? 0.3 : 0 })));
-  ticket.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.24, 0.015), new THREE.MeshStandardMaterial({ color, roughness: 0.5 })), { position: new THREE.Vector3(0.26, 0, 0) }));
-  for (let y = -0.1; y <= 0.1; y += 0.015) { ticket.add(Object.assign(new THREE.Mesh(new THREE.CircleGeometry(0.005, 8), new THREE.MeshBasicMaterial({ color: '#fff', side: THREE.DoubleSide })), { position: new THREE.Vector3(0.205, y, 0.009) })); }
-  const fCanvas = document.createElement('canvas'); fCanvas.width = 220; fCanvas.height = 120;
-  const fctx2 = fCanvas.getContext('2d')!;
-  fctx2.fillStyle = 'rgba(255,255,255,0.08)';
-  for (let i = -120; i < 340; i += 12) { fctx2.save(); fctx2.beginPath(); fctx2.moveTo(i, 0); fctx2.lineTo(i + 60, 120); fctx2.lineTo(i + 66, 120); fctx2.lineTo(i + 6, 0); fctx2.closePath(); fctx2.fill(); fctx2.restore(); }
-  fctx2.fillStyle = 'rgba(0,0,0,0.3)'; fctx2.fillRect(0, 0, 220, 25);
-  fctx2.fillStyle = '#fff'; fctx2.font = 'bold 14px Arial'; fctx2.textAlign = 'center'; fctx2.fillText('★ ADMIT ONE ★', 90, 18);
-  fctx2.font = 'bold 36px Arial'; fctx2.fillText(label, 90, 68);
-  fctx2.strokeStyle = 'rgba(255,255,255,0.5)'; fctx2.lineWidth = 1; fctx2.beginPath(); fctx2.moveTo(20, 80); fctx2.lineTo(160, 80); fctx2.stroke();
-  fctx2.font = 'bold 12px Arial'; fctx2.fillText('⭐ VIP ACCESS ⭐', 90, 98);
-  fctx2.font = '9px Arial'; fctx2.fillStyle = 'rgba(255,255,255,0.6)'; fctx2.fillText('VALID TODAY ONLY', 90, 113);
-  fctx2.save(); fctx2.translate(195, 60); fctx2.rotate(-Math.PI / 2); fctx2.fillStyle = '#fff'; fctx2.font = 'bold 14px Arial'; fctx2.textAlign = 'center'; fctx2.fillText(label, 0, 0); fctx2.restore();
-  ticket.add(Object.assign(new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.22), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(fCanvas), transparent: true })), { position: new THREE.Vector3(0, 0, 0.009) }));
-  const brdMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.6, roughness: 0.3 });
-  ticket.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.43, 0.005, 0.018), brdMat), { position: new THREE.Vector3(0, 0.12, 0) }));
-  ticket.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.43, 0.005, 0.018), brdMat), { position: new THREE.Vector3(0, -0.12, 0) }));
-  ticket.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.005, 0.24, 0.018), brdMat), { position: new THREE.Vector3(-0.21, 0, 0) }));
-  ticket.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.005, 0.24, 0.018), brdMat), { position: new THREE.Vector3(0.31, 0, 0) }));
-  const bkCanvas = document.createElement('canvas'); bkCanvas.width = 200; bkCanvas.height = 60;
-  const bkctx = bkCanvas.getContext('2d')!; bkctx.fillStyle = '#fff'; bkctx.fillRect(0, 0, 200, 60); bkctx.fillStyle = '#000';
-  for (let i = 10; i < 190; i += 3) { bkctx.fillRect(i, 10, 1.5, 30 + Math.random() * 15); }
-  bkctx.font = '8px monospace'; bkctx.textAlign = 'center'; bkctx.fillText(label + '-' + Math.floor(Math.random() * 9999), 100, 55);
-  const bkFace = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 0.1), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(bkCanvas) })); bkFace.position.z = -0.009; bkFace.rotation.y = Math.PI; ticket.add(bkFace);
-  if (isHighlighted) { ticket.add(new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.28, 0.03), new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.15 }))); }
+
+  // Main ticket body (thicker, card-like)
+  const ticketGeo = new THREE.BoxGeometry(0.42, 0.24, 0.015);
+  const ticketMat = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.4,
+    emissive: isHighlighted ? '#ffff00' : '#000',
+    emissiveIntensity: isHighlighted ? 0.3 : 0,
+  });
+  ticket.add(new THREE.Mesh(ticketGeo, ticketMat));
+
+  // Tear-off stub
+  const stubGeo = new THREE.BoxGeometry(0.1, 0.24, 0.015);
+  const stubMat = new THREE.MeshStandardMaterial({ color, roughness: 0.5 });
+  const stub = new THREE.Mesh(stubGeo, stubMat);
+  stub.position.x = 0.26;
+  ticket.add(stub);
+
+  // Perforation dots
+  const dotGeo = new THREE.CircleGeometry(0.005, 8);
+  const dotMat = new THREE.MeshBasicMaterial({ color: '#fff', side: THREE.DoubleSide });
+  for (let y = -0.1; y <= 0.1; y += 0.015) {
+    const dot = new THREE.Mesh(dotGeo, dotMat);
+    dot.position.set(0.205, y, 0.009);
+    ticket.add(dot);
+  }
+
+  // Front face design
+  const frontCanvas = document.createElement('canvas');
+  frontCanvas.width = 220;
+  frontCanvas.height = 120;
+  const fctx = frontCanvas.getContext('2d')!;
+
+  // Background pattern (diagonal stripes)
+  fctx.fillStyle = 'rgba(255,255,255,0.08)';
+  for (let i = -120; i < 340; i += 12) {
+    fctx.save();
+    fctx.beginPath();
+    fctx.moveTo(i, 0);
+    fctx.lineTo(i + 60, 120);
+    fctx.lineTo(i + 66, 120);
+    fctx.lineTo(i + 6, 0);
+    fctx.closePath();
+    fctx.fill();
+    fctx.restore();
+  }
+
+  // Top banner
+  fctx.fillStyle = 'rgba(0,0,0,0.3)';
+  fctx.fillRect(0, 0, 220, 25);
+
+  // "ADMIT ONE"
+  fctx.fillStyle = '#fff';
+  fctx.font = 'bold 14px Arial';
+  fctx.textAlign = 'center';
+  fctx.fillText('★ ADMIT ONE ★', 90, 18);
+
+  // Ticket number (large)
+  fctx.font = 'bold 36px Arial';
+  fctx.fillText(label, 90, 68);
+
+  // Decorative line
+  fctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  fctx.lineWidth = 1;
+  fctx.beginPath();
+  fctx.moveTo(20, 80);
+  fctx.lineTo(160, 80);
+  fctx.stroke();
+
+  // VIP text
+  fctx.font = 'bold 12px Arial';
+  fctx.fillText('⭐ VIP ACCESS ⭐', 90, 98);
+
+  // Date
+  fctx.font = '9px Arial';
+  fctx.fillStyle = 'rgba(255,255,255,0.6)';
+  fctx.fillText('VALID TODAY ONLY', 90, 113);
+
+  // Stub text (rotated)
+  fctx.save();
+  fctx.translate(195, 60);
+  fctx.rotate(-Math.PI / 2);
+  fctx.fillStyle = '#fff';
+  fctx.font = 'bold 14px Arial';
+  fctx.textAlign = 'center';
+  fctx.fillText(label, 0, 0);
+  fctx.restore();
+
+  const frontTex = new THREE.CanvasTexture(frontCanvas);
+  const frontFace = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.42, 0.22),
+    new THREE.MeshBasicMaterial({ map: frontTex, transparent: true })
+  );
+  frontFace.position.z = 0.009;
+  ticket.add(frontFace);
+
+  // Gold border edges
+  const borderMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.6, roughness: 0.3 });
+  const hBorderGeo = new THREE.BoxGeometry(0.43, 0.005, 0.018);
+  const topBorder = new THREE.Mesh(hBorderGeo, borderMat);
+  topBorder.position.y = 0.12;
+  ticket.add(topBorder);
+  const bottomBorder = new THREE.Mesh(hBorderGeo, borderMat);
+  bottomBorder.position.y = -0.12;
+  ticket.add(bottomBorder);
+
+  const vBorderGeo = new THREE.BoxGeometry(0.005, 0.24, 0.018);
+  const leftBorder = new THREE.Mesh(vBorderGeo, borderMat);
+  leftBorder.position.x = -0.21;
+  ticket.add(leftBorder);
+  const rightBorder = new THREE.Mesh(vBorderGeo, borderMat);
+  rightBorder.position.x = 0.31;
+  ticket.add(rightBorder);
+
+  // Barcode on back
+  const backCanvas = document.createElement('canvas');
+  backCanvas.width = 200;
+  backCanvas.height = 60;
+  const bctx = backCanvas.getContext('2d')!;
+  bctx.fillStyle = '#fff';
+  bctx.fillRect(0, 0, 200, 60);
+  bctx.fillStyle = '#000';
+  for (let i = 10; i < 190; i += 3) {
+    const h = 30 + Math.random() * 15;
+    bctx.fillRect(i, 10, 1.5, h);
+  }
+  bctx.font = '8px monospace';
+  bctx.textAlign = 'center';
+  bctx.fillText(label + '-' + Math.floor(Math.random() * 9999), 100, 55);
+
+  const backTex = new THREE.CanvasTexture(backCanvas);
+  const backFace = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.35, 0.1),
+    new THREE.MeshBasicMaterial({ map: backTex })
+  );
+  backFace.position.z = -0.009;
+  backFace.rotation.y = Math.PI;
+  ticket.add(backFace);
+
+  // Highlight
+  if (isHighlighted) {
+    const glowGeo = new THREE.BoxGeometry(0.46, 0.28, 0.03);
+    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.15 });
+    ticket.add(new THREE.Mesh(glowGeo, glowMat));
+  }
+
   return ticket;
 }
-// ==================== buildSceneContent ====================
+
+// ==================== END OF PART 4 ====================
+// ==================== PART 5: buildSceneContent (ALL ENVIRONMENTS) ====================
+// Place right after Part 4
 
 function buildSceneContent(
   group: THREE.Group,
@@ -769,8 +2442,12 @@ function buildSceneContent(
     : 0.85;
   const startX = -((data.length - 1) * spacing) / 2;
 
+  // ========================================================
+  // ==================== ARRAY =============================
+  // ========================================================
   if (structure === 'array') {
 
+    // ---------- 7-ELEVEN GROCERY SHELF ----------
     if (environment === 'grocery') {
       const shelfWidth = data.length * spacing + 0.8;
 
@@ -788,49 +2465,81 @@ function buildSceneContent(
         group.add(idx);
       });
 
+      // Metal shelf rack
       const shelfMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.7, roughness: 0.3 });
-      const mainShelf = new THREE.Mesh(new THREE.BoxGeometry(shelfWidth, 0.03, 0.35), shelfMat);
-      mainShelf.position.y = 0.06; group.add(mainShelf);
-      const lip = new THREE.Mesh(new THREE.BoxGeometry(shelfWidth, 0.04, 0.015), shelfMat);
-      lip.position.set(0, 0.08, 0.175); group.add(lip);
-      const lowerShelf = new THREE.Mesh(new THREE.BoxGeometry(shelfWidth, 0.03, 0.35), shelfMat);
-      lowerShelf.position.y = -0.35; group.add(lowerShelf);
-      const lowerLip = new THREE.Mesh(new THREE.BoxGeometry(shelfWidth, 0.04, 0.015), shelfMat);
-      lowerLip.position.set(0, -0.33, 0.175); group.add(lowerLip);
 
+      const mainShelf = new THREE.Mesh(new THREE.BoxGeometry(shelfWidth, 0.03, 0.35), shelfMat);
+      mainShelf.position.y = 0.06;
+      group.add(mainShelf);
+
+      const lip = new THREE.Mesh(new THREE.BoxGeometry(shelfWidth, 0.04, 0.015), shelfMat);
+      lip.position.set(0, 0.08, 0.175);
+      group.add(lip);
+
+      const lowerShelf = new THREE.Mesh(new THREE.BoxGeometry(shelfWidth, 0.03, 0.35), shelfMat);
+      lowerShelf.position.y = -0.35;
+      group.add(lowerShelf);
+
+      const lowerLip = new THREE.Mesh(new THREE.BoxGeometry(shelfWidth, 0.04, 0.015), shelfMat);
+      lowerLip.position.set(0, -0.33, 0.175);
+      group.add(lowerLip);
+
+      // Poles
       const poleMat = new THREE.MeshStandardMaterial({ color: '#a0a0a0', metalness: 0.8, roughness: 0.2 });
       const poleGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.9, 12);
       const poleXs = [-shelfWidth / 2 + 0.05, shelfWidth / 2 - 0.05];
       if (data.length > 3) poleXs.push(0);
       poleXs.forEach(x => {
         [0.16, -0.14].forEach(z => {
-          const pole = new THREE.Mesh(poleGeo, poleMat); pole.position.set(x, -0.1, z); group.add(pole);
+          const pole = new THREE.Mesh(poleGeo, poleMat);
+          pole.position.set(x, -0.1, z);
+          group.add(pole);
         });
       });
 
+      // Price strip
       const stripCanvas = document.createElement('canvas');
       stripCanvas.width = 512; stripCanvas.height = 32;
       const sctx = stripCanvas.getContext('2d')!;
-      sctx.fillStyle = '#2e7d32'; sctx.fillRect(0, 0, 512, 32);
-      sctx.fillStyle = '#fff'; sctx.font = 'bold 16px Arial'; sctx.textAlign = 'center';
+      sctx.fillStyle = '#2e7d32';
+      sctx.fillRect(0, 0, 512, 32);
+      sctx.fillStyle = '#fff';
+      sctx.font = 'bold 16px Arial';
+      sctx.textAlign = 'center';
       sctx.fillText('★ FRESH ITEMS ★ BEST PRICE ★ FRESH ITEMS ★ BEST PRICE ★', 256, 22);
-      const strip = new THREE.Mesh(new THREE.PlaneGeometry(shelfWidth, 0.06), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(stripCanvas) }));
-      strip.position.set(0, 0.05, 0.178); group.add(strip);
+      const strip = new THREE.Mesh(
+        new THREE.PlaneGeometry(shelfWidth, 0.06),
+        new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(stripCanvas) })
+      );
+      strip.position.set(0, 0.05, 0.178);
+      group.add(strip);
 
-      const backPanel = new THREE.Mesh(new THREE.PlaneGeometry(shelfWidth, 0.85), new THREE.MeshStandardMaterial({ color: '#f5f5f5', side: THREE.DoubleSide, roughness: 0.9 }));
-      backPanel.position.set(0, -0.05, -0.16); group.add(backPanel);
+      // Back panel + pegboard
+      const backPanel = new THREE.Mesh(
+        new THREE.PlaneGeometry(shelfWidth, 0.85),
+        new THREE.MeshStandardMaterial({ color: '#f5f5f5', side: THREE.DoubleSide, roughness: 0.9 })
+      );
+      backPanel.position.set(0, -0.05, -0.16);
+      group.add(backPanel);
 
       const holeMat = new THREE.MeshBasicMaterial({ color: '#ddd', side: THREE.DoubleSide });
       const holeGeo = new THREE.CircleGeometry(0.008, 8);
       for (let hx = -shelfWidth / 2 + 0.1; hx < shelfWidth / 2; hx += 0.08) {
         for (let hy = -0.3; hy < 0.35; hy += 0.08) {
-          const hole = new THREE.Mesh(holeGeo, holeMat); hole.position.set(hx, hy, -0.158); group.add(hole);
+          const hole = new THREE.Mesh(holeGeo, holeMat);
+          hole.position.set(hx, hy, -0.158);
+          group.add(hole);
         }
       }
 
-      const floor = new THREE.Mesh(new THREE.PlaneGeometry(shelfWidth + 0.5, 0.8), new THREE.MeshStandardMaterial({ color: '#e8dcc8', side: THREE.DoubleSide }));
-      floor.rotation.x = -Math.PI / 2; floor.position.y = -0.56; group.add(floor);
+      // Floor tiles
+      const floorGeo = new THREE.PlaneGeometry(shelfWidth + 0.5, 0.8);
+      const floor = new THREE.Mesh(floorGeo, new THREE.MeshStandardMaterial({ color: '#e8dcc8', side: THREE.DoubleSide }));
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = -0.56;
+      group.add(floor);
 
+    // ---------- CLASSROOM (Room + Seated Humans) ----------
     } else if (environment === 'classroom') {
       const roomWidth = data.length * spacing + 1.5;
 
@@ -842,257 +2551,697 @@ function buildSceneContent(
           human.scale.setScalar(0.8);
           applyItemAnimation(human, i, animPhase || '', animData || {}, 'array');
           group.add(human);
-          const chair = createChair(startX + i * spacing); chair.scale.setScalar(0.8); group.add(chair);
-          const desk = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.2), new THREE.MeshStandardMaterial({ color: '#a0855b', roughness: 0.7 }));
-          desk.position.set(startX + i * spacing, -0.1, 0.2); desk.scale.setScalar(0.8); group.add(desk);
+
+          const chair = createChair(startX + i * spacing);
+          chair.scale.setScalar(0.8);
+          group.add(chair);
+
+          // Desk in front of each student
+          const deskGeo = new THREE.BoxGeometry(0.3, 0.02, 0.2);
+          const deskMat = new THREE.MeshStandardMaterial({ color: '#a0855b', roughness: 0.7 });
+          const desk = new THREE.Mesh(deskGeo, deskMat);
+          desk.position.set(startX + i * spacing, -0.1, 0.2);
+          desk.scale.setScalar(0.8);
+          group.add(desk);
+
+          // Desk legs
           const dlegGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.16, 6);
           const dlegMat = new THREE.MeshStandardMaterial({ color: '#666' });
           [[-0.12, -0.19, 0.08], [0.12, -0.19, 0.08], [-0.12, -0.19, -0.08], [0.12, -0.19, -0.08]].forEach(([dx, dy, dz]) => {
-            const dleg = new THREE.Mesh(dlegGeo, dlegMat); dleg.position.set(startX + i * spacing + dx * 0.8, dy * 0.8 - 0.1, (dz + 0.2) * 0.8); group.add(dleg);
+            const dleg = new THREE.Mesh(dlegGeo, dlegMat);
+            dleg.position.set(startX + i * spacing + dx * 0.8, dy * 0.8 - 0.1, (dz + 0.2) * 0.8);
+            group.add(dleg);
           });
         }
-        const idx = createTextSprite(`[${i}]`, (highlightIndex === i || highlightIndex2 === i) ? '#ffff00' : '#ffffff', 22);
-        idx.position.set(startX + i * spacing, -0.42, 0); idx.scale.set(0.25, 0.12, 1); group.add(idx);
+
+        const idx = createTextSprite(`[${i}]`, isHl ? '#ffff00' : '#ffffff', 22);
+        idx.position.set(startX + i * spacing, -0.42, 0);
+        idx.scale.set(0.25, 0.12, 1);
+        group.add(idx);
       });
 
-      const wallMat = new THREE.MeshStandardMaterial({ color: '#f0e6d2', roughness: 0.9 });
-      const floor = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, 1.5), new THREE.MeshStandardMaterial({ color: '#c4a882', side: THREE.DoubleSide, roughness: 0.8 }));
-      floor.rotation.x = -Math.PI / 2; floor.position.y = -0.35; group.add(floor);
+      // Classroom floor
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(roomWidth, 1.5),
+        new THREE.MeshStandardMaterial({ color: '#c4a882', side: THREE.DoubleSide, roughness: 0.8 })
+      );
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = -0.35;
+      group.add(floor);
+
+      // Floor tile grid
+      const tileLineMat = new THREE.MeshBasicMaterial({ color: '#b39b7a', side: THREE.DoubleSide });
       for (let tx = -roomWidth / 2; tx <= roomWidth / 2; tx += 0.4) {
-        const line = new THREE.Mesh(new THREE.PlaneGeometry(0.005, 1.5), new THREE.MeshBasicMaterial({ color: '#b39b7a', side: THREE.DoubleSide }));
-        line.rotation.x = -Math.PI / 2; line.position.set(tx, -0.349, 0); group.add(line);
-      }
-      const backWall = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, 1.0), wallMat); backWall.position.set(0, 0.1, -0.5); group.add(backWall);
-      const board = new THREE.Mesh(new THREE.BoxGeometry(roomWidth * 0.6, 0.45, 0.02), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 }));
-      board.position.set(0, 0.25, -0.48); group.add(board);
-      const frameMat = new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.5 });
-      group.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(roomWidth * 0.62, 0.02, 0.03), frameMat), { position: new THREE.Vector3(0, 0.48, -0.47) }));
-      group.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(roomWidth * 0.62, 0.02, 0.03), frameMat), { position: new THREE.Vector3(0, 0.02, -0.47) }));
-      const bCanvas = document.createElement('canvas'); bCanvas.width = 256; bCanvas.height = 128;
-      const bctx = bCanvas.getContext('2d')!;
-      bctx.fillStyle = '#2c3e50'; bctx.font = 'bold 24px Arial'; bctx.textAlign = 'center'; bctx.fillText('Data Structures', 128, 40);
-      bctx.font = '16px Arial'; bctx.fillText('Array: O(1) Access', 128, 70); bctx.fillText('Index: 0, 1, 2, ...', 128, 95);
-      const bText = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth * 0.55, 0.35), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(bCanvas), transparent: true }));
-      bText.position.set(0, 0.25, -0.468); group.add(bText);
-      [-roomWidth / 2, roomWidth / 2].forEach(x => { const sw = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.0), wallMat); sw.position.set(x, 0.1, 0); sw.rotation.y = x > 0 ? -Math.PI / 2 : Math.PI / 2; group.add(sw); });
-      const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, 1.5), new THREE.MeshStandardMaterial({ color: '#f5f5f0', side: THREE.DoubleSide }));
-      ceiling.rotation.x = Math.PI / 2; ceiling.position.y = 0.6; group.add(ceiling);
-      for (let lx = -roomWidth / 3; lx <= roomWidth / 3; lx += roomWidth / 3) {
-        group.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.015, 0.08), new THREE.MeshBasicMaterial({ color: '#ffffee' })), { position: new THREE.Vector3(lx, 0.59, 0) }));
+        const line = new THREE.Mesh(new THREE.PlaneGeometry(0.005, 1.5), tileLineMat);
+        line.rotation.x = -Math.PI / 2;
+        line.position.set(tx, -0.349, 0);
+        group.add(line);
       }
 
+      // Back wall
+      const wallMat = new THREE.MeshStandardMaterial({ color: '#f0e6d2', roughness: 0.9 });
+      const backWall = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, 1.0), wallMat);
+      backWall.position.set(0, 0.1, -0.5);
+      group.add(backWall);
+
+      // Whiteboard on back wall
+      const boardGeo = new THREE.BoxGeometry(roomWidth * 0.6, 0.45, 0.02);
+      const boardMat2 = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 });
+      const board = new THREE.Mesh(boardGeo, boardMat2);
+      board.position.set(0, 0.25, -0.48);
+      group.add(board);
+
+      // Board frame
+      const frameMat = new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.5 });
+      const hFrame = new THREE.BoxGeometry(roomWidth * 0.62, 0.02, 0.03);
+      const topFrame = new THREE.Mesh(hFrame, frameMat);
+      topFrame.position.set(0, 0.48, -0.47);
+      group.add(topFrame);
+      const botFrame = new THREE.Mesh(hFrame, frameMat);
+      botFrame.position.set(0, 0.02, -0.47);
+      group.add(botFrame);
+
+      // Board text
+      const boardCanvas = document.createElement('canvas');
+      boardCanvas.width = 256; boardCanvas.height = 128;
+      const bctx = boardCanvas.getContext('2d')!;
+      bctx.fillStyle = '#2c3e50';
+      bctx.font = 'bold 24px Arial';
+      bctx.textAlign = 'center';
+      bctx.fillText('Data Structures', 128, 40);
+      bctx.font = '16px Arial';
+      bctx.fillText('Array: O(1) Access', 128, 70);
+      bctx.fillText('Index: 0, 1, 2, ...', 128, 95);
+      const boardTex = new THREE.CanvasTexture(boardCanvas);
+      const boardText = new THREE.Mesh(
+        new THREE.PlaneGeometry(roomWidth * 0.55, 0.35),
+        new THREE.MeshBasicMaterial({ map: boardTex, transparent: true })
+      );
+      boardText.position.set(0, 0.25, -0.468);
+      group.add(boardText);
+
+      // Side walls (short)
+      [-roomWidth / 2, roomWidth / 2].forEach(x => {
+        const sideWall = new THREE.Mesh(
+          new THREE.PlaneGeometry(1.5, 1.0),
+          wallMat
+        );
+        sideWall.position.set(x, 0.1, 0);
+        sideWall.rotation.y = x > 0 ? -Math.PI / 2 : Math.PI / 2;
+        group.add(sideWall);
+      });
+
+      // Ceiling
+      const ceiling = new THREE.Mesh(
+        new THREE.PlaneGeometry(roomWidth, 1.5),
+        new THREE.MeshStandardMaterial({ color: '#f5f5f0', side: THREE.DoubleSide })
+      );
+      ceiling.rotation.x = Math.PI / 2;
+      ceiling.position.y = 0.6;
+      group.add(ceiling);
+
+      // Ceiling lights
+      for (let lx = -roomWidth / 3; lx <= roomWidth / 3; lx += roomWidth / 3) {
+        const lightFixture = new THREE.Mesh(
+          new THREE.BoxGeometry(0.3, 0.015, 0.08),
+          new THREE.MeshBasicMaterial({ color: '#ffffee' })
+        );
+        lightFixture.position.set(lx, 0.59, 0);
+        group.add(lightFixture);
+      }
+
+    // ---------- TODO LIST (Flat on Surface) ----------
     } else if (environment === 'todo') {
       data.forEach((item, i) => {
         const isHl = highlightIndex === i || highlightIndex2 === i;
         const clipboard = createClipboard(item.label, item.color, isHl);
-        clipboard.position.set(startX + i * spacing, isHl ? 0.12 : 0, 0); clipboard.scale.setScalar(0.7);
+        clipboard.position.set(startX + i * spacing, isHl ? 0.12 : 0, 0);
+        clipboard.scale.setScalar(0.7);
         applyItemAnimation(clipboard, i, animPhase || '', animData || {}, 'array');
         group.add(clipboard);
+
         const idx = createTextSprite(`[${i}]`, isHl ? '#ffff00' : '#ffffff', 22);
-        idx.position.set(startX + i * spacing, -0.45, 0); idx.scale.set(0.25, 0.12, 1); group.add(idx);
+        idx.position.set(startX + i * spacing, -0.45, 0);
+        idx.scale.set(0.25, 0.12, 1);
+        group.add(idx);
       });
+
+      // Wooden desk
       const deskWidth = data.length * spacing + 0.5;
-      group.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(deskWidth, 0.04, 0.5), new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.7 })), { position: new THREE.Vector3(0, -0.3, 0) }));
-      const edg = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, deskWidth, 16), new THREE.MeshStandardMaterial({ color: '#4a3520' }));
-      edg.rotation.z = Math.PI / 2; edg.position.set(0, -0.3, 0.26); group.add(edg);
+      const desk = new THREE.Mesh(
+        new THREE.BoxGeometry(deskWidth, 0.04, 0.5),
+        new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.7 })
+      );
+      desk.position.y = -0.3;
+      group.add(desk);
+
+      // Desk edge (rounded)
+      const edgeGeo = new THREE.CylinderGeometry(0.02, 0.02, deskWidth, 16);
+      const edge = new THREE.Mesh(edgeGeo, new THREE.MeshStandardMaterial({ color: '#4a3520' }));
+      edge.rotation.z = Math.PI / 2;
+      edge.position.set(0, -0.3, 0.26);
+      group.add(edge);
     }
 
+  // ========================================================
+  // ==================== LINKED LIST =======================
+  // ========================================================
   } else if (structure === 'linkedlist') {
 
+    // ---------- TRAIN ----------
     if (environment === 'train') {
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const trainCar = createTrainCar(i === 0, item.color, item.label, isHl);
-        trainCar.position.set(startX + i * spacing, isHl ? 0.12 : 0, 0); trainCar.scale.setScalar(0.85);
+        trainCar.position.set(startX + i * spacing, isHl ? 0.12 : 0, 0);
+        trainCar.scale.setScalar(0.85);
         applyItemAnimation(trainCar, i, animPhase || '', animData || {}, 'linkedlist');
         group.add(trainCar);
+
         if (i < data.length - 1) {
           const arrow = createArrow(startX + i * spacing, startX + (i + 1) * spacing, highlightIndex === i || highlightIndex === i + 1);
-          arrow.position.y = -0.15; group.add(arrow);
+          arrow.position.y = -0.15;
+          group.add(arrow);
+
+          // Node pointer label
           const ptrLabel = createTextSprite('next →', '#00ff00', 14);
-          ptrLabel.position.set((startX + i * spacing + startX + (i + 1) * spacing) / 2, -0.28, 0); ptrLabel.scale.set(0.3, 0.1, 1); group.add(ptrLabel);
+          ptrLabel.position.set((startX + i * spacing + startX + (i + 1) * spacing) / 2, -0.28, 0);
+          ptrLabel.scale.set(0.3, 0.1, 1);
+          group.add(ptrLabel);
         }
       });
-      const headSprite = createTextSprite('HEAD', '#ff0000', 22); headSprite.position.set(startX, 0.6, 0); headSprite.scale.set(0.35, 0.14, 1); group.add(headSprite);
-      const tailSprite = createTextSprite('TAIL', '#0066ff', 22); tailSprite.position.set(startX + (data.length - 1) * spacing, 0.6, 0); tailSprite.scale.set(0.35, 0.14, 1); group.add(tailSprite);
-      const nullSprite = createTextSprite('NULL', '#ff0000', 24); nullSprite.position.set(startX + data.length * spacing, 0, 0); nullSprite.scale.set(0.35, 0.25, 1); group.add(nullSprite);
-      const nullArrow = createArrow(startX + (data.length - 1) * spacing, startX + data.length * spacing - 0.15, false); nullArrow.position.y = -0.15; group.add(nullArrow);
-      const railMat = new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.6 });
-      [-0.12, 0.12].forEach(z => { const rail = new THREE.Mesh(new THREE.BoxGeometry(data.length * spacing + 1.5, 0.02, 0.03), railMat); rail.position.set(0, -0.12, z); group.add(rail); });
-      const tieMat = new THREE.MeshStandardMaterial({ color: '#5d4037' });
-      for (let x = startX - 0.5; x <= startX + data.length * spacing + 0.5; x += 0.18) { const tie = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.015, 0.35), tieMat); tie.position.set(x, -0.13, 0); group.add(tie); }
-      const ground = new THREE.Mesh(new THREE.PlaneGeometry(data.length * spacing + 2, 1), new THREE.MeshStandardMaterial({ color: '#8b7355', side: THREE.DoubleSide }));
-      ground.rotation.x = -Math.PI / 2; ground.position.y = -0.14; group.add(ground);
 
+      // HEAD / TAIL / NULL labels
+      const headSprite = createTextSprite('HEAD', '#ff0000', 22);
+      headSprite.position.set(startX, 0.6, 0);
+      headSprite.scale.set(0.35, 0.14, 1);
+      group.add(headSprite);
+
+      const tailSprite = createTextSprite('TAIL', '#0066ff', 22);
+      tailSprite.position.set(startX + (data.length - 1) * spacing, 0.6, 0);
+      tailSprite.scale.set(0.35, 0.14, 1);
+      group.add(tailSprite);
+
+      const nullSprite = createTextSprite('NULL', '#ff0000', 24);
+      nullSprite.position.set(startX + data.length * spacing, 0, 0);
+      nullSprite.scale.set(0.35, 0.25, 1);
+      group.add(nullSprite);
+
+      const nullArrow = createArrow(startX + (data.length - 1) * spacing, startX + data.length * spacing - 0.15, false);
+      nullArrow.position.y = -0.15;
+      group.add(nullArrow);
+
+      // Rails
+      const railMat = new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.6 });
+      const railGeo = new THREE.BoxGeometry(data.length * spacing + 1.5, 0.02, 0.03);
+      [-0.12, 0.12].forEach(z => {
+        group.add(new THREE.Mesh(railGeo, railMat)).position.set(0, -0.12, z);
+      });
+
+      const tieMat = new THREE.MeshStandardMaterial({ color: '#5d4037' });
+      const tieGeo = new THREE.BoxGeometry(0.04, 0.015, 0.35);
+      for (let x = startX - 0.5; x <= startX + data.length * spacing + 0.5; x += 0.18) {
+        group.add(new THREE.Mesh(tieGeo, tieMat)).position.set(x, -0.13, 0);
+      }
+
+      // Ground
+      const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(data.length * spacing + 2, 1),
+        new THREE.MeshStandardMaterial({ color: '#8b7355', side: THREE.DoubleSide })
+      );
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = -0.14;
+      group.add(ground);
+
+    // ---------- PEOPLE LINE ----------
     } else if (environment === 'people') {
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         if (item.appearance) {
           const human = createHuman3D(item.appearance, item.label, isHl);
-          human.position.set(startX + i * spacing, isHl ? 0.08 : 0, 0); human.scale.setScalar(0.75);
-          applyItemAnimation(human, i, animPhase || '', animData || {}, 'linkedlist'); group.add(human);
+          human.position.set(startX + i * spacing, isHl ? 0.08 : 0, 0);
+          human.scale.setScalar(0.75);
+          applyItemAnimation(human, i, animPhase || '', animData || {}, 'linkedlist');
+          group.add(human);
         }
         if (i < data.length - 1) {
-          const arrow = createArrow(startX + i * spacing, startX + (i + 1) * spacing, false); arrow.position.y = 0.1; group.add(arrow);
+          const arrow = createArrow(startX + i * spacing, startX + (i + 1) * spacing, false);
+          arrow.position.y = 0.1;
+          group.add(arrow);
+
           const ptrLabel = createTextSprite('next →', '#00ff00', 14);
-          ptrLabel.position.set((startX + i * spacing + startX + (i + 1) * spacing) / 2, -0.05, 0); ptrLabel.scale.set(0.28, 0.08, 1); group.add(ptrLabel);
+          ptrLabel.position.set((startX + i * spacing + startX + (i + 1) * spacing) / 2, -0.05, 0);
+          ptrLabel.scale.set(0.28, 0.08, 1);
+          group.add(ptrLabel);
         }
       });
-      const headSprite = createTextSprite('HEAD', '#ff0000', 20); headSprite.position.set(startX, 0.55, 0); headSprite.scale.set(0.3, 0.12, 1); group.add(headSprite);
-      const nullSprite = createTextSprite('NULL', '#ff0000', 22); nullSprite.position.set(startX + data.length * spacing, 0.1, 0); nullSprite.scale.set(0.3, 0.2, 1); group.add(nullSprite);
-      const nullArrow = createArrow(startX + (data.length - 1) * spacing, startX + data.length * spacing - 0.1, false); nullArrow.position.y = 0.1; group.add(nullArrow);
-      const floor = new THREE.Mesh(new THREE.PlaneGeometry(data.length * spacing + 1, 0.6), new THREE.MeshStandardMaterial({ color: '#95a5a6', side: THREE.DoubleSide }));
-      floor.rotation.x = -Math.PI / 2; floor.position.y = -0.17; group.add(floor);
 
+      const headSprite = createTextSprite('HEAD', '#ff0000', 20);
+      headSprite.position.set(startX, 0.55, 0);
+      headSprite.scale.set(0.3, 0.12, 1);
+      group.add(headSprite);
+
+      const nullSprite = createTextSprite('NULL', '#ff0000', 22);
+      nullSprite.position.set(startX + data.length * spacing, 0.1, 0);
+      nullSprite.scale.set(0.3, 0.2, 1);
+      group.add(nullSprite);
+
+      const nullArrow = createArrow(startX + (data.length - 1) * spacing, startX + data.length * spacing - 0.1, false);
+      nullArrow.position.y = 0.1;
+      group.add(nullArrow);
+
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(data.length * spacing + 1, 0.6),
+        new THREE.MeshStandardMaterial({ color: '#95a5a6', side: THREE.DoubleSide })
+      );
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = -0.17;
+      group.add(floor);
+
+    // ---------- DOMINO ----------
     } else if (environment === 'domino') {
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const domino = createDomino(item.label, isHl);
-        domino.position.set(startX + i * spacing, isHl ? 0.1 : 0, 0); domino.scale.setScalar(0.85);
-        applyItemAnimation(domino, i, animPhase || '', animData || {}, 'linkedlist'); group.add(domino);
-        if (i < data.length - 1) { const arrow = createArrow(startX + i * spacing, startX + (i + 1) * spacing, false); arrow.position.y = -0.35; group.add(arrow); }
+        domino.position.set(startX + i * spacing, isHl ? 0.1 : 0, 0);
+        domino.scale.setScalar(0.85);
+        applyItemAnimation(domino, i, animPhase || '', animData || {}, 'linkedlist');
+        group.add(domino);
+
+        if (i < data.length - 1) {
+          const arrow = createArrow(startX + i * spacing, startX + (i + 1) * spacing, false);
+          arrow.position.y = -0.35;
+          group.add(arrow);
+        }
       });
-      const headSprite = createTextSprite('HEAD', '#ff0000', 20); headSprite.position.set(startX, 0.4, 0); headSprite.scale.set(0.3, 0.12, 1); group.add(headSprite);
-      const nullSprite = createTextSprite('NULL', '#ff0000', 20); nullSprite.position.set(startX + data.length * spacing, -0.35, 0); nullSprite.scale.set(0.3, 0.2, 1); group.add(nullSprite);
-      const nullArrow = createArrow(startX + (data.length - 1) * spacing, startX + data.length * spacing - 0.1, false); nullArrow.position.y = -0.35; group.add(nullArrow);
-      const table = new THREE.Mesh(new THREE.BoxGeometry(data.length * spacing + 0.8, 0.04, 0.6), new THREE.MeshStandardMaterial({ color: '#1b5e20', roughness: 0.9 }));
-      table.position.y = -0.3; group.add(table);
-      const edgeMat3 = new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.7 });
-      [0.32, -0.32].forEach(z => { const edg = new THREE.Mesh(new THREE.BoxGeometry(data.length * spacing + 0.85, 0.06, 0.04), edgeMat3); edg.position.set(0, -0.3, z); group.add(edg); });
+
+      const headSprite = createTextSprite('HEAD', '#ff0000', 20);
+      headSprite.position.set(startX, 0.4, 0);
+      headSprite.scale.set(0.3, 0.12, 1);
+      group.add(headSprite);
+
+      const nullSprite = createTextSprite('NULL', '#ff0000', 20);
+      nullSprite.position.set(startX + data.length * spacing, -0.35, 0);
+      nullSprite.scale.set(0.3, 0.2, 1);
+      group.add(nullSprite);
+
+      const nullArrow = createArrow(startX + (data.length - 1) * spacing, startX + data.length * spacing - 0.1, false);
+      nullArrow.position.y = -0.35;
+      group.add(nullArrow);
+
+      // Green felt table
+      const table = new THREE.Mesh(
+        new THREE.BoxGeometry(data.length * spacing + 0.8, 0.04, 0.6),
+        new THREE.MeshStandardMaterial({ color: '#1b5e20', roughness: 0.9 })
+      );
+      table.position.y = -0.3;
+      group.add(table);
+
+      // Table edge
+      const edgeMat = new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.7 });
+      const edgeGeo = new THREE.BoxGeometry(data.length * spacing + 0.85, 0.06, 0.04);
+      [0.32, -0.32].forEach(z => {
+        group.add(new THREE.Mesh(edgeGeo, edgeMat)).position.set(0, -0.3, z);
+      });
     }
 
+  // ========================================================
+  // ==================== STACK =============================
+  // ========================================================
   } else if (structure === 'stack') {
 
+    // ---------- BOOKS ----------
     if (environment === 'books') {
       const stackSpacing = 0.12;
       const baseY = -data.length * stackSpacing / 2;
+
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const book = createBook(item.label, item.color, isHl);
-        book.position.set(isHl ? 0.2 : 0, baseY + i * stackSpacing, 0); book.rotation.y = (i % 2 === 0) ? 0 : 0.05;
-        applyItemAnimation(book, i, animPhase || '', animData || {}, 'stack'); group.add(book);
-        if (i === data.length - 1) { const topSprite = createTextSprite('← TOP', '#ff0000', 24); topSprite.position.set(0.7, baseY + i * stackSpacing, 0); topSprite.scale.set(0.4, 0.15, 1); group.add(topSprite); }
-      });
-      group.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.04, 0.7), new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.7 })), { position: new THREE.Vector3(0, baseY - 0.1, 0) }));
+        book.position.set(isHl ? 0.2 : 0, baseY + i * stackSpacing, 0);
+        book.rotation.y = (i % 2 === 0) ? 0 : 0.05;
+        applyItemAnimation(book, i, animPhase || '', animData || {}, 'stack');
+        group.add(book);
 
+        if (i === data.length - 1) {
+          const topSprite = createTextSprite('← TOP', '#ff0000', 24);
+          topSprite.position.set(0.7, baseY + i * stackSpacing, 0);
+          topSprite.scale.set(0.4, 0.15, 1);
+          group.add(topSprite);
+        }
+      });
+
+      // Desk
+      const desk = new THREE.Mesh(
+        new THREE.BoxGeometry(1.4, 0.04, 0.7),
+        new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.7 })
+      );
+      desk.position.y = baseY - 0.1;
+      group.add(desk);
+
+    // ---------- PLATES (Cafeteria) ----------
     } else if (environment === 'plates') {
       const plateSpacing = 0.05;
       const plateBaseY = -data.length * plateSpacing / 2;
+
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const plate = createPlate(item.label, isHl);
-        plate.position.set(isHl ? 0.15 : 0, plateBaseY + i * plateSpacing, 0); plate.scale.setScalar(0.65);
-        applyItemAnimation(plate, i, animPhase || '', animData || {}, 'stack'); group.add(plate);
-        if (i === data.length - 1) { const topSprite = createTextSprite('← TOP', '#ff0000', 24); topSprite.position.set(0.5, plateBaseY + i * plateSpacing, 0); topSprite.scale.set(0.35, 0.12, 1); group.add(topSprite); }
-      });
-      group.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.06, 0.6), new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.4, roughness: 0.4 })), { position: new THREE.Vector3(0, plateBaseY - 0.06, 0) }));
-      group.add(Object.assign(new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.3), new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })), { position: new THREE.Vector3(0, plateBaseY - 0.2, 0.3) }));
-      const signCanvas = document.createElement('canvas'); signCanvas.width = 256; signCanvas.height = 48;
-      const sctx2 = signCanvas.getContext('2d')!; sctx2.fillStyle = '#e74c3c'; sctx2.fillRect(0, 0, 256, 48);
-      sctx2.fillStyle = '#fff'; sctx2.font = 'bold 28px Arial'; sctx2.textAlign = 'center'; sctx2.fillText('🍽️ CAFETERIA 🍽️', 128, 35);
-      const signSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(signCanvas), transparent: true }));
-      signSprite.position.set(0, plateBaseY + data.length * plateSpacing + 0.3, 0); signSprite.scale.set(0.8, 0.15, 1); group.add(signSprite);
+        plate.position.set(isHl ? 0.15 : 0, plateBaseY + i * plateSpacing, 0);
+        plate.scale.setScalar(0.65);
+        applyItemAnimation(plate, i, animPhase || '', animData || {}, 'stack');
+        group.add(plate);
 
+        if (i === data.length - 1) {
+          const topSprite = createTextSprite('← TOP', '#ff0000', 24);
+          topSprite.position.set(0.5, plateBaseY + i * plateSpacing, 0);
+          topSprite.scale.set(0.35, 0.12, 1);
+          group.add(topSprite);
+        }
+      });
+
+      // Counter
+      const counter = new THREE.Mesh(
+        new THREE.BoxGeometry(1.0, 0.06, 0.6),
+        new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.4, roughness: 0.4 })
+      );
+      counter.position.y = plateBaseY - 0.06;
+      group.add(counter);
+
+      // Counter front panel
+      const panel = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.0, 0.3),
+        new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
+      );
+      panel.position.set(0, plateBaseY - 0.2, 0.3);
+      group.add(panel);
+
+      // "CAFETERIA" sign
+      const signCanvas = document.createElement('canvas');
+      signCanvas.width = 256; signCanvas.height = 48;
+      const sctx = signCanvas.getContext('2d')!;
+      sctx.fillStyle = '#e74c3c';
+      sctx.fillRect(0, 0, 256, 48);
+      sctx.fillStyle = '#fff';
+      sctx.font = 'bold 28px Arial';
+      sctx.textAlign = 'center';
+      sctx.fillText('🍽️ CAFETERIA 🍽️', 128, 35);
+      const signSprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(signCanvas), transparent: true })
+      );
+      signSprite.position.set(0, plateBaseY + data.length * plateSpacing + 0.3, 0);
+      signSprite.scale.set(0.8, 0.15, 1);
+      group.add(signSprite);
+
+    // ---------- BOXES (Openable) ----------
     } else if (environment === 'boxes') {
       const boxSpacing = 0.42;
       const boxBaseY = -data.length * boxSpacing / 2 + 0.2;
+
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const isTop = i === data.length - 1;
         const isPeeking = animPhase === 'stack-peek-open' && isTop && isHl;
         const box = createCardboardBox(item.label, item.color, isHl, isPeeking);
-        box.position.set(isHl ? 0.2 : 0, boxBaseY + i * boxSpacing, 0); box.rotation.y = (i % 2 === 0) ? 0 : 0.06; box.scale.setScalar(0.82);
-        applyItemAnimation(box, i, animPhase || '', animData || {}, 'stack'); group.add(box);
-        if (isTop) { const topSprite = createTextSprite('← TOP', '#ff0000', 24); topSprite.position.set(0.6, boxBaseY + i * boxSpacing, 0); topSprite.scale.set(0.35, 0.12, 1); group.add(topSprite); }
+        box.position.set(isHl ? 0.2 : 0, boxBaseY + i * boxSpacing, 0);
+        box.rotation.y = (i % 2 === 0) ? 0 : 0.06;
+        box.scale.setScalar(0.82);
+        applyItemAnimation(box, i, animPhase || '', animData || {}, 'stack');
+        group.add(box);
+
+        if (isTop) {
+          const topSprite = createTextSprite('← TOP', '#ff0000', 24);
+          topSprite.position.set(0.6, boxBaseY + i * boxSpacing, 0);
+          topSprite.scale.set(0.35, 0.12, 1);
+          group.add(topSprite);
+        }
       });
-      group.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.06, 0.65), new THREE.MeshStandardMaterial({ color: '#a0522d', roughness: 0.9 })), { position: new THREE.Vector3(0, boxBaseY - 0.24, 0) }));
-      [-0.25, 0, 0.25].forEach(z => { group.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.015, 0.08), new THREE.MeshStandardMaterial({ color: '#8b6914' })), { position: new THREE.Vector3(0, boxBaseY - 0.28, z) })); });
+
+      // Pallet
+      const pallet = new THREE.Mesh(
+        new THREE.BoxGeometry(0.85, 0.06, 0.65),
+        new THREE.MeshStandardMaterial({ color: '#a0522d', roughness: 0.9 })
+      );
+      pallet.position.y = boxBaseY - 0.24;
+      group.add(pallet);
+
+      // Pallet slats
+      const slatGeo = new THREE.BoxGeometry(0.85, 0.015, 0.08);
+      const slatMat = new THREE.MeshStandardMaterial({ color: '#8b6914' });
+      [-0.25, 0, 0.25].forEach(z => {
+        const slat = new THREE.Mesh(slatGeo, slatMat);
+        slat.position.set(0, boxBaseY - 0.28, z);
+        group.add(slat);
+      });
     }
 
+  // ========================================================
+  // ==================== QUEUE =============================
+  // ========================================================
   } else if (structure === 'queue') {
 
+    // ---------- TOLLGATE ----------
     if (environment === 'tollgate') {
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const car = createCar(item.color, item.label, isHl);
-        car.position.set(startX + i * spacing, isHl ? 0.08 : 0, 0); car.scale.setScalar(0.82);
-        applyItemAnimation(car, i, animPhase || '', animData || {}, 'queue'); group.add(car);
+        car.position.set(startX + i * spacing, isHl ? 0.08 : 0, 0);
+        car.scale.setScalar(0.82);
+        applyItemAnimation(car, i, animPhase || '', animData || {}, 'queue');
+        group.add(car);
       });
-      const frontSprite = createTextSprite('FRONT', '#00ff00', 20); frontSprite.position.set(startX, -0.22, 0); frontSprite.scale.set(0.3, 0.12, 1); group.add(frontSprite);
-      const rearSprite = createTextSprite('REAR', '#ff6600', 20); rearSprite.position.set(startX + (data.length - 1) * spacing, -0.22, 0); rearSprite.scale.set(0.3, 0.12, 1); group.add(rearSprite);
-      const gateX = startX - 0.8;
-      const poleMat2 = new THREE.MeshStandardMaterial({ color: '#f1c40f', metalness: 0.5 });
-      [0.25, -0.25].forEach(z => { group.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.7, 12), poleMat2), { position: new THREE.Vector3(gateX, 0.25, z) })); });
-      group.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.55), poleMat2), { position: new THREE.Vector3(gateX, 0.6, 0) }));
-      const barrier = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.04, 0.04), new THREE.MeshStandardMaterial({ color: '#e74c3c' }));
-      barrier.position.set(gateX - 0.25, 0.5, 0); barrier.rotation.z = 0.3; group.add(barrier);
-      for (let sx = -0.2; sx < 0.2; sx += 0.08) { const st = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.045, 0.045), new THREE.MeshStandardMaterial({ color: '#ffffff' })); st.position.set(gateX - 0.25 + sx, 0.5, 0); st.rotation.z = 0.3; group.add(st); }
-      const signCanvas2 = document.createElement('canvas'); signCanvas2.width = 128; signCanvas2.height = 48;
-      const signCtx = signCanvas2.getContext('2d')!; signCtx.fillStyle = '#2c3e50'; signCtx.fillRect(0, 0, 128, 48);
-      signCtx.fillStyle = '#fff'; signCtx.font = 'bold 28px Arial'; signCtx.textAlign = 'center'; signCtx.fillText('TOLL', 64, 36);
-      const signSprite2 = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(signCanvas2), transparent: true }));
-      signSprite2.position.set(gateX, 0.72, 0); signSprite2.scale.set(0.35, 0.13, 1); group.add(signSprite2);
-      const road = new THREE.Mesh(new THREE.PlaneGeometry(data.length * spacing + 2.5, 0.7), new THREE.MeshStandardMaterial({ color: '#34495e', side: THREE.DoubleSide }));
-      road.rotation.x = -Math.PI / 2; road.position.y = -0.08; group.add(road);
-      for (let x = startX - 1; x <= startX + data.length * spacing + 0.5; x += 0.25) {
-        const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.025), new THREE.MeshStandardMaterial({ color: '#ffffff', side: THREE.DoubleSide }));
-        dash.rotation.x = -Math.PI / 2; dash.position.set(x, -0.075, 0); group.add(dash);
-      }
-      const exitSprite = createTextSprite('EXIT →', '#00ff00', 22); exitSprite.position.set(gateX - 0.6, 0.3, 0); exitSprite.scale.set(0.35, 0.12, 1); group.add(exitSprite);
 
+      // FRONT / REAR labels
+      const frontSprite = createTextSprite('FRONT', '#00ff00', 20);
+      frontSprite.position.set(startX, -0.22, 0);
+      frontSprite.scale.set(0.3, 0.12, 1);
+      group.add(frontSprite);
+
+      const rearSprite = createTextSprite('REAR', '#ff6600', 20);
+      rearSprite.position.set(startX + (data.length - 1) * spacing, -0.22, 0);
+      rearSprite.scale.set(0.3, 0.12, 1);
+      group.add(rearSprite);
+
+      // Toll gate structure
+      const gateX = startX - 0.8;
+
+      // Gate poles
+      const poleMat = new THREE.MeshStandardMaterial({ color: '#f1c40f', metalness: 0.5 });
+      const poleGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.7, 12);
+      [0.25, -0.25].forEach(z => {
+        group.add(new THREE.Mesh(poleGeo, poleMat)).position.set(gateX, 0.25, z);
+      });
+
+      // Gate top bar
+      const topBarGeo = new THREE.BoxGeometry(0.06, 0.06, 0.55);
+      group.add(new THREE.Mesh(topBarGeo, poleMat)).position.set(gateX, 0.6, 0);
+
+      // Barrier arm
+      const barrierGeo = new THREE.BoxGeometry(0.5, 0.04, 0.04);
+      const barrier = new THREE.Mesh(barrierGeo, new THREE.MeshStandardMaterial({ color: '#e74c3c' }));
+      barrier.position.set(gateX - 0.25, 0.5, 0);
+      barrier.rotation.z = 0.3;
+      group.add(barrier);
+
+      // Barrier stripes
+      const stripeMat = new THREE.MeshStandardMaterial({ color: '#ffffff' });
+      for (let sx = -0.2; sx < 0.2; sx += 0.08) {
+        const stripeGeo = new THREE.BoxGeometry(0.03, 0.045, 0.045);
+        const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+        stripe.position.set(gateX - 0.25 + sx, 0.5, 0);
+        stripe.rotation.z = 0.3;
+        group.add(stripe);
+      }
+
+      // "TOLL" sign
+      const signCanvas = document.createElement('canvas');
+      signCanvas.width = 128; signCanvas.height = 48;
+      const signCtx = signCanvas.getContext('2d')!;
+      signCtx.fillStyle = '#2c3e50';
+      signCtx.fillRect(0, 0, 128, 48);
+      signCtx.fillStyle = '#fff';
+      signCtx.font = 'bold 28px Arial';
+      signCtx.textAlign = 'center';
+      signCtx.fillText('TOLL', 64, 36);
+      const signSprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(signCanvas), transparent: true })
+      );
+      signSprite.position.set(gateX, 0.72, 0);
+      signSprite.scale.set(0.35, 0.13, 1);
+      group.add(signSprite);
+
+      // Road
+      const road = new THREE.Mesh(
+        new THREE.PlaneGeometry(data.length * spacing + 2.5, 0.7),
+        new THREE.MeshStandardMaterial({ color: '#34495e', side: THREE.DoubleSide })
+      );
+      road.rotation.x = -Math.PI / 2;
+      road.position.y = -0.08;
+      group.add(road);
+
+      // Dashed road lines
+      const dashMat = new THREE.MeshStandardMaterial({ color: '#ffffff', side: THREE.DoubleSide });
+      for (let x = startX - 1; x <= startX + data.length * spacing + 0.5; x += 0.25) {
+        const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.025), dashMat);
+        dash.rotation.x = -Math.PI / 2;
+        dash.position.set(x, -0.075, 0);
+        group.add(dash);
+      }
+
+      // Exit arrow
+      const exitSprite = createTextSprite('EXIT →', '#00ff00', 22);
+      exitSprite.position.set(gateX - 0.6, 0.3, 0);
+      exitSprite.scale.set(0.35, 0.12, 1);
+      group.add(exitSprite);
+
+    // ---------- TICKETS ----------
     } else if (environment === 'tickets') {
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const ticket = createTicket(item.label, item.color, isHl);
-        ticket.position.set(startX + i * spacing, isHl ? 0.1 : 0, 0); ticket.scale.setScalar(0.82);
-        applyItemAnimation(ticket, i, animPhase || '', animData || {}, 'queue'); group.add(ticket);
+        ticket.position.set(startX + i * spacing, isHl ? 0.1 : 0, 0);
+        ticket.scale.setScalar(0.82);
+        applyItemAnimation(ticket, i, animPhase || '', animData || {}, 'queue');
+        group.add(ticket);
       });
-      const frontSprite = createTextSprite('FRONT', '#00ff00', 20); frontSprite.position.set(startX, -0.22, 0); frontSprite.scale.set(0.3, 0.12, 1); group.add(frontSprite);
-      const rearSprite = createTextSprite('REAR', '#ff6600', 20); rearSprite.position.set(startX + (data.length - 1) * spacing, -0.22, 0); rearSprite.scale.set(0.3, 0.12, 1); group.add(rearSprite);
-      group.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(data.length * spacing + 0.6, 0.04, 0.4), new THREE.MeshStandardMaterial({ color: '#2c3e50', metalness: 0.3 })), { position: new THREE.Vector3(0, -0.15, 0) }));
-      const svCanvas = document.createElement('canvas'); svCanvas.width = 200; svCanvas.height = 64;
-      const svctx = svCanvas.getContext('2d')!; svctx.fillStyle = '#1a1a2e'; svctx.fillRect(0, 0, 200, 64);
-      svctx.strokeStyle = '#ffd700'; svctx.lineWidth = 2; svctx.strokeRect(3, 3, 194, 58);
-      svctx.fillStyle = '#00ff00'; svctx.font = 'bold 14px Arial'; svctx.textAlign = 'center'; svctx.fillText('NOW SERVING', 100, 22);
-      svctx.font = 'bold 28px Arial'; svctx.fillStyle = '#ff0'; svctx.fillText(data.length > 0 ? data[0].label : '---', 100, 52);
-      const svSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(svCanvas), transparent: true }));
-      svSprite.position.set(startX - 0.6, 0.2, 0); svSprite.scale.set(0.45, 0.15, 1); group.add(svSprite);
 
+      const frontSprite = createTextSprite('FRONT', '#00ff00', 20);
+      frontSprite.position.set(startX, -0.22, 0);
+      frontSprite.scale.set(0.3, 0.12, 1);
+      group.add(frontSprite);
+
+      const rearSprite = createTextSprite('REAR', '#ff6600', 20);
+      rearSprite.position.set(startX + (data.length - 1) * spacing, -0.22, 0);
+      rearSprite.scale.set(0.3, 0.12, 1);
+      group.add(rearSprite);
+
+      // Counter
+      const counter = new THREE.Mesh(
+        new THREE.BoxGeometry(data.length * spacing + 0.6, 0.04, 0.4),
+        new THREE.MeshStandardMaterial({ color: '#2c3e50', metalness: 0.3 })
+      );
+      counter.position.y = -0.15;
+      group.add(counter);
+
+      // "NOW SERVING" sign
+      const servingCanvas = document.createElement('canvas');
+      servingCanvas.width = 200; servingCanvas.height = 64;
+      const svctx = servingCanvas.getContext('2d')!;
+      svctx.fillStyle = '#1a1a2e';
+      svctx.fillRect(0, 0, 200, 64);
+      svctx.strokeStyle = '#ffd700';
+      svctx.lineWidth = 2;
+      svctx.strokeRect(3, 3, 194, 58);
+      svctx.fillStyle = '#00ff00';
+      svctx.font = 'bold 14px Arial';
+      svctx.textAlign = 'center';
+      svctx.fillText('NOW SERVING', 100, 22);
+      svctx.font = 'bold 28px Arial';
+      svctx.fillStyle = '#ff0';
+      svctx.fillText(data.length > 0 ? data[0].label : '---', 100, 52);
+      const servingSprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(servingCanvas), transparent: true })
+      );
+      servingSprite.position.set(startX - 0.6, 0.2, 0);
+      servingSprite.scale.set(0.45, 0.15, 1);
+      group.add(servingSprite);
+
+    // ---------- STUDENTS (School Queue with Building) ----------
     } else if (environment === 'students') {
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         if (item.appearance) {
           const human = createHuman3D(item.appearance, item.label, isHl);
-          human.position.set(startX + i * spacing, isHl ? 0.08 : 0, 0); human.scale.setScalar(0.68);
-          applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue'); group.add(human);
+          human.position.set(startX + i * spacing, isHl ? 0.08 : 0, 0);
+          human.scale.setScalar(0.68);
+          applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue');
+          group.add(human);
         }
       });
-      const frontSprite = createTextSprite('FRONT', '#00ff00', 18); frontSprite.position.set(startX, -0.2, 0); frontSprite.scale.set(0.28, 0.1, 1); group.add(frontSprite);
-      const rearSprite = createTextSprite('REAR', '#ff6600', 18); rearSprite.position.set(startX + (data.length - 1) * spacing, -0.2, 0); rearSprite.scale.set(0.28, 0.1, 1); group.add(rearSprite);
+
+      const frontSprite = createTextSprite('FRONT', '#00ff00', 18);
+      frontSprite.position.set(startX, -0.2, 0);
+      frontSprite.scale.set(0.28, 0.1, 1);
+      group.add(frontSprite);
+
+      const rearSprite = createTextSprite('REAR', '#ff6600', 18);
+      rearSprite.position.set(startX + (data.length - 1) * spacing, -0.2, 0);
+      rearSprite.scale.set(0.28, 0.1, 1);
+      group.add(rearSprite);
+
+      // School building entrance
       const buildingX = startX - 0.9;
-      const wallMat2 = new THREE.MeshStandardMaterial({ color: '#8b4513', roughness: 0.8 });
-      group.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.7, 0.8), wallMat2), { position: new THREE.Vector3(buildingX, 0.2, 0) }));
-      group.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.5, 0.35), new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.6 })), { position: new THREE.Vector3(buildingX + 0.02, 0.1, 0) }));
-      const door = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.45, 0.15), new THREE.MeshStandardMaterial({ color: '#6d4c2a', roughness: 0.7 }));
-      door.position.set(buildingX + 0.05, 0.08, 0.12); door.rotation.y = -0.8; group.add(door);
-      const schCanvas = document.createElement('canvas'); schCanvas.width = 200; schCanvas.height = 48;
-      const schCtx = schCanvas.getContext('2d')!; schCtx.fillStyle = '#1a5276'; schCtx.fillRect(0, 0, 200, 48);
-      schCtx.strokeStyle = '#ffd700'; schCtx.lineWidth = 3; schCtx.strokeRect(2, 2, 196, 44);
-      schCtx.fillStyle = '#fff'; schCtx.font = 'bold 16px Arial'; schCtx.textAlign = 'center'; schCtx.fillText('📚 DS ACADEMY 📚', 100, 32);
-      const schSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(schCanvas), transparent: true }));
-      schSprite.position.set(buildingX, 0.62, 0); schSprite.scale.set(0.5, 0.12, 1); group.add(schSprite);
-      group.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.04, 0.85), new THREE.MeshStandardMaterial({ color: '#c0392b' })), { position: new THREE.Vector3(buildingX, 0.57, 0) }));
-      const pathway = new THREE.Mesh(new THREE.PlaneGeometry(data.length * spacing + 1.8, 0.5), new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide }));
-      pathway.rotation.x = -Math.PI / 2; pathway.position.y = -0.14; group.add(pathway);
+      const wallMat = new THREE.MeshStandardMaterial({ color: '#8b4513', roughness: 0.8 });
+
+      // Building front wall
+      const frontWall = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.7, 0.8), wallMat);
+      frontWall.position.set(buildingX, 0.2, 0);
+      group.add(frontWall);
+
+      // Door frame
+      const doorFrameMat = new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.6 });
+      const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.5, 0.35), doorFrameMat);
+      doorFrame.position.set(buildingX + 0.02, 0.1, 0);
+      group.add(doorFrame);
+
+      // Door (open)
+      const doorMat = new THREE.MeshStandardMaterial({ color: '#6d4c2a', roughness: 0.7 });
+      const door = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.45, 0.15), doorMat);
+      door.position.set(buildingX + 0.05, 0.08, 0.12);
+      door.rotation.y = -0.8;
+      group.add(door);
+
+      // School sign
+      const schoolCanvas = document.createElement('canvas');
+      schoolCanvas.width = 200; schoolCanvas.height = 48;
+      const schCtx = schoolCanvas.getContext('2d')!;
+      schCtx.fillStyle = '#1a5276';
+      schCtx.fillRect(0, 0, 200, 48);
+      schCtx.strokeStyle = '#ffd700';
+      schCtx.lineWidth = 3;
+      schCtx.strokeRect(2, 2, 196, 44);
+      schCtx.fillStyle = '#fff';
+      schCtx.font = 'bold 16px Arial';
+      schCtx.textAlign = 'center';
+      schCtx.fillText('📚 DS ACADEMY 📚', 100, 32);
+      const schoolSprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(schoolCanvas), transparent: true })
+      );
+      schoolSprite.position.set(buildingX, 0.62, 0);
+      schoolSprite.scale.set(0.5, 0.12, 1);
+      group.add(schoolSprite);
+
+      // Roof
+      const roofGeo = new THREE.BoxGeometry(0.1, 0.04, 0.85);
+      const roofMat = new THREE.MeshStandardMaterial({ color: '#c0392b' });
+      const roofMesh = new THREE.Mesh(roofGeo, roofMat);
+      roofMesh.position.set(buildingX, 0.57, 0);
+      group.add(roofMesh);
+
+      // Floor / pathway
+      const pathway = new THREE.Mesh(
+        new THREE.PlaneGeometry(data.length * spacing + 1.8, 0.5),
+        new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
+      );
+      pathway.rotation.x = -Math.PI / 2;
+      pathway.position.y = -0.14;
+      group.add(pathway);
+
+      // Path lines
+      const pathLineMat = new THREE.MeshBasicMaterial({ color: '#95a5a6', side: THREE.DoubleSide });
       [-0.2, 0.2].forEach(z => {
-        const pathLine = new THREE.Mesh(new THREE.PlaneGeometry(data.length * spacing + 1.5, 0.01), new THREE.MeshBasicMaterial({ color: '#95a5a6', side: THREE.DoubleSide }));
-        pathLine.rotation.x = -Math.PI / 2; pathLine.position.set(0, -0.139, z); group.add(pathLine);
+        const pathLine = new THREE.Mesh(new THREE.PlaneGeometry(data.length * spacing + 1.5, 0.01), pathLineMat);
+        pathLine.rotation.x = -Math.PI / 2;
+        pathLine.position.set(0, -0.139, z);
+        group.add(pathLine);
       });
     }
   }
 }
 
-// ==================== HOME COMPONENT ====================
+// ==================== END OF PART 5 ====================
+// ==================== PARTS 6-9: Home + OpBtn + Visualization3D ====================
+// Place right after Part 5 (after buildSceneContent)
 
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -1140,59 +3289,87 @@ export default function Home() {
   const xrHitTestSourceRef = useRef<any>(null);
   const xrContainerRef = useRef<HTMLDivElement>(null);
 
+  // ==================== ALL DATA ====================
+
   const [groceryItems, setGroceryItems] = useState<DataItem[]>([
-    { id: 1, label: 'Milk', color: '#3498db' }, { id: 2, label: 'Bread', color: '#e67e22' },
-    { id: 3, label: 'Eggs', color: '#f1c40f' }, { id: 4, label: 'Apple', color: '#e74c3c' },
+    { id: 1, label: 'Milk', color: '#3498db' },
+    { id: 2, label: 'Bread', color: '#e67e22' },
+    { id: 3, label: 'Eggs', color: '#f1c40f' },
+    { id: 4, label: 'Apple', color: '#e74c3c' },
     { id: 5, label: 'Juice', color: '#9b59b6' },
   ]);
+
   const [students, setStudents] = useState<DataItem[]>([
     { id: 1, label: 'Alex', color: '#3498db', appearance: { skinTone: '#ffdbac', shirtColor: '#3498db', pantsColor: '#2c3e50', hairColor: '#4a3728', hairStyle: 'short', gender: 'male' } },
     { id: 2, label: 'Beth', color: '#e91e63', appearance: { skinTone: '#f5d0c5', shirtColor: '#e91e63', pantsColor: '#8e44ad', hairColor: '#2c1810', hairStyle: 'long', gender: 'female' } },
     { id: 3, label: 'Carl', color: '#27ae60', appearance: { skinTone: '#8d5524', shirtColor: '#27ae60', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } },
     { id: 4, label: 'Dana', color: '#f39c12', appearance: { skinTone: '#ffcd94', shirtColor: '#f39c12', pantsColor: '#3498db', hairColor: '#d4a574', hairStyle: 'long', gender: 'female' } },
   ]);
+
   const [tasks, setTasks] = useState<DataItem[]>([
-    { id: 1, label: 'Study', color: '#e74c3c' }, { id: 2, label: 'Code', color: '#e74c3c' },
-    { id: 3, label: 'Read', color: '#f39c12' }, { id: 4, label: 'Rest', color: '#2ecc71' },
+    { id: 1, label: 'Study', color: '#e74c3c' },
+    { id: 2, label: 'Code', color: '#e74c3c' },
+    { id: 3, label: 'Read', color: '#f39c12' },
+    { id: 4, label: 'Rest', color: '#2ecc71' },
   ]);
+
   const [trainCars, setTrainCars] = useState<DataItem[]>([
-    { id: 1, label: 'Engine', color: '#e74c3c' }, { id: 2, label: 'Coal', color: '#3498db' },
-    { id: 3, label: 'Cargo', color: '#2ecc71' }, { id: 4, label: 'Pass', color: '#9b59b6' },
+    { id: 1, label: 'Engine', color: '#e74c3c' },
+    { id: 2, label: 'Coal', color: '#3498db' },
+    { id: 3, label: 'Cargo', color: '#2ecc71' },
+    { id: 4, label: 'Pass', color: '#9b59b6' },
   ]);
+
   const [peopleLine, setPeopleLine] = useState<DataItem[]>([
     { id: 1, label: 'Alice', color: '#e74c3c', appearance: { skinTone: '#ffdbac', shirtColor: '#e74c3c', pantsColor: '#2c3e50', hairColor: '#2c1810', hairStyle: 'long', gender: 'female' } },
     { id: 2, label: 'Bob', color: '#3498db', appearance: { skinTone: '#8d5524', shirtColor: '#3498db', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } },
     { id: 3, label: 'Carol', color: '#2ecc71', appearance: { skinTone: '#f5d0c5', shirtColor: '#2ecc71', pantsColor: '#8e44ad', hairColor: '#d4a574', hairStyle: 'long', gender: 'female' } },
   ]);
+
   const [dominoNodes, setDominoNodes] = useState<DataItem[]>([
-    { id: 1, label: '1', color: '#ecf0f1' }, { id: 2, label: '2', color: '#ecf0f1' },
-    { id: 3, label: '3', color: '#ecf0f1' }, { id: 4, label: '4', color: '#ecf0f1' },
+    { id: 1, label: '1', color: '#ecf0f1' },
+    { id: 2, label: '2', color: '#ecf0f1' },
+    { id: 3, label: '3', color: '#ecf0f1' },
+    { id: 4, label: '4', color: '#ecf0f1' },
   ]);
+
   const [bookStack, setBookStack] = useState<DataItem[]>([
-    { id: 1, label: 'Math', color: '#3498db' }, { id: 2, label: 'Science', color: '#2ecc71' },
+    { id: 1, label: 'Math', color: '#3498db' },
+    { id: 2, label: 'Science', color: '#2ecc71' },
     { id: 3, label: 'History', color: '#e67e22' },
   ]);
+
   const [plateStack, setPlateStack] = useState<DataItem[]>([
-    { id: 1, label: 'Plate 1', color: '#ecf0f1' }, { id: 2, label: 'Plate 2', color: '#bdc3c7' },
+    { id: 1, label: 'Plate 1', color: '#ecf0f1' },
+    { id: 2, label: 'Plate 2', color: '#bdc3c7' },
     { id: 3, label: 'Plate 3', color: '#95a5a6' },
   ]);
+
   const [boxStack, setBoxStack] = useState<DataItem[]>([
-    { id: 1, label: 'Box A', color: '#e67e22' }, { id: 2, label: 'Box B', color: '#d35400' },
+    { id: 1, label: 'Box A', color: '#e67e22' },
+    { id: 2, label: 'Box B', color: '#d35400' },
     { id: 3, label: 'Box C', color: '#e74c3c' },
   ]);
+
   const [tollGate, setTollGate] = useState<DataItem[]>([
-    { id: 1, label: 'Red', color: '#e74c3c' }, { id: 2, label: 'Blue', color: '#3498db' },
+    { id: 1, label: 'Red', color: '#e74c3c' },
+    { id: 2, label: 'Blue', color: '#3498db' },
     { id: 3, label: 'Green', color: '#2ecc71' },
   ]);
+
   const [ticketQueue, setTicketQueue] = useState<DataItem[]>([
-    { id: 1, label: 'T-001', color: '#f39c12' }, { id: 2, label: 'T-002', color: '#e74c3c' },
+    { id: 1, label: 'T-001', color: '#f39c12' },
+    { id: 2, label: 'T-002', color: '#e74c3c' },
     { id: 3, label: 'T-003', color: '#9b59b6' },
   ]);
+
   const [studentQueue, setStudentQueue] = useState<DataItem[]>([
     { id: 1, label: 'Stu 1', color: '#3498db', appearance: { skinTone: '#ffdbac', shirtColor: '#3498db', pantsColor: '#2c3e50', hairColor: '#4a3728', hairStyle: 'short', gender: 'male' } },
     { id: 2, label: 'Stu 2', color: '#2ecc71', appearance: { skinTone: '#f5d0c5', shirtColor: '#2ecc71', pantsColor: '#8e44ad', hairColor: '#2c1810', hairStyle: 'long', gender: 'female' } },
     { id: 3, label: 'Stu 3', color: '#9b59b6', appearance: { skinTone: '#8d5524', shirtColor: '#9b59b6', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } },
   ]);
+
+  // ==================== HELPERS ====================
 
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
   const getArrayData = () => arrayEnv === 'grocery' ? groceryItems : arrayEnv === 'classroom' ? students : tasks;
@@ -1212,11 +3389,20 @@ export default function Home() {
   const zoomOut = useCallback(() => setZoomLevel(prev => Math.max(prev - 0.25, 0.1)), []);
   const resetZoom = useCallback(() => setZoomLevel(1.0), []);
 
+  // ==================== CAMERA ====================
+
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
     try {
       if (stream) stream.getTracks().forEach(track => track.stop());
-      const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
-      if (videoRef.current) { videoRef.current.srcObject = newStream; await new Promise<void>((resolve) => { if (videoRef.current) videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); resolve(); }; }); }
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = newStream;
+        await new Promise<void>((resolve) => {
+          if (videoRef.current) videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); resolve(); };
+        });
+      }
       setStream(newStream);
     } catch (err) { throw new Error('Cannot access camera.'); }
   }, [stream]);
@@ -1229,7 +3415,8 @@ export default function Home() {
 
   const loadModel = async () => {
     setLoadingText('Loading AI...');
-    const tf = await import('@tensorflow/tfjs'); await tf.ready(); await tf.setBackend('webgl');
+    const tf = await import('@tensorflow/tfjs');
+    await tf.ready(); await tf.setBackend('webgl');
     setLoadingText('Loading detector...');
     const cocoSsd = await import('@tensorflow-models/coco-ssd');
     return await cocoSsd.load({ base: 'lite_mobilenet_v2' });
@@ -1237,12 +3424,19 @@ export default function Home() {
 
   useEffect(() => {
     const init = async () => {
-      try { setLoadingText('Starting camera...'); await startCamera('environment'); const loadedModel = await loadModel(); setModel(loadedModel); setIsLoading(false); }
-      catch (err: any) { setError(err.message); setIsLoading(false); }
+      try {
+        setLoadingText('Starting camera...');
+        await startCamera('environment');
+        const loadedModel = await loadModel();
+        setModel(loadedModel);
+        setIsLoading(false);
+      } catch (err: any) { setError(err.message); setIsLoading(false); }
     };
     init();
     return () => { if (stream) stream.getTracks().forEach(track => track.stop()); };
   }, []);
+
+  // ==================== PERSON DETECTION ====================
 
   useEffect(() => {
     if (!model || !videoRef.current || !canvasRef.current || appMode !== 'person') return;
@@ -1271,18 +3465,37 @@ export default function Home() {
     return () => { running = false; if (animationId) cancelAnimationFrame(animationId); };
   }, [model, appMode]);
 
+  // ==================== WEBXR ====================
+
   useEffect(() => {
-    const checkXR = async () => { try { if ((navigator as any).xr) { setWebxrSupported(await (navigator as any).xr.isSessionSupported('immersive-ar')); } } catch { setWebxrSupported(false); } };
+    const checkXR = async () => {
+      try {
+        if ((navigator as any).xr) {
+          const supported = await (navigator as any).xr.isSessionSupported('immersive-ar');
+          setWebxrSupported(supported);
+        }
+      } catch { setWebxrSupported(false); }
+    };
     checkXR();
   }, []);
 
   const cleanupWebXR = useCallback(() => {
-    if (xrRendererRef.current) { xrRendererRef.current.setAnimationLoop(null); xrRendererRef.current.dispose(); if (xrContainerRef.current && xrRendererRef.current.domElement.parentNode === xrContainerRef.current) xrContainerRef.current.removeChild(xrRendererRef.current.domElement); }
-    xrSessionRef.current = null; xrRendererRef.current = null; xrSceneRef.current = null; xrCameraRef.current = null; xrGroupRef.current = null; xrReticleRef.current = null; xrHitTestSourceRef.current = null;
+    if (xrRendererRef.current) {
+      xrRendererRef.current.setAnimationLoop(null);
+      xrRendererRef.current.dispose();
+      if (xrContainerRef.current && xrRendererRef.current.domElement.parentNode === xrContainerRef.current)
+        xrContainerRef.current.removeChild(xrRendererRef.current.domElement);
+    }
+    xrSessionRef.current = null; xrRendererRef.current = null; xrSceneRef.current = null;
+    xrCameraRef.current = null; xrGroupRef.current = null; xrReticleRef.current = null;
+    xrHitTestSourceRef.current = null;
     setWebxrActive(false); setWebxrPlaced(false); setAppMode('surface');
   }, []);
 
-  const stopWebXR = useCallback(() => { if (xrSessionRef.current) { try { xrSessionRef.current.end(); } catch (e) { cleanupWebXR(); } } else cleanupWebXR(); }, [cleanupWebXR]);
+  const stopWebXR = useCallback(() => {
+    if (xrSessionRef.current) { try { xrSessionRef.current.end(); } catch (e) { cleanupWebXR(); } }
+    else cleanupWebXR();
+  }, [cleanupWebXR]);
 
   const startWebXR = async () => {
     const xr = (navigator as any).xr;
@@ -1294,22 +3507,30 @@ export default function Home() {
       const session = await xr.requestSession('immersive-ar', sessionInit);
       xrSessionRef.current = session;
       const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-      renderer.setPixelRatio(window.devicePixelRatio); renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.xr.enabled = true; renderer.xr.setReferenceSpaceType('local');
       xrRendererRef.current = renderer;
       if (xrContainerRef.current) xrContainerRef.current.appendChild(renderer.domElement);
       await renderer.xr.setSession(session);
       const scene = new THREE.Scene(); xrSceneRef.current = scene;
       scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8); dirLight.position.set(5, 10, 7); dirLight.castShadow = true; scene.add(dirLight);
-      scene.add(Object.assign(new THREE.DirectionalLight(0xffffff, 0.3), { position: new THREE.Vector3(-5, 5, -5) }));
-      const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 100); xrCameraRef.current = camera;
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(5, 10, 7); dirLight.castShadow = true; scene.add(dirLight);
+      const backLight = new THREE.DirectionalLight(0xffffff, 0.3);
+      backLight.position.set(-5, 5, -5); scene.add(backLight);
+      const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 100);
+      xrCameraRef.current = camera;
       const group = new THREE.Group(); group.visible = false; scene.add(group); xrGroupRef.current = group;
-      const reticle = new THREE.Mesh(new THREE.RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
+      const reticle = new THREE.Mesh(
+        new THREE.RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2),
+        new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+      );
       reticle.matrixAutoUpdate = false; reticle.visible = false; scene.add(reticle); xrReticleRef.current = reticle;
       reticle.add(new THREE.Mesh(new THREE.CircleGeometry(0.02, 16).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x00ff00 })));
       const viewerSpace = await session.requestReferenceSpace('viewer');
-      const hitTestSource = await session.requestHitTestSource({ space: viewerSpace }); xrHitTestSourceRef.current = hitTestSource;
+      const hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
+      xrHitTestSourceRef.current = hitTestSource;
       session.addEventListener('select', () => {
         if (xrReticleRef.current?.visible && xrGroupRef.current && !xrGroupRef.current.visible) {
           xrGroupRef.current.position.setFromMatrixPosition(xrReticleRef.current.matrix);
@@ -1321,7 +3542,13 @@ export default function Home() {
       renderer.setAnimationLoop((_ts: number, frame: any) => {
         if (frame && xrHitTestSourceRef.current && xrGroupRef.current && !xrGroupRef.current.visible) {
           const refSpace = renderer.xr.getReferenceSpace();
-          if (refSpace) { const results = frame.getHitTestResults(xrHitTestSourceRef.current); if (results.length > 0) { const pose = results[0].getPose(refSpace); if (pose && xrReticleRef.current) { xrReticleRef.current.visible = true; xrReticleRef.current.matrix.fromArray(pose.transform.matrix); } } else if (xrReticleRef.current) xrReticleRef.current.visible = false; }
+          if (refSpace) {
+            const results = frame.getHitTestResults(xrHitTestSourceRef.current);
+            if (results.length > 0) {
+              const pose = results[0].getPose(refSpace);
+              if (pose && xrReticleRef.current) { xrReticleRef.current.visible = true; xrReticleRef.current.matrix.fromArray(pose.transform.matrix); }
+            } else if (xrReticleRef.current) xrReticleRef.current.visible = false;
+          }
         }
         renderer.render(scene, camera);
       });
@@ -1329,35 +3556,44 @@ export default function Home() {
     } catch (err: any) { console.error(err); alert('WebXR failed. Using Surface mode.'); setAppMode('surface'); }
   };
 
-  useEffect(() => { if (appMode !== 'webxr' || !webxrPlaced || !xrGroupRef.current) return; buildSceneContent(xrGroupRef.current, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData); }, [appMode, webxrPlaced, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData]);
-  useEffect(() => { if (xrGroupRef.current && webxrActive && webxrPlaced) xrGroupRef.current.scale.setScalar(0.3 * zoomLevel); }, [zoomLevel, webxrActive, webxrPlaced]);
-  const resetWebXRPlacement = useCallback(() => { if (xrGroupRef.current) xrGroupRef.current.visible = false; setWebxrPlaced(false); }, []);
+  useEffect(() => {
+    if (appMode !== 'webxr' || !webxrPlaced || !xrGroupRef.current) return;
+    buildSceneContent(xrGroupRef.current, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData);
+  }, [appMode, webxrPlaced, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData]);
+
+  useEffect(() => {
+    if (xrGroupRef.current && webxrActive && webxrPlaced) xrGroupRef.current.scale.setScalar(0.3 * zoomLevel);
+  }, [zoomLevel, webxrActive, webxrPlaced]);
+
+  const resetWebXRPlacement = useCallback(() => {
+    if (xrGroupRef.current) xrGroupRef.current.visible = false;
+    setWebxrPlaced(false);
+  }, []);
+
+  // ==================== MODE SWITCHING ====================
 
   const switchToMode = useCallback((mode: AppMode) => {
     if (appMode === 'webxr' && mode !== 'webxr') stopWebXR();
-    if (mode === 'webxr') { if (!webxrSupported) { alert('WebXR not supported.'); mode = 'surface'; } else { startWebXR(); return; } }
+    if (mode === 'webxr') {
+      if (!webxrSupported) { alert('WebXR not supported. Using Surface mode.'); mode = 'surface'; }
+      else { startWebXR(); return; }
+    }
     setAppMode(mode);
     if (mode === 'surface') { setDetectedPerson(null); setPersonPosition(null); setSurfacePlaced(false); setSurfacePosition(null); }
     else if (mode === 'person') { setSurfacePlaced(false); setSurfacePosition(null); }
   }, [appMode, webxrSupported, stopWebXR]);
 
-  // ==================== SURFACE HANDLERS (FIXED CENTERING) ====================
+  // ==================== SURFACE HANDLERS ====================
 
   const handleSurfaceTap = useCallback((e: React.MouseEvent) => {
     if (appMode !== 'surface' || surfacePlaced) return;
     const { clientX, clientY } = e;
     if (clientY < 160 || clientY > window.innerHeight - 180) return;
-    // FIX: Use full screen size, center on tap point
-    const vizWidth = window.innerWidth;
-    const vizHeight = window.innerHeight;
-    setSurfacePosition({
-      x: clientX - vizWidth / 2,
-      y: clientY - vizHeight / 2,
-      width: vizWidth,
-      height: vizHeight
-    });
+    const vizWidth = Math.min(window.innerWidth - 20, 380);
+    const vizHeight = currentStructure === 'stack' ? 300 : 220;
+    setSurfacePosition({ x: clientX - vizWidth / 2, y: clientY - vizHeight / 2, width: vizWidth, height: vizHeight });
     setSurfacePlaced(true);
-  }, [appMode, surfacePlaced]);
+  }, [appMode, surfacePlaced, currentStructure]);
 
   const handleDragStart = useCallback((e: React.TouchEvent | React.MouseEvent) => {
     if (appMode !== 'surface' || !surfacePlaced || !surfacePosition) return;
@@ -1385,31 +3621,235 @@ export default function Home() {
   const showVisualization = appMode === 'person' ? !!detectedPerson : appMode === 'surface' ? surfacePlaced : false;
   const showControls = showVisualization || (appMode === 'webxr' && webxrPlaced);
 
-  // ==================== OPERATIONS ====================
+  // ==================== ARRAY OPERATIONS (ANIMATED) ====================
 
-  const arrayAccess = async () => { if (isAnimating) return; setIsAnimating(true); const data = getArrayData(), index = Math.floor(Math.random() * data.length); setHighlightIndex(index); setOperationMessage(`Accessing [${index}]...`); setCodeDisplay(`// O(1) Access\narray[${index}]`); setAnimPhase('access-lift'); setAnimData({ index }); await delay(400); setAnimPhase('access-bounce'); setOperationMessage(`Found: "${data[index].label}"`); await delay(900); setAnimPhase('access-settle'); await delay(400); setAnimPhase(''); setAnimData({}); setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false); };
-  const arrayInsert = async () => { if (isAnimating || getArrayData().length >= 6) return; setIsAnimating(true); const data = getArrayData(), insertIndex = Math.floor(Math.random() * (data.length + 1)); setOperationMessage(`Inserting at [${insertIndex}]...`); setCodeDisplay(`// O(n) Insert\narray.splice(${insertIndex}, 0, item)`); for (let i = data.length - 1; i >= insertIndex; i--) { setHighlightIndex(i); await delay(250); } (setArrayData as any)((prev: DataItem[]) => { const arr = [...prev]; arr.splice(insertIndex, 0, { id: Date.now(), label: 'New', color: '#1abc9c' }); return arr; }); setHighlightIndex(insertIndex); setAnimPhase('insert-drop'); setAnimData({ index: insertIndex }); await delay(500); setAnimPhase('insert-settle'); await delay(400); setAnimPhase(''); setAnimData({}); setOperationMessage('Inserted!'); await delay(800); setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false); };
-  const arrayDelete = async () => { if (isAnimating || getArrayData().length <= 2) return; setIsAnimating(true); const data = getArrayData(), deleteIndex = Math.floor(Math.random() * data.length); setHighlightIndex(deleteIndex); setOperationMessage(`Deleting [${deleteIndex}]: "${data[deleteIndex].label}"`); setCodeDisplay(`// O(n) Delete\narray.splice(${deleteIndex}, 1)`); setAnimPhase('delete-lift'); setAnimData({ index: deleteIndex }); await delay(500); setAnimPhase('delete-shrink'); await delay(500); setHighlightIndex(null); setAnimPhase('delete-close'); setAnimData({ deleteIndex }); (setArrayData as any)((prev: DataItem[]) => prev.filter((_: any, i: number) => i !== deleteIndex)); await delay(500); setAnimPhase(''); setAnimData({}); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false); };
-  const arraySwap = async () => { if (isAnimating) return; setIsAnimating(true); const data = getArrayData(); const idx1 = Math.floor(Math.random() * data.length); let idx2 = Math.floor(Math.random() * data.length); while (idx2 === idx1) idx2 = Math.floor(Math.random() * data.length); setHighlightIndex(idx1); setHighlightIndex2(idx2); setOperationMessage(`Swapping [${idx1}] ↔ [${idx2}]`); setCodeDisplay('// O(1) Swap'); setAnimPhase('swap-lift'); setAnimData({ index1: idx1, index2: idx2 }); await delay(500); setAnimPhase('swap-cross'); await delay(400); (setArrayData as any)((prev: DataItem[]) => { const a = [...prev]; [a[idx1], a[idx2]] = [a[idx2], a[idx1]]; return a; }); setAnimPhase('swap-drop'); await delay(500); setAnimPhase(''); setAnimData({}); setHighlightIndex(null); setHighlightIndex2(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false); };
+  const arrayAccess = async () => {
+    if (isAnimating) return; setIsAnimating(true);
+    const data = getArrayData(), index = Math.floor(Math.random() * data.length);
+    setHighlightIndex(index);
+    setOperationMessage(`Accessing [${index}]...`);
+    setCodeDisplay(`// O(1) Access\narray[${index}]`);
+    setAnimPhase('access-lift'); setAnimData({ index }); await delay(400);
+    setAnimPhase('access-bounce');
+    setOperationMessage(`Found: "${data[index].label}"`); await delay(900);
+    setAnimPhase('access-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
 
-  const linkedListInsertHead = async () => { if (isAnimating || getLinkedListData().length >= 5) return; setIsAnimating(true); setOperationMessage('Inserting at HEAD...'); setCodeDisplay('// O(1)\nnewNode.next = head\nhead = newNode'); const newItem: DataItem = linkedListEnv === 'people' ? { id: Date.now(), label: 'New', color: '#1abc9c', appearance: { skinTone: '#ffdbac', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#4a3728', hairStyle: 'short', gender: 'male' } } : { id: Date.now(), label: 'New', color: '#1abc9c' }; (setLinkedListData as any)((prev: DataItem[]) => [newItem, ...prev]); setHighlightIndex(0); setAnimPhase('ll-insert-head'); setAnimData({ index: 0 }); await delay(500); setAnimPhase('ll-insert-head-settle'); await delay(400); setAnimPhase(''); setAnimData({}); setOperationMessage('Inserted at HEAD!'); await delay(1000); setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false); };
-  const linkedListInsertTail = async () => { if (isAnimating || getLinkedListData().length >= 5) return; setIsAnimating(true); const data = getLinkedListData(); setOperationMessage('Traversing to TAIL...'); setCodeDisplay('// O(n) Traverse'); for (let i = 0; i < data.length; i++) { setHighlightIndex(i); setAnimPhase('ll-traverse'); setAnimData({ index: i }); await delay(350); } setAnimPhase(''); setAnimData({}); const newItem: DataItem = linkedListEnv === 'people' ? { id: Date.now(), label: 'Last', color: '#e74c3c', appearance: { skinTone: '#8d5524', shirtColor: '#e74c3c', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } } : { id: Date.now(), label: 'New', color: '#e74c3c' }; (setLinkedListData as any)((prev: DataItem[]) => [...prev, newItem]); setHighlightIndex(data.length); setAnimPhase('ll-insert-tail'); setAnimData({ index: data.length }); await delay(500); setAnimPhase('ll-insert-tail-settle'); await delay(400); setAnimPhase(''); setAnimData({}); setOperationMessage('Inserted at TAIL!'); await delay(1000); setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false); };
-  const linkedListDeleteHead = async () => { if (isAnimating || getLinkedListData().length <= 2) return; setIsAnimating(true); setHighlightIndex(0); setOperationMessage('Deleting HEAD...'); setCodeDisplay('// O(1)\nhead = head.next'); setAnimPhase('ll-delete-lift'); setAnimData({ index: 0 }); await delay(500); setAnimPhase('ll-delete-shrink'); await delay(500); (setLinkedListData as any)((prev: DataItem[]) => prev.slice(1)); setAnimPhase(''); setAnimData({}); await delay(500); setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false); };
-  const linkedListTraverse = async () => { if (isAnimating) return; setIsAnimating(true); const data = getLinkedListData(); for (let i = 0; i < data.length; i++) { setHighlightIndex(i); setOperationMessage(`Visiting: ${data[i].label}`); setCodeDisplay(`// Node ${i}\ncurr = curr.next`); setAnimPhase('ll-traverse'); setAnimData({ index: i }); await delay(500); } setAnimPhase(''); setAnimData({}); setOperationMessage(`Done! ${data.length} nodes`); await delay(1000); setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false); };
+  const arrayInsert = async () => {
+    if (isAnimating || getArrayData().length >= 6) return; setIsAnimating(true);
+    const data = getArrayData(), insertIndex = Math.floor(Math.random() * (data.length + 1));
+    setOperationMessage(`Inserting at [${insertIndex}]...`);
+    setCodeDisplay(`// O(n) Insert\narray.splice(${insertIndex}, 0, item)`);
+    for (let i = data.length - 1; i >= insertIndex; i--) { setHighlightIndex(i); await delay(250); }
+    (setArrayData as any)((prev: DataItem[]) => {
+      const arr = [...prev]; arr.splice(insertIndex, 0, { id: Date.now(), label: 'New', color: '#1abc9c' }); return arr;
+    });
+    setHighlightIndex(insertIndex);
+    setAnimPhase('insert-drop'); setAnimData({ index: insertIndex }); await delay(500);
+    setAnimPhase('insert-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({});
+    setOperationMessage('Inserted!'); await delay(800);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
 
-  const stackPush = async () => { if (isAnimating || getStackData().length >= 5) return; setIsAnimating(true); const data = getStackData(); const labels = stackEnv === 'books' ? ['Physics', 'English', 'Art'] : stackEnv === 'plates' ? [`Plate ${data.length + 1}`] : [`Box ${String.fromCharCode(65 + data.length)}`]; const colors = stackEnv === 'books' ? ['#9b59b6', '#e74c3c', '#1abc9c'] : ['#7f8c8d']; const newItem = { id: Date.now(), label: labels[Math.floor(Math.random() * labels.length)], color: colors[Math.floor(Math.random() * colors.length)] }; setOperationMessage(`Pushing "${newItem.label}"...`); setCodeDisplay(`// O(1) LIFO\nstack.push("${newItem.label}")`); (setStackData as any)((prev: DataItem[]) => [...prev, newItem]); setHighlightIndex(data.length); setAnimPhase('stack-push-drop'); setAnimData({ index: data.length }); await delay(500); setAnimPhase('stack-push-settle'); await delay(400); setAnimPhase(''); setAnimData({}); setOperationMessage('Pushed!'); await delay(800); setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false); };
-  const stackPop = async () => { if (isAnimating || getStackData().length <= 1) return; setIsAnimating(true); const data = getStackData(), topItem = data[data.length - 1]; setHighlightIndex(data.length - 1); setOperationMessage(`Popping "${topItem.label}"...`); setCodeDisplay(`// O(1) LIFO\nstack.pop() → "${topItem.label}"`); setAnimPhase('stack-pop-lift'); setAnimData({ index: data.length - 1 }); await delay(500); setAnimPhase('stack-pop-fly'); await delay(500); (setStackData as any)((prev: DataItem[]) => prev.slice(0, -1)); setAnimPhase(''); setAnimData({}); await delay(500); setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false); };
-  const stackPeek = async () => { if (isAnimating || getStackData().length === 0) return; setIsAnimating(true); const data = getStackData(), topItem = data[data.length - 1]; setHighlightIndex(data.length - 1); setOperationMessage(`Peeking TOP...`); setCodeDisplay(`// O(1)\nstack.peek()`); setAnimPhase('stack-peek-lift'); setAnimData({ index: data.length - 1 }); await delay(400); setAnimPhase('stack-peek-open'); setOperationMessage(`TOP: "${topItem.label}"`); await delay(1200); setAnimPhase('stack-peek-settle'); await delay(400); setAnimPhase(''); setAnimData({}); setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false); };
+  const arrayDelete = async () => {
+    if (isAnimating || getArrayData().length <= 2) return; setIsAnimating(true);
+    const data = getArrayData(), deleteIndex = Math.floor(Math.random() * data.length);
+    setHighlightIndex(deleteIndex);
+    setOperationMessage(`Deleting [${deleteIndex}]: "${data[deleteIndex].label}"`);
+    setCodeDisplay(`// O(n) Delete\narray.splice(${deleteIndex}, 1)`);
+    setAnimPhase('delete-lift'); setAnimData({ index: deleteIndex }); await delay(500);
+    setAnimPhase('delete-shrink'); await delay(500);
+    setHighlightIndex(null); setAnimPhase('delete-close'); setAnimData({ deleteIndex });
+    (setArrayData as any)((prev: DataItem[]) => prev.filter((_: any, i: number) => i !== deleteIndex));
+    await delay(500);
+    setAnimPhase(''); setAnimData({});
+    setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
 
-  const queueEnqueue = async () => { if (isAnimating || getQueueData().length >= 5) return; setIsAnimating(true); const data = getQueueData(); const newItem: DataItem = queueEnv === 'students' ? { id: Date.now(), label: `Stu ${data.length + 1}`, color: '#1abc9c', appearance: { skinTone: '#ffdbac', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#4a3728', hairStyle: 'short', gender: 'male' } } : { id: Date.now(), label: queueEnv === 'tollgate' ? 'New Car' : `T-00${data.length + 1}`, color: '#1abc9c' }; setOperationMessage(`Enqueue: "${newItem.label}"...`); setCodeDisplay(`// O(1) FIFO\nqueue.enqueue("${newItem.label}")`); (setQueueData as any)((prev: DataItem[]) => [...prev, newItem]); setHighlightIndex(data.length); setAnimPhase('queue-enqueue-enter'); setAnimData({ index: data.length }); await delay(500); setAnimPhase('queue-enqueue-settle'); await delay(400); setAnimPhase(''); setAnimData({}); setOperationMessage('Enqueued!'); await delay(800); setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false); };
-  const queueDequeue = async () => { if (isAnimating || getQueueData().length <= 1) return; setIsAnimating(true); const frontItem = getQueueData()[0]; setHighlightIndex(0); setOperationMessage(`Dequeue: "${frontItem.label}"...`); setCodeDisplay(`// O(1) FIFO\nqueue.dequeue() → "${frontItem.label}"`); setAnimPhase('queue-dequeue-exit'); setAnimData({ index: 0 }); await delay(600); setAnimPhase('queue-dequeue-gone'); await delay(400); (setQueueData as any)((prev: DataItem[]) => prev.slice(1)); setAnimPhase(''); setAnimData({}); await delay(500); setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false); };
-  const queueFront = async () => { if (isAnimating || getQueueData().length === 0) return; setIsAnimating(true); const frontItem = getQueueData()[0]; setHighlightIndex(0); setOperationMessage(`FRONT: "${frontItem.label}"`); setCodeDisplay(`// O(1)\nqueue.front() → "${frontItem.label}"`); setAnimPhase('queue-front-peek'); setAnimData({ index: 0 }); await delay(1500); setAnimPhase(''); setAnimData({}); setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false); };
+  const arraySwap = async () => {
+    if (isAnimating) return; setIsAnimating(true);
+    const data = getArrayData();
+    const idx1 = Math.floor(Math.random() * data.length);
+    let idx2 = Math.floor(Math.random() * data.length);
+    while (idx2 === idx1) idx2 = Math.floor(Math.random() * data.length);
+    setHighlightIndex(idx1); setHighlightIndex2(idx2);
+    setOperationMessage(`Swapping [${idx1}] ↔ [${idx2}]`);
+    setCodeDisplay('// O(1) Swap');
+    setAnimPhase('swap-lift'); setAnimData({ index1: idx1, index2: idx2 }); await delay(500);
+    setAnimPhase('swap-cross'); await delay(400);
+    (setArrayData as any)((prev: DataItem[]) => { const a = [...prev]; [a[idx1], a[idx2]] = [a[idx2], a[idx1]]; return a; });
+    setAnimPhase('swap-drop'); await delay(500);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setHighlightIndex2(null);
+    setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  // ==================== LINKED LIST OPERATIONS (ANIMATED) ====================
+
+  const linkedListInsertHead = async () => {
+    if (isAnimating || getLinkedListData().length >= 5) return; setIsAnimating(true);
+    setOperationMessage('Inserting at HEAD...');
+    setCodeDisplay('// O(1)\nnewNode.next = head\nhead = newNode');
+    const newItem: DataItem = linkedListEnv === 'people'
+      ? { id: Date.now(), label: 'New', color: '#1abc9c', appearance: { skinTone: '#ffdbac', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#4a3728', hairStyle: 'short', gender: 'male' } }
+      : { id: Date.now(), label: 'New', color: '#1abc9c' };
+    (setLinkedListData as any)((prev: DataItem[]) => [newItem, ...prev]);
+    setHighlightIndex(0);
+    setAnimPhase('ll-insert-head'); setAnimData({ index: 0 }); await delay(500);
+    setAnimPhase('ll-insert-head-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({});
+    setOperationMessage('Inserted at HEAD!'); await delay(1000);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const linkedListInsertTail = async () => {
+    if (isAnimating || getLinkedListData().length >= 5) return; setIsAnimating(true);
+    const data = getLinkedListData();
+    setOperationMessage('Traversing to TAIL...');
+    setCodeDisplay('// O(n) Traverse');
+    for (let i = 0; i < data.length; i++) {
+      setHighlightIndex(i); setAnimPhase('ll-traverse'); setAnimData({ index: i }); await delay(350);
+    }
+    setAnimPhase(''); setAnimData({});
+    const newItem: DataItem = linkedListEnv === 'people'
+      ? { id: Date.now(), label: 'Last', color: '#e74c3c', appearance: { skinTone: '#8d5524', shirtColor: '#e74c3c', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } }
+      : { id: Date.now(), label: 'New', color: '#e74c3c' };
+    (setLinkedListData as any)((prev: DataItem[]) => [...prev, newItem]);
+    setHighlightIndex(data.length);
+    setAnimPhase('ll-insert-tail'); setAnimData({ index: data.length }); await delay(500);
+    setAnimPhase('ll-insert-tail-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({});
+    setOperationMessage('Inserted at TAIL!'); await delay(1000);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const linkedListDeleteHead = async () => {
+    if (isAnimating || getLinkedListData().length <= 2) return; setIsAnimating(true);
+    setHighlightIndex(0);
+    setOperationMessage('Deleting HEAD...');
+    setCodeDisplay('// O(1)\nhead = head.next');
+    setAnimPhase('ll-delete-lift'); setAnimData({ index: 0 }); await delay(500);
+    setAnimPhase('ll-delete-shrink'); await delay(500);
+    (setLinkedListData as any)((prev: DataItem[]) => prev.slice(1));
+    setAnimPhase(''); setAnimData({});
+    await delay(500);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const linkedListTraverse = async () => {
+    if (isAnimating) return; setIsAnimating(true);
+    const data = getLinkedListData();
+    for (let i = 0; i < data.length; i++) {
+      setHighlightIndex(i);
+      setOperationMessage(`Visiting: ${data[i].label}`);
+      setCodeDisplay(`// Node ${i}\ncurr = curr.next`);
+      setAnimPhase('ll-traverse'); setAnimData({ index: i }); await delay(500);
+    }
+    setAnimPhase(''); setAnimData({});
+    setOperationMessage(`Done! ${data.length} nodes`); await delay(1000);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  // ==================== STACK OPERATIONS (ANIMATED) ====================
+
+  const stackPush = async () => {
+    if (isAnimating || getStackData().length >= 5) return; setIsAnimating(true);
+    const data = getStackData();
+    const labels = stackEnv === 'books' ? ['Physics', 'English', 'Art'] : stackEnv === 'plates' ? [`Plate ${data.length + 1}`] : [`Box ${String.fromCharCode(65 + data.length)}`];
+    const colors = stackEnv === 'books' ? ['#9b59b6', '#e74c3c', '#1abc9c'] : ['#7f8c8d'];
+    const newItem = { id: Date.now(), label: labels[Math.floor(Math.random() * labels.length)], color: colors[Math.floor(Math.random() * colors.length)] };
+    setOperationMessage(`Pushing "${newItem.label}"...`);
+    setCodeDisplay(`// O(1) LIFO\nstack.push("${newItem.label}")`);
+    (setStackData as any)((prev: DataItem[]) => [...prev, newItem]);
+    setHighlightIndex(data.length);
+    setAnimPhase('stack-push-drop'); setAnimData({ index: data.length }); await delay(500);
+    setAnimPhase('stack-push-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({});
+    setOperationMessage('Pushed!'); await delay(800);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const stackPop = async () => {
+    if (isAnimating || getStackData().length <= 1) return; setIsAnimating(true);
+    const data = getStackData(), topItem = data[data.length - 1];
+    setHighlightIndex(data.length - 1);
+    setOperationMessage(`Popping "${topItem.label}"...`);
+    setCodeDisplay(`// O(1) LIFO\nstack.pop() → "${topItem.label}"`);
+    setAnimPhase('stack-pop-lift'); setAnimData({ index: data.length - 1 }); await delay(500);
+    setAnimPhase('stack-pop-fly'); await delay(500);
+    (setStackData as any)((prev: DataItem[]) => prev.slice(0, -1));
+    setAnimPhase(''); setAnimData({});
+    await delay(500);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const stackPeek = async () => {
+    if (isAnimating || getStackData().length === 0) return; setIsAnimating(true);
+    const data = getStackData(), topItem = data[data.length - 1];
+    setHighlightIndex(data.length - 1);
+    setOperationMessage(`Peeking TOP...`);
+    setCodeDisplay(`// O(1)\nstack.peek()`);
+    setAnimPhase('stack-peek-lift'); setAnimData({ index: data.length - 1 }); await delay(400);
+    setAnimPhase('stack-peek-open');
+    setOperationMessage(`TOP: "${topItem.label}"`); await delay(1200);
+    setAnimPhase('stack-peek-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  // ==================== QUEUE OPERATIONS (ANIMATED) ====================
+
+  const queueEnqueue = async () => {
+    if (isAnimating || getQueueData().length >= 5) return; setIsAnimating(true);
+    const data = getQueueData();
+    const newItem: DataItem = queueEnv === 'students'
+      ? { id: Date.now(), label: `Stu ${data.length + 1}`, color: '#1abc9c', appearance: { skinTone: '#ffdbac', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#4a3728', hairStyle: 'short', gender: 'male' } }
+      : { id: Date.now(), label: queueEnv === 'tollgate' ? 'New Car' : `T-00${data.length + 1}`, color: '#1abc9c' };
+    setOperationMessage(`Enqueue: "${newItem.label}"...`);
+    setCodeDisplay(`// O(1) FIFO\nqueue.enqueue("${newItem.label}")`);
+    (setQueueData as any)((prev: DataItem[]) => [...prev, newItem]);
+    setHighlightIndex(data.length);
+    setAnimPhase('queue-enqueue-enter'); setAnimData({ index: data.length }); await delay(500);
+    setAnimPhase('queue-enqueue-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({});
+    setOperationMessage('Enqueued!'); await delay(800);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const queueDequeue = async () => {
+    if (isAnimating || getQueueData().length <= 1) return; setIsAnimating(true);
+    const frontItem = getQueueData()[0];
+    setHighlightIndex(0);
+    setOperationMessage(`Dequeue: "${frontItem.label}"...`);
+    setCodeDisplay(`// O(1) FIFO\nqueue.dequeue() → "${frontItem.label}"`);
+    setAnimPhase('queue-dequeue-exit'); setAnimData({ index: 0 }); await delay(600);
+    setAnimPhase('queue-dequeue-gone'); await delay(400);
+    (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
+    setAnimPhase(''); setAnimData({});
+    await delay(500);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const queueFront = async () => {
+    if (isAnimating || getQueueData().length === 0) return; setIsAnimating(true);
+    const frontItem = getQueueData()[0];
+    setHighlightIndex(0);
+    setOperationMessage(`FRONT: "${frontItem.label}"`);
+    setCodeDisplay(`// O(1)\nqueue.front() → "${frontItem.label}"`);
+    setAnimPhase('queue-front-peek'); setAnimData({ index: 0 }); await delay(1500);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
 
   // ==================== RENDER ====================
 
   if (error) return (
     <div style={{ width: '100vw', height: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-      <div style={{ fontSize: 80 }}>📷</div><h2>Camera Access Needed</h2>
+      <div style={{ fontSize: 80 }}>📷</div>
+      <h2>Camera Access Needed</h2>
       <button onClick={() => window.location.reload()} style={{ marginTop: 30, padding: '15px 40px', background: '#667eea', border: 'none', borderRadius: 30, color: 'white' }}>🔄 Try Again</button>
     </div>
   );
@@ -1417,7 +3857,8 @@ export default function Home() {
   if (isLoading) return (
     <div style={{ width: '100vw', height: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
       <div style={{ width: 70, height: 70, border: '4px solid rgba(255,255,255,0.2)', borderTopColor: '#667eea', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-      <h2 style={{ marginTop: 25 }}>📊 Data Structure AR</h2><p>{loadingText}</p>
+      <h2 style={{ marginTop: 25 }}>📊 Data Structure AR</h2>
+      <p>{loadingText}</p>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
@@ -1448,6 +3889,11 @@ export default function Home() {
         <Visualization3D position={activePosition} data={currentData} highlightIndex={highlightIndex} highlightIndex2={highlightIndex2}
           structure={currentStructure} environment={currentEnvId} zoomLevel={zoomLevel} setZoomLevel={setZoomLevel}
           isSurfaceMode={appMode === 'surface'} animPhase={animPhase} animData={animData} />
+      )}
+
+      {!webxrActive && appMode === 'surface' && surfacePlaced && surfacePosition && (
+        <div style={{ position: 'absolute', left: surfacePosition.x + 40, top: surfacePosition.y + surfacePosition.height, width: surfacePosition.width - 80, height: 25,
+          background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.1) 60%, transparent 100%)', borderRadius: '50%', zIndex: 49, pointerEvents: 'none' }} />
       )}
 
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: 10, zIndex: 100 }}>
@@ -1574,7 +4020,7 @@ function OpBtn({ onClick, disabled, color, label }: { onClick: () => void; disab
   );
 }
 
-// ==================== VISUALIZATION 3D (FIXED CENTERING) ====================
+// ==================== VISUALIZATION 3D ====================
 
 function Visualization3D({ position, data, highlightIndex, highlightIndex2, structure, environment, zoomLevel, setZoomLevel, isSurfaceMode, animPhase, animData }: {
   position: Position; data: DataItem[]; highlightIndex: number | null; highlightIndex2: number | null;
@@ -1607,8 +4053,10 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
     scene.add(new THREE.AmbientLight(0xffffff, 0.7));
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
     dirLight.position.set(5, 10, 7); dirLight.castShadow = true; scene.add(dirLight);
-    scene.add(Object.assign(new THREE.DirectionalLight(0xffffff, 0.3), { position: new THREE.Vector3(-5, 5, -5) }));
-    const fillLight = new THREE.PointLight(0xffffff, 0.3); fillLight.position.set(0, -3, 3); scene.add(fillLight);
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.3);
+    backLight.position.set(-5, 5, -5); scene.add(backLight);
+    const fillLight = new THREE.PointLight(0xffffff, 0.3);
+    fillLight.position.set(0, -3, 3); scene.add(fillLight);
 
     const group = new THREE.Group(); groupRef.current = group; scene.add(group);
 
@@ -1651,16 +4099,6 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
     buildSceneContent(groupRef.current, data, highlightIndex, highlightIndex2, structure, environment, animPhase, animData);
   }, [data, highlightIndex, highlightIndex2, structure, environment, animPhase, animData]);
 
-  // FIX: Always render full screen, centered on screen
-  return <div ref={containerRef} style={{
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    width: '100vw',
-    height: '100vh',
-    zIndex: 50,
-    touchAction: 'none',
-    pointerEvents: 'auto',
-    overflow: 'visible'
-  }} />;
+  return <div ref={containerRef} style={{ position: 'absolute', left: 0, top: 0, width: '100vw', height: '100vh', zIndex: 50, touchAction: 'none', pointerEvents: 'auto', overflow: 'visible' }} />;
 }
+  
