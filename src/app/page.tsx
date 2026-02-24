@@ -3,6 +3,41 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import * as THREE from 'three';
 
+// ==================== WEBXR TYPE DECLARATIONS ====================
+
+declare global {
+  interface XRSystem {
+    isSessionSupported(mode: string): Promise<boolean>;
+    requestSession(mode: string, options?: XRSessionInit): Promise<XRSession>;
+  }
+  
+  interface XRSession {
+    requestReferenceSpace(type: string): Promise<XRReferenceSpace>;
+    requestHitTestSource?(options: { space: XRReferenceSpace }): Promise<XRHitTestSource>;
+    addEventListener(type: string, listener: EventListener): void;
+    end(): Promise<void>;
+  }
+  
+  interface XRReferenceSpace {}
+  interface XRHitTestSource {}
+  
+  interface XRFrame {
+    getHitTestResults(source: XRHitTestSource): XRHitTestResult[];
+  }
+  
+  interface XRHitTestResult {
+    getPose(space: XRReferenceSpace): XRPose | null;
+  }
+  
+  interface XRPose {
+    transform: { matrix: Float32Array };
+  }
+
+  interface Navigator {
+    xr?: XRSystem;
+  }
+}
+
 // ==================== INTERFACES ====================
 
 interface Detection {
@@ -118,6 +153,13 @@ function createArrow(fromX: number, toX: number, isHighlighted: boolean): THREE.
   cone.position.set(toX - 0.4, 0, 0);
   cone.rotation.z = -Math.PI / 2;
   arrow.add(cone);
+
+  if (isHighlighted) {
+    const glowMat = new THREE.LineBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.3 });
+    const glow = new THREE.Line(lineGeo.clone(), glowMat);
+    glow.position.y = 0.01;
+    arrow.add(glow);
+  }
 
   return arrow;
 }
@@ -241,7 +283,7 @@ function applyItemAnimation(
   }
 }
 
-// ==================== SIMPLE HUMAN ====================
+// ==================== HUMAN 3D ====================
 
 function createHuman3D(
   appearance: HumanAppearance,
@@ -354,7 +396,6 @@ function createGroceryBox(color: string, label: string, isHighlighted: boolean):
   body.castShadow = true;
   product.add(body);
 
-  // Label
   const canvas = document.createElement('canvas');
   canvas.width = 180;
   canvas.height = 260;
@@ -427,7 +468,6 @@ function createBook(label: string, color: string, isHighlighted: boolean): THREE
   pages.position.x = 0.01;
   book.add(pages);
 
-  // Spine
   const spineGeo = new THREE.BoxGeometry(0.025, 0.075, 0.35);
   const spineMat = new THREE.MeshStandardMaterial({
     color: new THREE.Color(color).multiplyScalar(0.7),
@@ -437,7 +477,6 @@ function createBook(label: string, color: string, isHighlighted: boolean): THREE
   spine.position.x = -0.26;
   book.add(spine);
 
-  // Title label
   const canvas = document.createElement('canvas');
   canvas.width = 200;
   canvas.height = 160;
@@ -468,7 +507,7 @@ function createBook(label: string, color: string, isHighlighted: boolean): THREE
   return book;
 }
 
-// ==================== PLATE ====================
+// ==================== PLATE WITH FOOD ====================
 
 function createPlate(label: string, isHighlighted: boolean): THREE.Group {
   const plate = new THREE.Group();
@@ -491,18 +530,15 @@ function createPlate(label: string, isHighlighted: boolean): THREE.Group {
   rim.position.y = 0.01;
   plate.add(rim);
 
-  // Food
   const plateNum = parseInt(label.replace(/\D/g, '')) || 1;
 
   if (plateNum % 3 === 1) {
-    // Rice
     const riceGeo = new THREE.SphereGeometry(0.05, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2);
     const riceMat = new THREE.MeshStandardMaterial({ color: '#f5f5dc' });
     const rice = new THREE.Mesh(riceGeo, riceMat);
     rice.position.set(-0.06, 0.015, 0);
     plate.add(rice);
 
-    // Chicken
     const chickenGeo = new THREE.SphereGeometry(0.035, 8, 8);
     const chickenMat = new THREE.MeshStandardMaterial({ color: '#d4a054' });
     const chicken = new THREE.Mesh(chickenGeo, chickenMat);
@@ -510,42 +546,30 @@ function createPlate(label: string, isHighlighted: boolean): THREE.Group {
     chicken.scale.set(1, 0.7, 1.3);
     plate.add(chicken);
   } else if (plateNum % 3 === 2) {
-    // Spaghetti
     const spaghettiMat = new THREE.MeshStandardMaterial({ color: '#f0d58c' });
     for (let i = 0; i < 6; i++) {
       const noodleGeo = new THREE.TorusGeometry(0.035 + Math.random() * 0.02, 0.004, 6, 12);
       const noodle = new THREE.Mesh(noodleGeo, spaghettiMat);
-      noodle.position.set(
-        (Math.random() - 0.5) * 0.06,
-        0.02 + i * 0.004,
-        (Math.random() - 0.5) * 0.06
-      );
+      noodle.position.set((Math.random() - 0.5) * 0.06, 0.02 + i * 0.004, (Math.random() - 0.5) * 0.06);
       noodle.rotation.y = Math.random() * Math.PI;
       plate.add(noodle);
     }
 
-    // Sauce
     const sauceGeo = new THREE.SphereGeometry(0.04, 8, 8, 0, Math.PI * 2, 0, Math.PI / 2);
     const sauceMat = new THREE.MeshStandardMaterial({ color: '#c0392b' });
     const sauce = new THREE.Mesh(sauceGeo, sauceMat);
     sauce.position.set(0, 0.04, 0);
     plate.add(sauce);
   } else {
-    // Salad
     const lettuceMat = new THREE.MeshStandardMaterial({ color: '#2ecc71' });
     for (let i = 0; i < 4; i++) {
       const leafGeo = new THREE.SphereGeometry(0.03, 6, 5);
       const leaf = new THREE.Mesh(leafGeo, lettuceMat);
-      leaf.position.set(
-        (Math.random() - 0.5) * 0.1,
-        0.02,
-        (Math.random() - 0.5) * 0.1
-      );
+      leaf.position.set((Math.random() - 0.5) * 0.1, 0.02, (Math.random() - 0.5) * 0.1);
       leaf.scale.set(1.2, 0.4, 1);
       plate.add(leaf);
     }
 
-    // Tomatoes
     const tomatoMat = new THREE.MeshStandardMaterial({ color: '#e74c3c' });
     for (let i = 0; i < 3; i++) {
       const tomatoGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.006, 10);
@@ -564,7 +588,7 @@ function createPlate(label: string, isHighlighted: boolean): THREE.Group {
   return plate;
 }
 
-// ==================== CARDBOARD BOX ====================
+// ==================== DETAILED CARDBOARD BOX ====================
 
 function createCardboardBox(
   label: string,
@@ -574,7 +598,12 @@ function createCardboardBox(
 ): THREE.Group {
   const box = new THREE.Group();
 
-  const bodyGeo = new THREE.BoxGeometry(0.45, 0.32, 0.36);
+  const width = 0.52;
+  const height = 0.36;
+  const depth = 0.42;
+
+  // Main body
+  const bodyGeo = new THREE.BoxGeometry(width, height, depth);
   const bodyMat = new THREE.MeshStandardMaterial({
     color,
     roughness: 0.85,
@@ -583,61 +612,165 @@ function createCardboardBox(
   });
   const body = new THREE.Mesh(bodyGeo, bodyMat);
   body.castShadow = true;
+  body.receiveShadow = true;
   box.add(body);
 
+  // Corner creases
+  const creaseMat = new THREE.MeshStandardMaterial({ color: '#7a5530', roughness: 0.9 });
+  const vCreaseGeo = new THREE.BoxGeometry(0.012, height, 0.012);
+  [
+    [-width/2, 0, depth/2], [width/2, 0, depth/2],
+    [-width/2, 0, -depth/2], [width/2, 0, -depth/2]
+  ].forEach(([x, y, z]) => {
+    const crease = new THREE.Mesh(vCreaseGeo, creaseMat);
+    crease.position.set(x, y, z);
+    box.add(crease);
+  });
+
   // Flaps
-  const flapAngle = isOpen ? -1.1 : 0;
+  const flapAngle = isOpen ? -1.2 : 0;
   const flapMat = new THREE.MeshStandardMaterial({ color, roughness: 0.85, side: THREE.DoubleSide });
 
-  const frontFlapGeo = new THREE.BoxGeometry(0.45, 0.1, 0.01);
+  const frontFlapGeo = new THREE.BoxGeometry(width, 0.15, 0.01);
   const frontFlap = new THREE.Mesh(frontFlapGeo, flapMat);
-  frontFlap.position.set(0, 0.16 + (isOpen ? 0.03 : 0), 0.18);
+  frontFlap.position.set(0, height/2 + (isOpen ? 0.06 : 0), depth/2);
   frontFlap.rotation.x = flapAngle;
+  frontFlap.castShadow = true;
   box.add(frontFlap);
 
   const backFlap = new THREE.Mesh(frontFlapGeo, flapMat);
-  backFlap.position.set(0, 0.16 + (isOpen ? 0.03 : 0), -0.18);
+  backFlap.position.set(0, height/2 + (isOpen ? 0.06 : 0), -depth/2);
   backFlap.rotation.x = -flapAngle;
+  backFlap.castShadow = true;
   box.add(backFlap);
 
+  const sideFlapGeo = new THREE.BoxGeometry(0.01, 0.15, depth);
+  const leftFlap = new THREE.Mesh(sideFlapGeo, flapMat);
+  leftFlap.position.set(-width/2, height/2 + (isOpen ? 0.04 : 0), 0);
+  leftFlap.rotation.z = isOpen ? 0.8 : 0;
+  leftFlap.castShadow = true;
+  box.add(leftFlap);
+
+  const rightFlap = new THREE.Mesh(sideFlapGeo, flapMat);
+  rightFlap.position.set(width/2, height/2 + (isOpen ? 0.04 : 0), 0);
+  rightFlap.rotation.z = isOpen ? -0.8 : 0;
+  rightFlap.castShadow = true;
+  box.add(rightFlap);
+
+  // Inside items when open
+  if (isOpen) {
+    const insideGeo = new THREE.PlaneGeometry(width - 0.04, depth - 0.04);
+    const insideMat = new THREE.MeshStandardMaterial({ color: '#a0734a', side: THREE.DoubleSide, roughness: 0.9 });
+    const inside = new THREE.Mesh(insideGeo, insideMat);
+    inside.rotation.x = -Math.PI / 2;
+    inside.position.y = -height/2 + 0.01;
+    box.add(inside);
+
+    const item1 = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.1, 0.1),
+      new THREE.MeshStandardMaterial({ color: '#3498db', roughness: 0.6 })
+    );
+    item1.position.set(-0.1, -0.05, 0);
+    item1.rotation.y = 0.2;
+    item1.castShadow = true;
+    box.add(item1);
+
+    const item2 = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.04, 0.04, 0.12, 12),
+      new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.5 })
+    );
+    item2.position.set(0.08, -0.03, 0.05);
+    item2.castShadow = true;
+    box.add(item2);
+
+    const item3 = new THREE.Mesh(
+      new THREE.SphereGeometry(0.05, 12, 12),
+      new THREE.MeshStandardMaterial({ color: '#f39c12', roughness: 0.5 })
+    );
+    item3.position.set(0.02, 0.02, -0.08);
+    item3.castShadow = true;
+    box.add(item3);
+
+    const glowLight = new THREE.PointLight(0xffff00, 0.4, 0.5);
+    glowLight.position.set(0, 0, 0);
+    box.add(glowLight);
+  }
+
+  // Packing tape
+  if (!isOpen) {
+    const tapeGeo = new THREE.BoxGeometry(0.08, 0.005, depth + 0.02);
+    const tapeMat = new THREE.MeshStandardMaterial({ color: '#d4a574', transparent: true, opacity: 0.7, roughness: 0.3 });
+    const tape = new THREE.Mesh(tapeGeo, tapeMat);
+    tape.position.y = height/2 + 0.003;
+    box.add(tape);
+
+    const sideTapeGeo = new THREE.BoxGeometry(width + 0.02, 0.005, 0.06);
+    const sideTape = new THREE.Mesh(sideTapeGeo, tapeMat);
+    sideTape.position.set(0, height/2 + 0.003, depth/2 - 0.03);
+    box.add(sideTape);
+  }
+
   // Label
-  const canvas = document.createElement('canvas');
-  canvas.width = 180;
-  canvas.height = 100;
-  const ctx = canvas.getContext('2d')!;
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, 180, 100);
-  ctx.strokeStyle = '#333';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(2, 2, 176, 96);
+  const labelCanvas = document.createElement('canvas');
+  labelCanvas.width = 160;
+  labelCanvas.height = 100;
+  const lctx = labelCanvas.getContext('2d')!;
 
-  ctx.fillStyle = '#e74c3c';
-  ctx.fillRect(5, 5, 170, 22);
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 14px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText('⚠ FRAGILE ⚠', 90, 22);
+  lctx.fillStyle = '#ffffff';
+  lctx.fillRect(0, 0, 160, 100);
+  lctx.strokeStyle = '#333';
+  lctx.lineWidth = 2;
+  lctx.strokeRect(2, 2, 156, 96);
 
-  ctx.fillStyle = '#000';
-  ctx.font = 'bold 24px Arial';
-  ctx.fillText(label, 90, 60);
+  lctx.fillStyle = '#e74c3c';
+  lctx.fillRect(5, 5, 150, 25);
+  lctx.fillStyle = '#fff';
+  lctx.font = 'bold 16px Arial';
+  lctx.textAlign = 'center';
+  lctx.fillText('⚠ FRAGILE ⚠', 80, 24);
 
-  ctx.fillStyle = '#666';
-  ctx.font = '10px Arial';
-  ctx.fillText('HANDLE WITH CARE', 90, 85);
+  lctx.fillStyle = '#000';
+  lctx.font = 'bold 26px Arial';
+  lctx.fillText(label, 80, 62);
 
-  const labelTex = new THREE.CanvasTexture(canvas);
+  lctx.fillStyle = '#666';
+  lctx.font = '10px Arial';
+  lctx.fillText('HANDLE WITH CARE', 80, 82);
+  lctx.fillStyle = '#333';
+  lctx.font = '14px Arial';
+  lctx.fillText('↑ THIS SIDE UP ↑', 80, 95);
+
+  const labelTex = new THREE.CanvasTexture(labelCanvas);
   const labelMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.32, 0.18),
+    new THREE.PlaneGeometry(0.38, 0.24),
     new THREE.MeshBasicMaterial({ map: labelTex })
   );
-  labelMesh.position.set(0, 0.02, 0.181);
+  labelMesh.position.set(0, 0, depth/2 + 0.001);
   box.add(labelMesh);
 
+  // Handles
+  const handleMat = new THREE.MeshStandardMaterial({ color: '#5d3a1a', roughness: 0.8 });
+  [-width/2 - 0.001, width/2 + 0.001].forEach(x => {
+    const handleGeo = new THREE.TorusGeometry(0.04, 0.008, 6, 12, Math.PI);
+    const handle = new THREE.Mesh(handleGeo, handleMat);
+    handle.position.set(x, 0.05, 0);
+    handle.rotation.y = Math.PI / 2;
+    handle.rotation.z = Math.PI;
+    box.add(handle);
+  });
+
+  // Highlight
   if (isHighlighted) {
-    const glowGeo = new THREE.BoxGeometry(0.49, 0.36, 0.4);
-    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 });
+    const glowGeo = new THREE.BoxGeometry(width + 0.06, height + 0.06, depth + 0.06);
+    const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending });
     box.add(new THREE.Mesh(glowGeo, glowMat));
+
+    const arrowGeo = new THREE.ConeGeometry(0.05, 0.1, 8);
+    const arrowMat = new THREE.MeshBasicMaterial({ color: '#ffff00' });
+    const arrow = new THREE.Mesh(arrowGeo, arrowMat);
+    arrow.position.y = height/2 + 0.2;
+    arrow.rotation.z = Math.PI;
+    box.add(arrow);
   }
 
   return box;
@@ -656,21 +789,18 @@ function createCar(color: string, label: string, isHighlighted: boolean): THREE.
     emissiveIntensity: isHighlighted ? 0.3 : 0,
   });
 
-  // Lower body
   const lowerGeo = new THREE.BoxGeometry(0.55, 0.12, 0.26);
   const lower = new THREE.Mesh(lowerGeo, bodyMat);
   lower.position.y = 0.07;
   lower.castShadow = true;
   car.add(lower);
 
-  // Cabin
   const cabinGeo = new THREE.BoxGeometry(0.26, 0.1, 0.22);
   const cabin = new THREE.Mesh(cabinGeo, bodyMat);
   cabin.position.set(-0.04, 0.18, 0);
   cabin.castShadow = true;
   car.add(cabin);
 
-  // Wheels
   const wheelGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.02, 16);
   const wheelMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.9 });
 
@@ -688,7 +818,6 @@ function createCar(color: string, label: string, isHighlighted: boolean): THREE.
     car.add(rim);
   });
 
-  // Headlights
   const hlMat = new THREE.MeshBasicMaterial({ color: '#ffffee' });
   const hlGeo = new THREE.BoxGeometry(0.008, 0.03, 0.04);
   [-0.08, 0.08].forEach(z => {
@@ -697,7 +826,6 @@ function createCar(color: string, label: string, isHighlighted: boolean): THREE.
     car.add(hl);
   });
 
-  // Tail lights
   const tlMat = new THREE.MeshBasicMaterial({ color: '#ff2222' });
   [-0.08, 0.08].forEach(z => {
     const tl = new THREE.Mesh(hlGeo, tlMat);
@@ -705,7 +833,6 @@ function createCar(color: string, label: string, isHighlighted: boolean): THREE.
     car.add(tl);
   });
 
-  // License plate
   const plateCanvas = document.createElement('canvas');
   plateCanvas.width = 100;
   plateCanvas.height = 35;
@@ -742,12 +869,7 @@ function createCar(color: string, label: string, isHighlighted: boolean): THREE.
 
 // ==================== TRAIN CAR ====================
 
-function createTrainCar(
-  isEngine: boolean,
-  color: string,
-  label: string,
-  isHighlighted: boolean
-): THREE.Group {
+function createTrainCar(isEngine: boolean, color: string, label: string, isHighlighted: boolean): THREE.Group {
   const train = new THREE.Group();
 
   const bodyMat = new THREE.MeshStandardMaterial({
@@ -764,14 +886,12 @@ function createTrainCar(
   body.castShadow = true;
   train.add(body);
 
-  // Roof
   const roofGeo = new THREE.BoxGeometry(0.55, 0.03, 0.22);
   const roofMat = new THREE.MeshStandardMaterial({ color: '#1a1a2e', metalness: 0.4 });
   const roof = new THREE.Mesh(roofGeo, roofMat);
   roof.position.y = 0.25;
   train.add(roof);
 
-  // Wheels
   const wheelGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.02, 16);
   const wheelMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', metalness: 0.7 });
 
@@ -783,7 +903,6 @@ function createTrainCar(
   });
 
   if (isEngine) {
-    // Boiler
     const boilerGeo = new THREE.CylinderGeometry(0.1, 0.11, 0.22, 16);
     const boilerMat = new THREE.MeshStandardMaterial({ color: '#b71c1c', metalness: 0.45 });
     const boiler = new THREE.Mesh(boilerGeo, boilerMat);
@@ -791,14 +910,12 @@ function createTrainCar(
     boiler.position.set(0.45, 0.1, 0);
     train.add(boiler);
 
-    // Chimney
     const chimneyGeo = new THREE.CylinderGeometry(0.025, 0.035, 0.12, 10);
     const chimneyMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a' });
     const chimney = new THREE.Mesh(chimneyGeo, chimneyMat);
     chimney.position.set(0.18, 0.35, 0);
     train.add(chimney);
 
-    // Smoke
     const smokeMat = new THREE.MeshBasicMaterial({ color: '#bdc3c7', transparent: true, opacity: 0.3 });
     [0.4, 0.48, 0.58].forEach((y, i) => {
       const smokeGeo = new THREE.SphereGeometry(0.03 + i * 0.01, 8, 8);
@@ -807,7 +924,6 @@ function createTrainCar(
       train.add(smoke);
     });
   } else {
-    // Windows
     const windowMat = new THREE.MeshStandardMaterial({ color: '#87ceeb', metalness: 0.4 });
     const windowGeo = new THREE.PlaneGeometry(0.07, 0.06);
     [-0.16, 0, 0.16].forEach(x => {
@@ -817,7 +933,6 @@ function createTrainCar(
     });
   }
 
-  // Label
   const labelSprite = createTextSprite(label, isHighlighted ? '#000' : '#fff', 18, true);
   labelSprite.position.y = 0.42;
   labelSprite.scale.set(0.4, 0.1, 1);
@@ -851,26 +966,21 @@ function createDomino(value: string, isHighlighted: boolean): THREE.Group {
   tile.castShadow = true;
   domino.add(tile);
 
-  // Border
   const borderGeo = new THREE.BoxGeometry(0.21, 0.41, 0.045);
   const borderMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a' });
   const border = new THREE.Mesh(borderGeo, borderMat);
   border.position.z = -0.005;
   domino.add(border);
 
-  // Groove
   const grooveGeo = new THREE.BoxGeometry(0.16, 0.008, 0.01);
   const grooveMat = new THREE.MeshStandardMaterial({ color: '#2c3e50' });
   const groove = new THREE.Mesh(grooveGeo, grooveMat);
   groove.position.z = 0.024;
   domino.add(groove);
 
-  // Dots
   const val = parseInt(value) || 1;
   const dotGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.01, 10);
-  const dotMat = new THREE.MeshStandardMaterial({
-    color: isHighlighted ? '#fff' : '#1a1a1a',
-  });
+  const dotMat = new THREE.MeshStandardMaterial({ color: isHighlighted ? '#fff' : '#1a1a1a' });
 
   const dotPositions: Record<number, [number, number][]> = {
     1: [[0, 0.12]],
@@ -918,14 +1028,12 @@ function createClipboard(label: string, color: string, isHighlighted: boolean): 
   board.castShadow = true;
   clipboard.add(board);
 
-  // Clip
   const clipGeo = new THREE.BoxGeometry(0.1, 0.03, 0.018);
   const clipMat = new THREE.MeshStandardMaterial({ color: '#8a8a8a', metalness: 0.9 });
   const clip = new THREE.Mesh(clipGeo, clipMat);
   clip.position.set(0, 0.24, 0.01);
   clipboard.add(clip);
 
-  // Paper
   const paperCanvas = document.createElement('canvas');
   paperCanvas.width = 180;
   paperCanvas.height = 250;
@@ -933,10 +1041,8 @@ function createClipboard(label: string, color: string, isHighlighted: boolean): 
 
   pctx.fillStyle = '#fefef6';
   pctx.fillRect(0, 0, 180, 250);
-
   pctx.fillStyle = color;
   pctx.fillRect(0, 0, 180, 30);
-
   pctx.fillStyle = '#fff';
   pctx.font = 'bold 14px Arial';
   pctx.textAlign = 'center';
@@ -952,7 +1058,6 @@ function createClipboard(label: string, color: string, isHighlighted: boolean): 
 
   tasks.forEach((task, i) => {
     const y = 50 + i * 35;
-
     pctx.strokeStyle = '#d4d0c8';
     pctx.lineWidth = 0.8;
     pctx.beginPath();
@@ -972,17 +1077,13 @@ function createClipboard(label: string, color: string, isHighlighted: boolean): 
       pctx.lineTo(23, y + 10);
       pctx.lineTo(29, y + 3);
       pctx.stroke();
-
       pctx.fillStyle = '#999';
-      pctx.font = '11px Arial';
-      pctx.textAlign = 'left';
-      pctx.fillText(task.text, 36, y + 10);
     } else {
       pctx.fillStyle = '#2c3e50';
-      pctx.font = '11px Arial';
-      pctx.textAlign = 'left';
-      pctx.fillText(task.text, 36, y + 10);
     }
+    pctx.font = '11px Arial';
+    pctx.textAlign = 'left';
+    pctx.fillText(task.text, 36, y + 10);
   });
 
   pctx.strokeStyle = '#e74c3c';
@@ -1026,7 +1127,6 @@ function createTicket(label: string, color: string, isHighlighted: boolean): THR
   ticketBody.castShadow = true;
   ticket.add(ticketBody);
 
-  // Front design
   const canvas = document.createElement('canvas');
   canvas.width = 240;
   canvas.height = 120;
@@ -1034,15 +1134,12 @@ function createTicket(label: string, color: string, isHighlighted: boolean): THR
 
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.fillRect(0, 0, 240, 25);
-
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 14px Arial';
   ctx.textAlign = 'center';
   ctx.fillText('★ ADMIT ONE ★', 100, 18);
-
   ctx.font = 'bold 36px Arial';
   ctx.fillText(label, 100, 72);
-
   ctx.font = 'bold 12px Arial';
   ctx.fillText('⭐ VIP ACCESS ⭐', 100, 100);
 
@@ -1054,14 +1151,11 @@ function createTicket(label: string, color: string, isHighlighted: boolean): THR
   frontMesh.position.z = 0.006;
   ticket.add(frontMesh);
 
-  // Gold border
   const borderMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.6 });
-
   const hBorderGeo = new THREE.BoxGeometry(0.38, 0.005, 0.012);
   const topBorder = new THREE.Mesh(hBorderGeo, borderMat);
   topBorder.position.y = 0.1;
   ticket.add(topBorder);
-
   const bottomBorder = new THREE.Mesh(hBorderGeo, borderMat);
   bottomBorder.position.y = -0.1;
   ticket.add(bottomBorder);
@@ -1101,8 +1195,7 @@ function createChair(x: number): THREE.Group {
   chair.position.x = x;
   return chair;
 }
-// ==================== PART 2/2: BUILD SCENE + MAIN COMPONENT ====================
-// Place this DIRECTLY after Part 1 (in the same file)
+// ==================== PART 2/2: BUILD SCENE + MAIN COMPONENT + WEBXR ====================
 
 // ==================== BUILD SCENE CONTENT ====================
 
@@ -1116,15 +1209,11 @@ function buildSceneContent(
   animPhase?: string,
   animData?: Record<string, unknown>
 ): void {
-  // Clear existing children
   while (group.children.length > 0) {
-    const child = group.children[0];
-    group.remove(child);
+    group.remove(group.children[0]);
   }
 
-  const spacing = structure === 'linkedlist' ? 1.0
-    : structure === 'queue' ? 0.85
-    : 0.75;
+  const spacing = structure === 'linkedlist' ? 1.0 : structure === 'queue' ? 0.85 : 0.75;
   const startX = -((data.length - 1) * spacing) / 2;
 
   // ==================== ARRAY ====================
@@ -1146,7 +1235,6 @@ function buildSceneContent(
         group.add(idx);
       });
 
-      // Shelf
       const shelfMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.7, roughness: 0.3 });
       const shelf = new THREE.Mesh(new THREE.BoxGeometry(shelfWidth, 0.02, 0.28), shelfMat);
       shelf.position.y = 0.06;
@@ -1157,7 +1245,6 @@ function buildSceneContent(
       lowerShelf.position.y = -0.28;
       group.add(lowerShelf);
 
-      // Poles
       const poleMat = new THREE.MeshStandardMaterial({ color: '#a0a0a0', metalness: 0.8 });
       const poleGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.75, 10);
       [-shelfWidth / 2 + 0.03, shelfWidth / 2 - 0.03].forEach(x => {
@@ -1168,7 +1255,6 @@ function buildSceneContent(
         });
       });
 
-      // Floor
       const floor = new THREE.Mesh(
         new THREE.PlaneGeometry(shelfWidth + 0.3, 0.65),
         new THREE.MeshStandardMaterial({ color: '#e8dcc8', side: THREE.DoubleSide })
@@ -1193,7 +1279,6 @@ function buildSceneContent(
           chair.scale.setScalar(0.7);
           group.add(chair);
 
-          // Desk
           const deskGeo = new THREE.BoxGeometry(0.25, 0.015, 0.16);
           const deskMat = new THREE.MeshStandardMaterial({ color: '#a0855b', roughness: 0.7 });
           const desk = new THREE.Mesh(deskGeo, deskMat);
@@ -1208,7 +1293,6 @@ function buildSceneContent(
         group.add(idx);
       });
 
-      // Floor
       const floor = new THREE.Mesh(
         new THREE.PlaneGeometry(roomWidth, 1.2),
         new THREE.MeshStandardMaterial({ color: '#c4a882', side: THREE.DoubleSide })
@@ -1217,7 +1301,6 @@ function buildSceneContent(
       floor.position.y = -0.28;
       group.add(floor);
 
-      // Back wall
       const backWall = new THREE.Mesh(
         new THREE.PlaneGeometry(roomWidth, 0.85),
         new THREE.MeshStandardMaterial({ color: '#f0e6d2' })
@@ -1225,7 +1308,6 @@ function buildSceneContent(
       backWall.position.set(0, 0.1, -0.4);
       group.add(backWall);
 
-      // Whiteboard
       const board = new THREE.Mesh(
         new THREE.BoxGeometry(roomWidth * 0.5, 0.38, 0.015),
         new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 })
@@ -1248,7 +1330,6 @@ function buildSceneContent(
         group.add(idx);
       });
 
-      // Desk
       const deskWidth = data.length * spacing + 0.4;
       const desk = new THREE.Mesh(
         new THREE.BoxGeometry(deskWidth, 0.03, 0.4),
@@ -1281,19 +1362,16 @@ function buildSceneContent(
         }
       });
 
-      // HEAD label
       const headSprite = createTextSprite('HEAD', '#ff0000', 16, true);
       headSprite.position.set(startX, 0.52, 0);
       headSprite.scale.set(0.28, 0.1, 1);
       group.add(headSprite);
 
-      // TAIL label
       const tailSprite = createTextSprite('TAIL', '#0066ff', 16, true);
       tailSprite.position.set(startX + (data.length - 1) * spacing, 0.52, 0);
       tailSprite.scale.set(0.28, 0.1, 1);
       group.add(tailSprite);
 
-      // NULL
       const nullSprite = createTextSprite('NULL', '#ff0000', 18);
       nullSprite.position.set(startX + data.length * spacing, 0, 0);
       nullSprite.scale.set(0.28, 0.18, 1);
@@ -1303,7 +1381,6 @@ function buildSceneContent(
       nullArrow.position.y = -0.12;
       group.add(nullArrow);
 
-      // Rails
       const railMat = new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.6 });
       const railGeo = new THREE.BoxGeometry(data.length * spacing + 1.2, 0.015, 0.02);
       [-0.1, 0.1].forEach(z => {
@@ -1312,7 +1389,6 @@ function buildSceneContent(
         group.add(rail);
       });
 
-      // Ties
       const tieMat = new THREE.MeshStandardMaterial({ color: '#5d4037' });
       const tieGeo = new THREE.BoxGeometry(0.03, 0.01, 0.28);
       for (let x = startX - 0.4; x <= startX + data.length * spacing + 0.4; x += 0.14) {
@@ -1321,7 +1397,6 @@ function buildSceneContent(
         group.add(tie);
       }
 
-      // Ground
       const ground = new THREE.Mesh(
         new THREE.PlaneGeometry(data.length * spacing + 1.6, 0.85),
         new THREE.MeshStandardMaterial({ color: '#8b7355', side: THREE.DoubleSide })
@@ -1405,7 +1480,6 @@ function buildSceneContent(
       nullArrow.position.y = -0.28;
       group.add(nullArrow);
 
-      // Table
       const table = new THREE.Mesh(
         new THREE.BoxGeometry(data.length * spacing + 0.6, 0.03, 0.5),
         new THREE.MeshStandardMaterial({ color: '#1b5e20', roughness: 0.9 })
@@ -1470,7 +1544,6 @@ function buildSceneContent(
       counter.position.y = plateBaseY - 0.05;
       group.add(counter);
 
-      // Cafeteria sign
       const signCanvas = document.createElement('canvas');
       signCanvas.width = 240;
       signCanvas.height = 45;
@@ -1483,43 +1556,48 @@ function buildSceneContent(
       sctx.fillText('🍽️ CAFETERIA 🍽️', 120, 32);
 
       const signTex = new THREE.CanvasTexture(signCanvas);
-      const signSprite = new THREE.Sprite(
-        new THREE.SpriteMaterial({ map: signTex, transparent: true })
-      );
+      const signSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: signTex, transparent: true }));
       signSprite.position.set(0, plateBaseY + data.length * plateSpacing + 0.25, 0);
       signSprite.scale.set(0.65, 0.12, 1);
       group.add(signSprite);
 
     } else if (environment === 'boxes') {
-      const boxSpacing = 0.36;
-      const boxBaseY = -data.length * boxSpacing / 2 + 0.15;
+      const boxSpacing = 0.38;
+      const boxBaseY = -data.length * boxSpacing / 2 + 0.18;
 
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const isTop = i === data.length - 1;
         const isPeeking = animPhase === 'stack-peek-open' && isTop && isHl;
         const box = createCardboardBox(item.label, item.color, isHl, isPeeking);
-        box.position.set(isHl ? 0.15 : 0, boxBaseY + i * boxSpacing, 0);
-        box.rotation.y = (i % 2 === 0) ? 0 : 0.04;
-        box.scale.setScalar(0.72);
+        box.position.set(isHl ? 0.18 : 0, boxBaseY + i * boxSpacing, 0);
+        box.rotation.y = (i % 2 === 0) ? 0 : 0.05;
+        box.scale.setScalar(0.75);
         applyItemAnimation(box, i, animPhase || '', animData || {}, 'stack');
         group.add(box);
 
         if (isTop) {
           const topSprite = createTextSprite('← TOP', '#ff0000', 18, true);
-          topSprite.position.set(0.52, boxBaseY + i * boxSpacing, 0);
+          topSprite.position.set(0.55, boxBaseY + i * boxSpacing, 0);
           topSprite.scale.set(0.3, 0.09, 1);
           group.add(topSprite);
         }
       });
 
-      // Pallet
       const pallet = new THREE.Mesh(
-        new THREE.BoxGeometry(0.72, 0.05, 0.55),
+        new THREE.BoxGeometry(0.75, 0.05, 0.58),
         new THREE.MeshStandardMaterial({ color: '#a0522d', roughness: 0.9 })
       );
-      pallet.position.y = boxBaseY - 0.2;
+      pallet.position.y = boxBaseY - 0.22;
       group.add(pallet);
+
+      const slatGeo = new THREE.BoxGeometry(0.75, 0.01, 0.06);
+      const slatMat = new THREE.MeshStandardMaterial({ color: '#8b6914' });
+      [-0.2, 0, 0.2].forEach(z => {
+        const slat = new THREE.Mesh(slatGeo, slatMat);
+        slat.position.set(0, boxBaseY - 0.25, z);
+        group.add(slat);
+      });
     }
 
   // ==================== QUEUE ====================
@@ -1544,7 +1622,6 @@ function buildSceneContent(
       rearSprite.scale.set(0.25, 0.09, 1);
       group.add(rearSprite);
 
-      // Toll gate
       const gateX = startX - 0.68;
       const poleMat = new THREE.MeshStandardMaterial({ color: '#f1c40f', metalness: 0.5 });
       const poleGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.58, 10);
@@ -1560,7 +1637,6 @@ function buildSceneContent(
       topBar.position.set(gateX, 0.5, 0);
       group.add(topBar);
 
-      // Barrier
       const barrierGeo = new THREE.BoxGeometry(0.4, 0.03, 0.03);
       const barrierMat = new THREE.MeshStandardMaterial({ color: '#e74c3c' });
       const barrier = new THREE.Mesh(barrierGeo, barrierMat);
@@ -1568,7 +1644,15 @@ function buildSceneContent(
       barrier.rotation.z = 0.25;
       group.add(barrier);
 
-      // TOLL sign
+      const stripeMat = new THREE.MeshStandardMaterial({ color: '#ffffff' });
+      for (let sx = -0.15; sx < 0.15; sx += 0.06) {
+        const stripeGeo = new THREE.BoxGeometry(0.02, 0.035, 0.035);
+        const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+        stripe.position.set(gateX - 0.2 + sx, 0.42, 0);
+        stripe.rotation.z = 0.25;
+        group.add(stripe);
+      }
+
       const signCanvas = document.createElement('canvas');
       signCanvas.width = 120;
       signCanvas.height = 45;
@@ -1581,14 +1665,11 @@ function buildSceneContent(
       signCtx.fillText('TOLL', 60, 32);
 
       const signTex = new THREE.CanvasTexture(signCanvas);
-      const signSprite = new THREE.Sprite(
-        new THREE.SpriteMaterial({ map: signTex, transparent: true })
-      );
+      const signSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: signTex, transparent: true }));
       signSprite.position.set(gateX, 0.6, 0);
       signSprite.scale.set(0.28, 0.1, 1);
       group.add(signSprite);
 
-      // Road
       const road = new THREE.Mesh(
         new THREE.PlaneGeometry(data.length * spacing + 2, 0.58),
         new THREE.MeshStandardMaterial({ color: '#34495e', side: THREE.DoubleSide })
@@ -1597,7 +1678,6 @@ function buildSceneContent(
       road.position.y = -0.06;
       group.add(road);
 
-      // Dashed lines
       const dashMat = new THREE.MeshStandardMaterial({ color: '#ffffff', side: THREE.DoubleSide });
       for (let x = startX - 0.8; x <= startX + data.length * spacing + 0.4; x += 0.2) {
         const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.09, 0.018), dashMat);
@@ -1605,6 +1685,11 @@ function buildSceneContent(
         dash.position.set(x, -0.055, 0);
         group.add(dash);
       }
+
+      const exitSprite = createTextSprite('EXIT →', '#00ff00', 14);
+      exitSprite.position.set(gateX - 0.5, 0.25, 0);
+      exitSprite.scale.set(0.28, 0.08, 1);
+      group.add(exitSprite);
 
     } else if (environment === 'tickets') {
       data.forEach((item, i) => {
@@ -1633,7 +1718,6 @@ function buildSceneContent(
       counter.position.y = -0.12;
       group.add(counter);
 
-      // NOW SERVING sign
       const servingCanvas = document.createElement('canvas');
       servingCanvas.width = 200;
       servingCanvas.height = 65;
@@ -1652,9 +1736,7 @@ function buildSceneContent(
       svctx.fillText(data.length > 0 ? data[0].label : '---', 100, 52);
 
       const servingTex = new THREE.CanvasTexture(servingCanvas);
-      const servingSprite = new THREE.Sprite(
-        new THREE.SpriteMaterial({ map: servingTex, transparent: true })
-      );
+      const servingSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: servingTex, transparent: true }));
       servingSprite.position.set(startX - 0.5, 0.15, 0);
       servingSprite.scale.set(0.38, 0.12, 1);
       group.add(servingSprite);
@@ -1681,7 +1763,6 @@ function buildSceneContent(
       rearSprite.scale.set(0.22, 0.07, 1);
       group.add(rearSprite);
 
-      // School entrance
       const buildingX = startX - 0.78;
       const wallMat = new THREE.MeshStandardMaterial({ color: '#8b4513', roughness: 0.8 });
 
@@ -1700,7 +1781,6 @@ function buildSceneContent(
       door.rotation.y = -0.7;
       group.add(door);
 
-      // School sign
       const schoolCanvas = document.createElement('canvas');
       schoolCanvas.width = 200;
       schoolCanvas.height = 45;
@@ -1716,14 +1796,11 @@ function buildSceneContent(
       schCtx.fillText('📚 DS ACADEMY 📚', 100, 30);
 
       const schoolTex = new THREE.CanvasTexture(schoolCanvas);
-      const schoolSprite = new THREE.Sprite(
-        new THREE.SpriteMaterial({ map: schoolTex, transparent: true })
-      );
+      const schoolSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: schoolTex, transparent: true }));
       schoolSprite.position.set(buildingX, 0.52, 0);
       schoolSprite.scale.set(0.42, 0.1, 1);
       group.add(schoolSprite);
 
-      // Roof
       const roofMesh = new THREE.Mesh(
         new THREE.BoxGeometry(0.08, 0.03, 0.72),
         new THREE.MeshStandardMaterial({ color: '#c0392b' })
@@ -1731,7 +1808,6 @@ function buildSceneContent(
       roofMesh.position.set(buildingX, 0.46, 0);
       group.add(roofMesh);
 
-      // Pathway
       const pathway = new THREE.Mesh(
         new THREE.PlaneGeometry(data.length * spacing + 1.5, 0.42),
         new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
@@ -1765,7 +1841,6 @@ function OpBtn({ onClick, disabled, color, label }: {
         color: 'white',
         opacity: disabled ? 0.5 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
-        transition: 'transform 0.1s, opacity 0.2s',
       }}
     >
       {label}
@@ -1803,9 +1878,7 @@ function Visualization3D({
   const rotationRef = useRef({ x: 0.15, y: 0, targetX: 0.15, targetY: 0 });
   const zoomRef = useRef(zoomLevel);
 
-  useEffect(() => {
-    zoomRef.current = zoomLevel;
-  }, [zoomLevel]);
+  useEffect(() => { zoomRef.current = zoomLevel; }, [zoomLevel]);
 
   const renderWidth = typeof window !== 'undefined' ? window.innerWidth : 800;
   const renderHeight = typeof window !== 'undefined' ? window.innerHeight : 600;
@@ -1827,32 +1900,21 @@ function Visualization3D({
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
 
-    // Lighting
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
     dirLight.position.set(5, 10, 7);
     dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 1024;
-    dirLight.shadow.mapSize.height = 1024;
     scene.add(dirLight);
-
     const backLight = new THREE.DirectionalLight(0xffffff, 0.3);
     backLight.position.set(-5, 5, -5);
     scene.add(backLight);
-
-    const fillLight = new THREE.PointLight(0xffffff, 0.3);
-    fillLight.position.set(0, -3, 3);
-    scene.add(fillLight);
 
     const group = new THREE.Group();
     groupRef.current = group;
     scene.add(group);
 
-    // Interaction
     let isDragging = false;
-    let lastX = 0;
-    let lastY = 0;
+    let lastX = 0, lastY = 0;
     let pinchDist: number | null = null;
     let pinchZoom = 1;
 
@@ -1865,14 +1927,8 @@ function Visualization3D({
 
     const onTouchStart = (e: TouchEvent) => {
       e.preventDefault();
-      if (e.touches.length === 2) {
-        pinchDist = getDist(e.touches);
-        pinchZoom = zoomRef.current;
-      } else if (e.touches.length === 1) {
-        isDragging = true;
-        lastX = e.touches[0].clientX;
-        lastY = e.touches[0].clientY;
-      }
+      if (e.touches.length === 2) { pinchDist = getDist(e.touches); pinchZoom = zoomRef.current; }
+      else if (e.touches.length === 1) { isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }
     };
 
     const onTouchMove = (e: TouchEvent) => {
@@ -1883,8 +1939,7 @@ function Visualization3D({
       } else if (e.touches.length === 1 && isDragging) {
         rotationRef.current.targetY += (e.touches[0].clientX - lastX) * 0.008;
         rotationRef.current.targetX += (e.touches[0].clientY - lastY) * 0.006;
-        lastX = e.touches[0].clientX;
-        lastY = e.touches[0].clientY;
+        lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
       }
     };
 
@@ -1894,24 +1949,14 @@ function Visualization3D({
       if (e.touches.length === 0) isDragging = false;
     };
 
-    const onMouseDown = (e: MouseEvent) => {
-      isDragging = true;
-      lastX = e.clientX;
-      lastY = e.clientY;
-    };
-
+    const onMouseDown = (e: MouseEvent) => { isDragging = true; lastX = e.clientX; lastY = e.clientY; };
     const onMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
       rotationRef.current.targetY += (e.clientX - lastX) * 0.008;
       rotationRef.current.targetX += (e.clientY - lastY) * 0.006;
-      lastX = e.clientX;
-      lastY = e.clientY;
+      lastX = e.clientX; lastY = e.clientY;
     };
-
-    const onMouseUp = () => {
-      isDragging = false;
-    };
-
+    const onMouseUp = () => { isDragging = false; };
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       setZoomLevel(Math.max(0.1, Math.min(3, zoomRef.current + (e.deltaY > 0 ? -0.12 : 0.12))));
@@ -1926,16 +1971,13 @@ function Visualization3D({
     container.addEventListener('mouseleave', onMouseUp);
     container.addEventListener('wheel', onWheel, { passive: false });
 
-    // Animation loop
     let animationId: number;
     const DAMPING = 0.1;
 
     const animate = () => {
       if (groupRef.current) {
-        // Smooth damping
         rotationRef.current.x += (rotationRef.current.targetX - rotationRef.current.x) * DAMPING;
         rotationRef.current.y += (rotationRef.current.targetY - rotationRef.current.y) * DAMPING;
-
         groupRef.current.rotation.x = rotationRef.current.x;
         groupRef.current.rotation.y = rotationRef.current.y;
         groupRef.current.scale.setScalar(zoomRef.current);
@@ -1956,41 +1998,16 @@ function Visualization3D({
       container.removeEventListener('mouseleave', onMouseUp);
       container.removeEventListener('wheel', onWheel);
       renderer.dispose();
-      if (container.contains(renderer.domElement)) {
-        container.removeChild(renderer.domElement);
-      }
+      if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
     };
   }, [structure, renderWidth, renderHeight, setZoomLevel]);
 
   useEffect(() => {
     if (!groupRef.current) return;
-    buildSceneContent(
-      groupRef.current,
-      data,
-      highlightIndex,
-      highlightIndex2,
-      structure,
-      environment,
-      animPhase,
-      animData
-    );
+    buildSceneContent(groupRef.current, data, highlightIndex, highlightIndex2, structure, environment, animPhase, animData);
   }, [data, highlightIndex, highlightIndex2, structure, environment, animPhase, animData]);
 
-  return (
-    <div
-      ref={containerRef}
-      style={{
-        position: 'absolute',
-        left: 0,
-        top: 0,
-        width: '100vw',
-        height: '100vh',
-        zIndex: 50,
-        touchAction: 'none',
-        pointerEvents: 'auto',
-      }}
-    />
-  );
+  return <div ref={containerRef} style={{ position: 'absolute', left: 0, top: 0, width: '100vw', height: '100vh', zIndex: 50, touchAction: 'none', pointerEvents: 'auto' }} />;
 }
 
 // ==================== MAIN COMPONENT ====================
@@ -2001,7 +2018,7 @@ export default function Home() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [loadingText, setLoadingText] = useState('Starting...');
-  const [model, setModel] = useState<any>(null);
+  const [model, setModel] = useState<unknown>(null);
   const [detectedPerson, setDetectedPerson] = useState<Detection | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
@@ -2026,6 +2043,18 @@ export default function Home() {
   const [appMode, setAppMode] = useState<AppMode>('surface');
   const [surfacePosition, setSurfacePosition] = useState<Position | null>(null);
   const [surfacePlaced, setSurfacePlaced] = useState(false);
+
+  // WebXR State
+  const [webxrSupported, setWebxrSupported] = useState(false);
+  const [webxrActive, setWebxrActive] = useState(false);
+  const [webxrPlaced, setWebxrPlaced] = useState(false);
+  const xrSessionRef = useRef<XRSession | null>(null);
+  const xrRendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const xrSceneRef = useRef<THREE.Scene | null>(null);
+  const xrGroupRef = useRef<THREE.Group | null>(null);
+  const xrReticleRef = useRef<THREE.Mesh | null>(null);
+  const xrHitTestSourceRef = useRef<XRHitTestSource | null>(null);
+  const xrContainerRef = useRef<HTMLDivElement>(null);
 
   // ==================== DATA ====================
 
@@ -2113,13 +2142,10 @@ export default function Home() {
 
   const getArrayData = () => arrayEnv === 'grocery' ? groceryItems : arrayEnv === 'classroom' ? students : tasks;
   const setArrayData = arrayEnv === 'grocery' ? setGroceryItems : arrayEnv === 'classroom' ? setStudents : setTasks;
-
   const getLinkedListData = () => linkedListEnv === 'train' ? trainCars : linkedListEnv === 'people' ? peopleLine : dominoNodes;
   const setLinkedListData = linkedListEnv === 'train' ? setTrainCars : linkedListEnv === 'people' ? setPeopleLine : setDominoNodes;
-
   const getStackData = () => stackEnv === 'books' ? bookStack : stackEnv === 'plates' ? plateStack : boxStack;
   const setStackData = stackEnv === 'books' ? setBookStack : stackEnv === 'plates' ? setPlateStack : setBoxStack;
-
   const getQueueData = () => queueEnv === 'tollgate' ? tollGate : queueEnv === 'tickets' ? ticketQueue : studentQueue;
   const setQueueData = queueEnv === 'tollgate' ? setTollGate : queueEnv === 'tickets' ? setTicketQueue : setStudentQueue;
 
@@ -2130,16 +2156,8 @@ export default function Home() {
     return getQueueData();
   };
 
-  const currentEnvId = currentStructure === 'array' ? arrayEnv
-    : currentStructure === 'linkedlist' ? linkedListEnv
-    : currentStructure === 'stack' ? stackEnv
-    : queueEnv;
-
-  const setCurrentEnv = currentStructure === 'array' ? setArrayEnv
-    : currentStructure === 'linkedlist' ? setLinkedListEnv
-    : currentStructure === 'stack' ? setStackEnv
-    : setQueueEnv;
-
+  const currentEnvId = currentStructure === 'array' ? arrayEnv : currentStructure === 'linkedlist' ? linkedListEnv : currentStructure === 'stack' ? stackEnv : queueEnv;
+  const setCurrentEnv = currentStructure === 'array' ? setArrayEnv : currentStructure === 'linkedlist' ? setLinkedListEnv : currentStructure === 'stack' ? setStackEnv : setQueueEnv;
   const currentData = getCurrentData();
 
   // ==================== CAMERA ====================
@@ -2148,41 +2166,28 @@ export default function Home() {
     try {
       if (stream) stream.getTracks().forEach(track => track.stop());
       const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false
+        video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
       });
       if (videoRef.current) {
         videoRef.current.srcObject = newStream;
         await new Promise<void>(resolve => {
-          if (videoRef.current) {
-            videoRef.current.onloadedmetadata = () => {
-              videoRef.current?.play();
-              resolve();
-            };
-          }
+          if (videoRef.current) videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); resolve(); };
         });
       }
       setStream(newStream);
-    } catch (err) {
-      throw new Error('Cannot access camera.');
-    }
+    } catch { throw new Error('Cannot access camera.'); }
   }, [stream]);
 
   const switchCamera = async () => {
     const newFacing = cameraFacing === 'environment' ? 'user' : 'environment';
     setCameraFacing(newFacing);
-    try {
-      await startCamera(newFacing);
-    } catch (err) {
-      console.error(err);
-    }
+    try { await startCamera(newFacing); } catch (err) { console.error(err); }
   };
 
   const loadModel = async () => {
     setLoadingText('Loading AI...');
     const tf = await import('@tensorflow/tfjs');
-    await tf.ready();
-    await tf.setBackend('webgl');
+    await tf.ready(); await tf.setBackend('webgl');
     setLoadingText('Loading detector...');
     const cocoSsd = await import('@tensorflow-models/coco-ssd');
     return await cocoSsd.load({ base: 'lite_mobilenet_v2' });
@@ -2197,16 +2202,12 @@ export default function Home() {
         setModel(loadedModel);
         setIsLoading(false);
       } catch (err: unknown) {
-        if (err instanceof Error) {
-          setError(err.message);
-        }
+        if (err instanceof Error) setError(err.message);
         setIsLoading(false);
       }
     };
     init();
-    return () => {
-      if (stream) stream.getTracks().forEach(track => track.stop());
-    };
+    return () => { if (stream) stream.getTracks().forEach(track => track.stop()); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -2214,511 +2215,376 @@ export default function Home() {
 
   useEffect(() => {
     if (!model || !videoRef.current || !canvasRef.current || appMode !== 'person') return;
-
-    let animationId: number;
-    let running = true;
-    let lastDetection = 0;
+    let animationId: number, running = true, lastDetection = 0;
 
     const detect = async () => {
       if (!running || !videoRef.current || !canvasRef.current) return;
-
       const now = Date.now();
-      if (now - lastDetection < 100) {
-        animationId = requestAnimationFrame(detect);
-        return;
-      }
+      if (now - lastDetection < 100) { animationId = requestAnimationFrame(detect); return; }
       lastDetection = now;
-
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-
-      if (video.readyState !== 4) {
-        animationId = requestAnimationFrame(detect);
-        return;
-      }
-
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-
+      const video = videoRef.current, canvas = canvasRef.current;
+      if (video.readyState !== 4) { animationId = requestAnimationFrame(detect); return; }
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
       try {
-        const predictions = await model.detect(video);
+        const predictions = await (model as { detect: (video: HTMLVideoElement) => Promise<Detection[]> }).detect(video);
         const humans = predictions.filter((p: Detection) => p.class === 'person' && p.score > 0.5);
-
         if (humans.length > 0) {
           const [x, y, width, height] = humans[0].bbox;
-          const scaleX = window.innerWidth / canvas.width;
-          const scaleY = window.innerHeight / canvas.height;
-
-          setDetectedPerson({
-            bbox: humans[0].bbox,
-            class: humans[0].class,
-            score: humans[0].score
-          });
-          setPersonPosition({
-            x: x * scaleX,
-            y: y * scaleY,
-            width: width * scaleX,
-            height: height * scaleY
-          });
-        } else {
-          setDetectedPerson(null);
-          setPersonPosition(null);
-        }
-      } catch (e) {
-        console.error(e);
-      }
-
+          const scaleX = window.innerWidth / canvas.width, scaleY = window.innerHeight / canvas.height;
+          setDetectedPerson({ bbox: humans[0].bbox, class: humans[0].class, score: humans[0].score });
+          setPersonPosition({ x: x * scaleX, y: y * scaleY, width: width * scaleX, height: height * scaleY });
+        } else { setDetectedPerson(null); setPersonPosition(null); }
+      } catch (e) { console.error(e); }
       if (running) animationId = requestAnimationFrame(detect);
     };
-
     detect();
-
-    return () => {
-      running = false;
-      if (animationId) cancelAnimationFrame(animationId);
-    };
+    return () => { running = false; if (animationId) cancelAnimationFrame(animationId); };
   }, [model, appMode]);
+
+  // ==================== WEBXR ====================
+
+  useEffect(() => {
+    const checkXR = async () => {
+      try {
+        if ('xr' in navigator) {
+          const xr = (navigator as Navigator & { xr: XRSystem }).xr;
+          const supported = await xr.isSessionSupported('immersive-ar');
+          setWebxrSupported(supported);
+        }
+      } catch { setWebxrSupported(false); }
+    };
+    checkXR();
+  }, []);
+
+  const cleanupWebXR = useCallback(() => {
+    if (xrRendererRef.current) {
+      xrRendererRef.current.setAnimationLoop(null);
+      xrRendererRef.current.dispose();
+      if (xrContainerRef.current && xrRendererRef.current.domElement.parentNode === xrContainerRef.current) {
+        xrContainerRef.current.removeChild(xrRendererRef.current.domElement);
+      }
+    }
+    xrSessionRef.current = null; xrRendererRef.current = null; xrSceneRef.current = null;
+    xrGroupRef.current = null; xrReticleRef.current = null; xrHitTestSourceRef.current = null;
+    setWebxrActive(false); setWebxrPlaced(false); setAppMode('surface');
+  }, []);
+
+  const stopWebXR = useCallback(() => {
+    if (xrSessionRef.current) { try { xrSessionRef.current.end(); } catch { cleanupWebXR(); } }
+    else cleanupWebXR();
+  }, [cleanupWebXR]);
+
+  const startWebXR = useCallback(async () => {
+    if (!('xr' in navigator)) { alert('WebXR not available.'); setAppMode('surface'); return; }
+    try {
+      const xr = (navigator as Navigator & { xr: XRSystem }).xr;
+      const sessionInit: XRSessionInit & { domOverlay?: { root: Element } } = { requiredFeatures: ['hit-test'], optionalFeatures: ['dom-overlay'] };
+      const overlayEl = document.getElementById('ar-overlay');
+      if (overlayEl) sessionInit.domOverlay = { root: overlayEl };
+
+      const session = await xr.requestSession('immersive-ar', sessionInit);
+      xrSessionRef.current = session;
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.xr.enabled = true;
+      renderer.xr.setReferenceSpaceType('local');
+      xrRendererRef.current = renderer;
+      if (xrContainerRef.current) xrContainerRef.current.appendChild(renderer.domElement);
+      await renderer.xr.setSession(session);
+
+      const scene = new THREE.Scene(); xrSceneRef.current = scene;
+      scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(5, 10, 7); dirLight.castShadow = true; scene.add(dirLight);
+
+      const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 100);
+      const group = new THREE.Group(); group.visible = false; scene.add(group); xrGroupRef.current = group;
+
+      const reticle = new THREE.Mesh(
+        new THREE.RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2),
+        new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+      );
+      reticle.matrixAutoUpdate = false; reticle.visible = false; scene.add(reticle); xrReticleRef.current = reticle;
+      reticle.add(new THREE.Mesh(new THREE.CircleGeometry(0.02, 16).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x00ff00 })));
+
+      const viewerSpace = await session.requestReferenceSpace('viewer');
+      const hitTestSource = await session.requestHitTestSource!({ space: viewerSpace });
+      xrHitTestSourceRef.current = hitTestSource;
+
+      session.addEventListener('select', () => {
+        if (xrReticleRef.current?.visible && xrGroupRef.current && !xrGroupRef.current.visible) {
+          xrGroupRef.current.position.setFromMatrixPosition(xrReticleRef.current.matrix);
+          xrGroupRef.current.visible = true;
+          xrGroupRef.current.scale.setScalar(0.3 * zoomLevel);
+          xrReticleRef.current.visible = false;
+          setWebxrPlaced(true);
+        }
+      });
+
+      session.addEventListener('end', () => cleanupWebXR());
+
+      renderer.setAnimationLoop((_ts: number, frame: XRFrame | undefined) => {
+        if (frame && xrHitTestSourceRef.current && xrGroupRef.current && !xrGroupRef.current.visible) {
+          const refSpace = renderer.xr.getReferenceSpace();
+          if (refSpace) {
+            const results = frame.getHitTestResults(xrHitTestSourceRef.current);
+            if (results.length > 0) {
+              const pose = results[0].getPose(refSpace);
+              if (pose && xrReticleRef.current) {
+                xrReticleRef.current.visible = true;
+                xrReticleRef.current.matrix.fromArray(pose.transform.matrix);
+              }
+            } else if (xrReticleRef.current) xrReticleRef.current.visible = false;
+          }
+        }
+        renderer.render(scene, camera);
+      });
+
+      setWebxrActive(true); setWebxrPlaced(false); setAppMode('webxr');
+    } catch (err) { console.error('WebXR failed:', err); alert('WebXR failed. Using Surface mode.'); setAppMode('surface'); }
+  }, [cleanupWebXR, zoomLevel]);
+
+  useEffect(() => {
+    if (appMode !== 'webxr' || !webxrPlaced || !xrGroupRef.current) return;
+    buildSceneContent(xrGroupRef.current, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData);
+  }, [appMode, webxrPlaced, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData]);
+
+  useEffect(() => {
+    if (xrGroupRef.current && webxrActive && webxrPlaced) xrGroupRef.current.scale.setScalar(0.3 * zoomLevel);
+  }, [zoomLevel, webxrActive, webxrPlaced]);
+
+  const resetWebXRPlacement = useCallback(() => {
+    if (xrGroupRef.current) xrGroupRef.current.visible = false;
+    setWebxrPlaced(false);
+  }, []);
+
+  // ==================== MODE SWITCHING ====================
+
+  const switchToMode = useCallback((mode: AppMode) => {
+    if (appMode === 'webxr' && mode !== 'webxr') stopWebXR();
+    if (mode === 'webxr') {
+      if (!webxrSupported) { alert('WebXR not supported. Using Surface mode.'); mode = 'surface'; }
+      else { startWebXR(); return; }
+    }
+    setAppMode(mode);
+    if (mode === 'surface') { setDetectedPerson(null); setPersonPosition(null); setSurfacePlaced(false); setSurfacePosition(null); }
+    else if (mode === 'person') { setSurfacePlaced(false); setSurfacePosition(null); }
+  }, [appMode, webxrSupported, stopWebXR, startWebXR]);
 
   // ==================== SURFACE MODE ====================
 
   const handleSurfaceTap = useCallback((e: React.MouseEvent) => {
     if (appMode !== 'surface' || surfacePlaced) return;
-
     const { clientX, clientY } = e;
     if (clientY < 140 || clientY > window.innerHeight - 160) return;
-
     const vizWidth = Math.min(window.innerWidth - 20, 360);
     const vizHeight = currentStructure === 'stack' ? 280 : 200;
-
-    setSurfacePosition({
-      x: clientX - vizWidth / 2,
-      y: clientY - vizHeight / 2,
-      width: vizWidth,
-      height: vizHeight
-    });
+    setSurfacePosition({ x: clientX - vizWidth / 2, y: clientY - vizHeight / 2, width: vizWidth, height: vizHeight });
     setSurfacePlaced(true);
   }, [appMode, surfacePlaced, currentStructure]);
 
-  const resetSurfacePlacement = useCallback(() => {
-    setSurfacePlaced(false);
-    setSurfacePosition(null);
-  }, []);
-
-  const switchToMode = useCallback((mode: AppMode) => {
-    setAppMode(mode);
-    if (mode === 'surface') {
-      setDetectedPerson(null);
-      setPersonPosition(null);
-      setSurfacePlaced(false);
-      setSurfacePosition(null);
-    } else if (mode === 'person') {
-      setSurfacePlaced(false);
-      setSurfacePosition(null);
-    }
-  }, []);
+  const resetSurfacePlacement = useCallback(() => { setSurfacePlaced(false); setSurfacePosition(null); }, []);
 
   const activePosition = appMode === 'person' ? personPosition : surfacePosition;
-  const showVisualization = appMode === 'person' ? !!detectedPerson : surfacePlaced;
+  const showVisualization = appMode === 'person' ? !!detectedPerson : appMode === 'surface' ? surfacePlaced : false;
+  const showControls = showVisualization || (appMode === 'webxr' && webxrPlaced);
 
   // ==================== ARRAY OPERATIONS ====================
 
   const arrayAccess = async () => {
-    if (isAnimating) return;
-    setIsAnimating(true);
-    const data = getArrayData();
-    const index = Math.floor(Math.random() * data.length);
-    setHighlightIndex(index);
-    setOperationMessage(`Accessing [${index}]...`);
-    setCodeDisplay(`// O(1) Access\narray[${index}]`);
-    setAnimPhase('access-lift');
-    setAnimData({ index });
-    await delay(400);
-    setAnimPhase('access-bounce');
-    setOperationMessage(`Found: "${data[index].label}"`);
-    await delay(900);
-    setAnimPhase('access-settle');
-    await delay(400);
-    setAnimPhase('');
-    setAnimData({});
-    setHighlightIndex(null);
-    setOperationMessage('');
-    setCodeDisplay('');
-    setIsAnimating(false);
+    if (isAnimating) return; setIsAnimating(true);
+    const data = getArrayData(), index = Math.floor(Math.random() * data.length);
+    setHighlightIndex(index); setOperationMessage(`Accessing [${index}]...`); setCodeDisplay(`// O(1) Access\narray[${index}]`);
+    setAnimPhase('access-lift'); setAnimData({ index }); await delay(400);
+    setAnimPhase('access-bounce'); setOperationMessage(`Found: "${data[index].label}"`); await delay(900);
+    setAnimPhase('access-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({}); setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
   const arrayInsert = async () => {
-    if (isAnimating || getArrayData().length >= 6) return;
-    setIsAnimating(true);
-    const data = getArrayData();
-    const insertIndex = Math.floor(Math.random() * (data.length + 1));
-    setOperationMessage(`Inserting at [${insertIndex}]...`);
-    setCodeDisplay(`// O(n) Insert\narray.splice(${insertIndex}, 0, item)`);
-
-    for (let i = data.length - 1; i >= insertIndex; i--) {
-      setHighlightIndex(i);
-      await delay(200);
-    }
-
+    if (isAnimating || getArrayData().length >= 6) return; setIsAnimating(true);
+    const data = getArrayData(), insertIndex = Math.floor(Math.random() * (data.length + 1));
+    setOperationMessage(`Inserting at [${insertIndex}]...`); setCodeDisplay(`// O(n) Insert\narray.splice(${insertIndex}, 0, item)`);
+    for (let i = data.length - 1; i >= insertIndex; i--) { setHighlightIndex(i); await delay(200); }
     const newItem: DataItem = arrayEnv === 'classroom'
       ? { id: Date.now(), label: 'New', color: '#1abc9c', appearance: { skinTone: '#ffdbac', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#4a3728', hairStyle: 'short', gender: 'male' } }
       : { id: Date.now(), label: 'New', color: '#1abc9c' };
-
-    (setArrayData as React.Dispatch<React.SetStateAction<DataItem[]>>)(prev => {
-      const arr = [...prev];
-      arr.splice(insertIndex, 0, newItem);
-      return arr;
-    });
-
-    setHighlightIndex(insertIndex);
-    setAnimPhase('insert-drop');
-    setAnimData({ index: insertIndex });
-    await delay(500);
-    setAnimPhase('insert-settle');
-    await delay(400);
-    setAnimPhase('');
-    setAnimData({});
-    setOperationMessage('Inserted!');
-    await delay(800);
-    setHighlightIndex(null);
-    setOperationMessage('');
-    setCodeDisplay('');
-    setIsAnimating(false);
+    (setArrayData as React.Dispatch<React.SetStateAction<DataItem[]>>)(prev => { const arr = [...prev]; arr.splice(insertIndex, 0, newItem); return arr; });
+    setHighlightIndex(insertIndex); setAnimPhase('insert-drop'); setAnimData({ index: insertIndex }); await delay(500);
+    setAnimPhase('insert-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({}); setOperationMessage('Inserted!'); await delay(800);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
   const arrayDelete = async () => {
-    if (isAnimating || getArrayData().length <= 2) return;
-    setIsAnimating(true);
-    const data = getArrayData();
-    const deleteIndex = Math.floor(Math.random() * data.length);
-    setHighlightIndex(deleteIndex);
-    setOperationMessage(`Deleting [${deleteIndex}]: "${data[deleteIndex].label}"`);
-    setCodeDisplay(`// O(n) Delete\narray.splice(${deleteIndex}, 1)`);
-    setAnimPhase('delete-lift');
-    setAnimData({ index: deleteIndex });
-    await delay(500);
-    setAnimPhase('delete-shrink');
-    await delay(500);
-    setHighlightIndex(null);
+    if (isAnimating || getArrayData().length <= 2) return; setIsAnimating(true);
+    const data = getArrayData(), deleteIndex = Math.floor(Math.random() * data.length);
+    setHighlightIndex(deleteIndex); setOperationMessage(`Deleting [${deleteIndex}]: "${data[deleteIndex].label}"`); setCodeDisplay(`// O(n) Delete\narray.splice(${deleteIndex}, 1)`);
+    setAnimPhase('delete-lift'); setAnimData({ index: deleteIndex }); await delay(500);
+    setAnimPhase('delete-shrink'); await delay(500); setHighlightIndex(null);
     (setArrayData as React.Dispatch<React.SetStateAction<DataItem[]>>)(prev => prev.filter((_, i) => i !== deleteIndex));
-    setAnimPhase('');
-    setAnimData({});
-    await delay(500);
-    setOperationMessage('');
-    setCodeDisplay('');
-    setIsAnimating(false);
+    setAnimPhase(''); setAnimData({}); await delay(500);
+    setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
   const arraySwap = async () => {
-    if (isAnimating) return;
-    setIsAnimating(true);
+    if (isAnimating) return; setIsAnimating(true);
     const data = getArrayData();
     const idx1 = Math.floor(Math.random() * data.length);
     let idx2 = Math.floor(Math.random() * data.length);
     while (idx2 === idx1) idx2 = Math.floor(Math.random() * data.length);
-    setHighlightIndex(idx1);
-    setHighlightIndex2(idx2);
-    setOperationMessage(`Swapping [${idx1}] ↔ [${idx2}]`);
-    setCodeDisplay('// O(1) Swap');
-    setAnimPhase('swap-lift');
-    setAnimData({ index1: idx1, index2: idx2 });
-    await delay(500);
-    setAnimPhase('swap-cross');
-    await delay(400);
-    (setArrayData as React.Dispatch<React.SetStateAction<DataItem[]>>)(prev => {
-      const a = [...prev];
-      [a[idx1], a[idx2]] = [a[idx2], a[idx1]];
-      return a;
-    });
-    setAnimPhase('swap-drop');
-    await delay(500);
-    setAnimPhase('');
-    setAnimData({});
-    setHighlightIndex(null);
-    setHighlightIndex2(null);
-    setOperationMessage('');
-    setCodeDisplay('');
-    setIsAnimating(false);
+    setHighlightIndex(idx1); setHighlightIndex2(idx2); setOperationMessage(`Swapping [${idx1}] ↔ [${idx2}]`); setCodeDisplay('// O(1) Swap');
+    setAnimPhase('swap-lift'); setAnimData({ index1: idx1, index2: idx2 }); await delay(500);
+    setAnimPhase('swap-cross'); await delay(400);
+    (setArrayData as React.Dispatch<React.SetStateAction<DataItem[]>>)(prev => { const a = [...prev]; [a[idx1], a[idx2]] = [a[idx2], a[idx1]]; return a; });
+    setAnimPhase('swap-drop'); await delay(500);
+    setAnimPhase(''); setAnimData({}); setHighlightIndex(null); setHighlightIndex2(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
   // ==================== LINKED LIST OPERATIONS ====================
 
   const linkedListInsertHead = async () => {
-    if (isAnimating || getLinkedListData().length >= 5) return;
-    setIsAnimating(true);
-    setOperationMessage('Inserting at HEAD...');
-    setCodeDisplay('// O(1)\nnewNode.next = head\nhead = newNode');
-
+    if (isAnimating || getLinkedListData().length >= 5) return; setIsAnimating(true);
+    setOperationMessage('Inserting at HEAD...'); setCodeDisplay('// O(1)\nnewNode.next = head\nhead = newNode');
     const newItem: DataItem = linkedListEnv === 'people'
       ? { id: Date.now(), label: 'New', color: '#1abc9c', appearance: { skinTone: '#ffdbac', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#4a3728', hairStyle: 'short', gender: 'male' } }
       : { id: Date.now(), label: 'New', color: '#1abc9c' };
-
     (setLinkedListData as React.Dispatch<React.SetStateAction<DataItem[]>>)(prev => [newItem, ...prev]);
-    setHighlightIndex(0);
-    setAnimPhase('ll-insert-head');
-    setAnimData({ index: 0 });
-    await delay(500);
-    setAnimPhase('ll-insert-head-settle');
-    await delay(400);
-    setAnimPhase('');
-    setAnimData({});
-    setOperationMessage('Inserted at HEAD!');
-    await delay(1000);
-    setHighlightIndex(null);
-    setOperationMessage('');
-    setCodeDisplay('');
-    setIsAnimating(false);
+    setHighlightIndex(0); setAnimPhase('ll-insert-head'); setAnimData({ index: 0 }); await delay(500);
+    setAnimPhase('ll-insert-head-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({}); setOperationMessage('Inserted at HEAD!'); await delay(1000);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
   const linkedListInsertTail = async () => {
-    if (isAnimating || getLinkedListData().length >= 5) return;
-    setIsAnimating(true);
+    if (isAnimating || getLinkedListData().length >= 5) return; setIsAnimating(true);
     const data = getLinkedListData();
-    setOperationMessage('Traversing to TAIL...');
-    setCodeDisplay('// O(n) Traverse');
-
-    for (let i = 0; i < data.length; i++) {
-      setHighlightIndex(i);
-      setAnimPhase('ll-traverse');
-      setAnimData({ index: i });
-      await delay(300);
-    }
-
-    setAnimPhase('');
-    setAnimData({});
-
+    setOperationMessage('Traversing to TAIL...'); setCodeDisplay('// O(n) Traverse');
+    for (let i = 0; i < data.length; i++) { setHighlightIndex(i); setAnimPhase('ll-traverse'); setAnimData({ index: i }); await delay(300); }
+    setAnimPhase(''); setAnimData({});
     const newItem: DataItem = linkedListEnv === 'people'
       ? { id: Date.now(), label: 'Last', color: '#e74c3c', appearance: { skinTone: '#8d5524', shirtColor: '#e74c3c', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } }
       : { id: Date.now(), label: 'New', color: '#e74c3c' };
-
     (setLinkedListData as React.Dispatch<React.SetStateAction<DataItem[]>>)(prev => [...prev, newItem]);
-    setHighlightIndex(data.length);
-    setAnimPhase('ll-insert-tail');
-    setAnimData({ index: data.length });
-    await delay(500);
-    setAnimPhase('ll-insert-tail-settle');
-    await delay(400);
-    setAnimPhase('');
-    setAnimData({});
-    setOperationMessage('Inserted at TAIL!');
-    await delay(1000);
-    setHighlightIndex(null);
-    setOperationMessage('');
-    setCodeDisplay('');
-    setIsAnimating(false);
+    setHighlightIndex(data.length); setAnimPhase('ll-insert-tail'); setAnimData({ index: data.length }); await delay(500);
+    setAnimPhase('ll-insert-tail-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({}); setOperationMessage('Inserted at TAIL!'); await delay(1000);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
   const linkedListDeleteHead = async () => {
-    if (isAnimating || getLinkedListData().length <= 2) return;
-    setIsAnimating(true);
-    setHighlightIndex(0);
-    setOperationMessage('Deleting HEAD...');
-    setCodeDisplay('// O(1)\nhead = head.next');
-    setAnimPhase('ll-delete-lift');
-    setAnimData({ index: 0 });
-    await delay(500);
-    setAnimPhase('ll-delete-shrink');
-    await delay(500);
+    if (isAnimating || getLinkedListData().length <= 2) return; setIsAnimating(true);
+    setHighlightIndex(0); setOperationMessage('Deleting HEAD...'); setCodeDisplay('// O(1)\nhead = head.next');
+    setAnimPhase('ll-delete-lift'); setAnimData({ index: 0 }); await delay(500);
+    setAnimPhase('ll-delete-shrink'); await delay(500);
     (setLinkedListData as React.Dispatch<React.SetStateAction<DataItem[]>>)(prev => prev.slice(1));
-    setAnimPhase('');
-    setAnimData({});
-    await delay(500);
-    setHighlightIndex(null);
-    setOperationMessage('');
-    setCodeDisplay('');
-    setIsAnimating(false);
+    setAnimPhase(''); setAnimData({}); await delay(500);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
   const linkedListTraverse = async () => {
-    if (isAnimating) return;
-    setIsAnimating(true);
+    if (isAnimating) return; setIsAnimating(true);
     const data = getLinkedListData();
-
     for (let i = 0; i < data.length; i++) {
-      setHighlightIndex(i);
-      setOperationMessage(`Visiting: ${data[i].label}`);
-      setCodeDisplay(`// Node ${i}\ncurr = curr.next`);
-      setAnimPhase('ll-traverse');
-      setAnimData({ index: i });
-      await delay(500);
+      setHighlightIndex(i); setOperationMessage(`Visiting: ${data[i].label}`); setCodeDisplay(`// Node ${i}\ncurr = curr.next`);
+      setAnimPhase('ll-traverse'); setAnimData({ index: i }); await delay(500);
     }
-
-    setAnimPhase('');
-    setAnimData({});
-    setOperationMessage(`Done! ${data.length} nodes`);
-    await delay(1000);
-    setHighlightIndex(null);
-    setOperationMessage('');
-    setCodeDisplay('');
-    setIsAnimating(false);
+    setAnimPhase(''); setAnimData({}); setOperationMessage(`Done! ${data.length} nodes`); await delay(1000);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
   // ==================== STACK OPERATIONS ====================
 
   const stackPush = async () => {
-    if (isAnimating || getStackData().length >= 5) return;
-    setIsAnimating(true);
+    if (isAnimating || getStackData().length >= 5) return; setIsAnimating(true);
     const data = getStackData();
     const labels = stackEnv === 'books' ? ['Physics', 'English', 'Art'] : stackEnv === 'plates' ? [`Plate ${data.length + 1}`] : [`Box ${String.fromCharCode(65 + data.length)}`];
     const colors = stackEnv === 'books' ? ['#9b59b6', '#e74c3c', '#1abc9c'] : ['#7f8c8d'];
     const newItem = { id: Date.now(), label: labels[Math.floor(Math.random() * labels.length)], color: colors[Math.floor(Math.random() * colors.length)] };
-    setOperationMessage(`Pushing "${newItem.label}"...`);
-    setCodeDisplay(`// O(1) LIFO\nstack.push("${newItem.label}")`);
+    setOperationMessage(`Pushing "${newItem.label}"...`); setCodeDisplay(`// O(1) LIFO\nstack.push("${newItem.label}")`);
     (setStackData as React.Dispatch<React.SetStateAction<DataItem[]>>)(prev => [...prev, newItem]);
-    setHighlightIndex(data.length);
-    setAnimPhase('stack-push-drop');
-    setAnimData({ index: data.length });
-    await delay(500);
-    setAnimPhase('stack-push-settle');
-    await delay(400);
-    setAnimPhase('');
-    setAnimData({});
-    setOperationMessage('Pushed!');
-    await delay(800);
-    setHighlightIndex(null);
-    setOperationMessage('');
-    setCodeDisplay('');
-    setIsAnimating(false);
+    setHighlightIndex(data.length); setAnimPhase('stack-push-drop'); setAnimData({ index: data.length }); await delay(500);
+    setAnimPhase('stack-push-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({}); setOperationMessage('Pushed!'); await delay(800);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
   const stackPop = async () => {
-    if (isAnimating || getStackData().length <= 1) return;
-    setIsAnimating(true);
-    const data = getStackData();
-    const topItem = data[data.length - 1];
-    setHighlightIndex(data.length - 1);
-    setOperationMessage(`Popping "${topItem.label}"...`);
-    setCodeDisplay(`// O(1) LIFO\nstack.pop() → "${topItem.label}"`);
-    setAnimPhase('stack-pop-lift');
-    setAnimData({ index: data.length - 1 });
-    await delay(500);
-    setAnimPhase('stack-pop-fly');
-    await delay(500);
+    if (isAnimating || getStackData().length <= 1) return; setIsAnimating(true);
+    const data = getStackData(), topItem = data[data.length - 1];
+    setHighlightIndex(data.length - 1); setOperationMessage(`Popping "${topItem.label}"...`); setCodeDisplay(`// O(1) LIFO\nstack.pop() → "${topItem.label}"`);
+    setAnimPhase('stack-pop-lift'); setAnimData({ index: data.length - 1 }); await delay(500);
+    setAnimPhase('stack-pop-fly'); await delay(500);
     (setStackData as React.Dispatch<React.SetStateAction<DataItem[]>>)(prev => prev.slice(0, -1));
-    setAnimPhase('');
-    setAnimData({});
-    await delay(500);
-    setHighlightIndex(null);
-    setOperationMessage('');
-    setCodeDisplay('');
-    setIsAnimating(false);
+    setAnimPhase(''); setAnimData({}); await delay(500);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
   const stackPeek = async () => {
-    if (isAnimating || getStackData().length === 0) return;
-    setIsAnimating(true);
-    const data = getStackData();
-    const topItem = data[data.length - 1];
-    setHighlightIndex(data.length - 1);
-    setOperationMessage(`Peeking TOP...`);
-    setCodeDisplay(`// O(1)\nstack.peek()`);
-    setAnimPhase('stack-peek-lift');
-    setAnimData({ index: data.length - 1 });
-    await delay(400);
-    setAnimPhase('stack-peek-open');
-    setOperationMessage(`TOP: "${topItem.label}"`);
-    await delay(1200);
-    setAnimPhase('stack-peek-settle');
-    await delay(400);
-    setAnimPhase('');
-    setAnimData({});
-    setHighlightIndex(null);
-    setOperationMessage('');
-    setCodeDisplay('');
-    setIsAnimating(false);
+    if (isAnimating || getStackData().length === 0) return; setIsAnimating(true);
+    const data = getStackData(), topItem = data[data.length - 1];
+    setHighlightIndex(data.length - 1); setOperationMessage(`Peeking TOP...`); setCodeDisplay(`// O(1)\nstack.peek()`);
+    setAnimPhase('stack-peek-lift'); setAnimData({ index: data.length - 1 }); await delay(400);
+    setAnimPhase('stack-peek-open'); setOperationMessage(`TOP: "${topItem.label}"`); await delay(1200);
+    setAnimPhase('stack-peek-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({}); setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
   // ==================== QUEUE OPERATIONS ====================
 
   const queueEnqueue = async () => {
-    if (isAnimating || getQueueData().length >= 5) return;
-    setIsAnimating(true);
+    if (isAnimating || getQueueData().length >= 5) return; setIsAnimating(true);
     const data = getQueueData();
-
     const newItem: DataItem = queueEnv === 'students'
       ? { id: Date.now(), label: `Stu ${data.length + 1}`, color: '#1abc9c', appearance: { skinTone: '#ffdbac', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#4a3728', hairStyle: 'short', gender: 'male' } }
       : { id: Date.now(), label: queueEnv === 'tollgate' ? 'New' : `T-00${data.length + 1}`, color: '#1abc9c' };
-
-    setOperationMessage(`Enqueue: "${newItem.label}"...`);
-    setCodeDisplay(`// O(1) FIFO\nqueue.enqueue("${newItem.label}")`);
+    setOperationMessage(`Enqueue: "${newItem.label}"...`); setCodeDisplay(`// O(1) FIFO\nqueue.enqueue("${newItem.label}")`);
     (setQueueData as React.Dispatch<React.SetStateAction<DataItem[]>>)(prev => [...prev, newItem]);
-    setHighlightIndex(data.length);
-    setAnimPhase('queue-enqueue-enter');
-    setAnimData({ index: data.length });
-    await delay(500);
-    setAnimPhase('queue-enqueue-settle');
-    await delay(400);
-    setAnimPhase('');
-    setAnimData({});
-    setOperationMessage('Enqueued!');
-    await delay(800);
-    setHighlightIndex(null);
-    setOperationMessage('');
-    setCodeDisplay('');
-    setIsAnimating(false);
+    setHighlightIndex(data.length); setAnimPhase('queue-enqueue-enter'); setAnimData({ index: data.length }); await delay(500);
+    setAnimPhase('queue-enqueue-settle'); await delay(400);
+    setAnimPhase(''); setAnimData({}); setOperationMessage('Enqueued!'); await delay(800);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
   const queueDequeue = async () => {
-    if (isAnimating || getQueueData().length <= 1) return;
-    setIsAnimating(true);
+    if (isAnimating || getQueueData().length <= 1) return; setIsAnimating(true);
     const frontItem = getQueueData()[0];
-    setHighlightIndex(0);
-    setOperationMessage(`Dequeue: "${frontItem.label}"...`);
-    setCodeDisplay(`// O(1) FIFO\nqueue.dequeue() → "${frontItem.label}"`);
-    setAnimPhase('queue-dequeue-exit');
-    setAnimData({ index: 0 });
-    await delay(600);
-    setAnimPhase('queue-dequeue-gone');
-    await delay(400);
+    setHighlightIndex(0); setOperationMessage(`Dequeue: "${frontItem.label}"...`); setCodeDisplay(`// O(1) FIFO\nqueue.dequeue() → "${frontItem.label}"`);
+    setAnimPhase('queue-dequeue-exit'); setAnimData({ index: 0 }); await delay(600);
+    setAnimPhase('queue-dequeue-gone'); await delay(400);
     (setQueueData as React.Dispatch<React.SetStateAction<DataItem[]>>)(prev => prev.slice(1));
-    setAnimPhase('');
-    setAnimData({});
-    await delay(500);
-    setHighlightIndex(null);
-    setOperationMessage('');
-    setCodeDisplay('');
-    setIsAnimating(false);
+    setAnimPhase(''); setAnimData({}); await delay(500);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
   const queueFront = async () => {
-    if (isAnimating || getQueueData().length === 0) return;
-    setIsAnimating(true);
+    if (isAnimating || getQueueData().length === 0) return; setIsAnimating(true);
     const frontItem = getQueueData()[0];
-    setHighlightIndex(0);
-    setOperationMessage(`FRONT: "${frontItem.label}"`);
-    setCodeDisplay(`// O(1)\nqueue.front() → "${frontItem.label}"`);
-    setAnimPhase('queue-front-peek');
-    setAnimData({ index: 0 });
-    await delay(1500);
-    setAnimPhase('');
-    setAnimData({});
-    setHighlightIndex(null);
-    setOperationMessage('');
-    setCodeDisplay('');
-    setIsAnimating(false);
+    setHighlightIndex(0); setOperationMessage(`FRONT: "${frontItem.label}"`); setCodeDisplay(`// O(1)\nqueue.front() → "${frontItem.label}"`);
+    setAnimPhase('queue-front-peek'); setAnimData({ index: 0 }); await delay(1500);
+    setAnimPhase(''); setAnimData({}); setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
   // ==================== RENDER ====================
 
-  if (error) {
-    return (
-      <div style={{ width: '100vw', height: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-        <div style={{ fontSize: 80 }}>📷</div>
-        <h2>Camera Access Needed</h2>
-        <button onClick={() => window.location.reload()} style={{ marginTop: 30, padding: '15px 40px', background: '#667eea', border: 'none', borderRadius: 30, color: 'white', fontSize: 16 }}>🔄 Try Again</button>
-      </div>
-    );
-  }
+  if (error) return (
+    <div style={{ width: '100vw', height: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+      <div style={{ fontSize: 80 }}>📷</div>
+      <h2>Camera Access Needed</h2>
+      <button onClick={() => window.location.reload()} style={{ marginTop: 30, padding: '15px 40px', background: '#667eea', border: 'none', borderRadius: 30, color: 'white', fontSize: 16 }}>🔄 Try Again</button>
+    </div>
+  );
 
-  if (isLoading) {
-    return (
-      <div style={{ width: '100vw', height: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-        <div style={{ width: 70, height: 70, border: '4px solid rgba(255,255,255,0.2)', borderTopColor: '#667eea', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-        <h2 style={{ marginTop: 25 }}>📊 Data Structure AR</h2>
-        <p>{loadingText}</p>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
+  if (isLoading) return (
+    <div style={{ width: '100vw', height: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+      <div style={{ width: 70, height: 70, border: '4px solid rgba(255,255,255,0.2)', borderTopColor: '#667eea', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+      <h2 style={{ marginTop: 25 }}>📊 Data Structure AR</h2>
+      <p>{loadingText}</p>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
 
   const envTabs = currentStructure === 'array'
     ? [{ id: 'grocery', icon: '🛒', label: 'Shelf' }, { id: 'classroom', icon: '🧑‍🤝‍🧑', label: 'Seats' }, { id: 'todo', icon: '📝', label: 'Tasks' }]
@@ -2729,40 +2595,32 @@ export default function Home() {
         : [{ id: 'tollgate', icon: '🚗', label: 'Toll' }, { id: 'tickets', icon: '🎫', label: 'Tickets' }, { id: 'students', icon: '🧑‍🎓', label: 'Students' }];
 
   return (
-    <div
-      style={{ position: 'fixed', inset: 0, background: '#000', overflow: 'hidden' }}
-      onClick={appMode === 'surface' && !surfacePlaced ? handleSurfaceTap : undefined}
-    >
-      <video ref={videoRef} playsInline muted autoPlay style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
+    <div id="ar-overlay" style={{ position: 'fixed', inset: 0, background: '#000', overflow: 'hidden' }}
+      onClick={appMode === 'surface' && !surfacePlaced ? handleSurfaceTap : undefined}>
 
-      {showVisualization && activePosition && (
-        <Visualization3D
-          position={activePosition}
-          data={currentData}
-          highlightIndex={highlightIndex}
-          highlightIndex2={highlightIndex2}
-          structure={currentStructure}
-          environment={currentEnvId}
-          zoomLevel={zoomLevel}
-          setZoomLevel={setZoomLevel}
-          animPhase={animPhase}
-          animData={animData}
-        />
+      {!webxrActive && <video ref={videoRef} playsInline muted autoPlay style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+      <div ref={xrContainerRef} style={{ position: 'fixed', inset: 0, zIndex: webxrActive ? 1 : -1, pointerEvents: 'none' }} />
+
+      {!webxrActive && showVisualization && activePosition && (
+        <Visualization3D position={activePosition} data={currentData} highlightIndex={highlightIndex} highlightIndex2={highlightIndex2}
+          structure={currentStructure} environment={currentEnvId} zoomLevel={zoomLevel} setZoomLevel={setZoomLevel} animPhase={animPhase} animData={animData} />
       )}
 
       {/* TOP CONTROLS */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: 10, zIndex: 100 }}>
-        <button onClick={switchCamera} style={{ position: 'absolute', top: 10, right: 10, width: 48, height: 48, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 22 }}>🔄</button>
+        {!webxrActive && <button onClick={switchCamera} style={{ position: 'absolute', top: 10, right: 10, width: 48, height: 48, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 22, zIndex: 200 }}>🔄</button>}
+        {webxrActive && <button onClick={stopWebXR} style={{ position: 'absolute', top: 10, right: 10, padding: '10px 18px', background: '#e74c3c', color: 'white', border: 'none', borderRadius: 20, fontSize: 13, fontWeight: 'bold', zIndex: 300 }}>✕ Exit AR</button>}
 
         {/* Mode switcher */}
-        <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', display: 'flex', background: 'rgba(0,0,0,0.8)', borderRadius: 25, padding: 3, border: '1px solid rgba(255,255,255,0.2)' }}>
-          <button onClick={() => switchToMode('person')} style={{ padding: '8px 14px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20, background: appMode === 'person' ? '#667eea' : 'transparent', color: 'white', opacity: appMode === 'person' ? 1 : 0.5 }}>🧑 Person</button>
-          <button onClick={() => switchToMode('surface')} style={{ padding: '8px 14px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20, background: appMode === 'surface' ? '#00b894' : 'transparent', color: 'white', opacity: appMode === 'surface' ? 1 : 0.5 }}>📱 Surface</button>
+        <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', display: 'flex', background: 'rgba(0,0,0,0.8)', borderRadius: 25, padding: 3, border: '1px solid rgba(255,255,255,0.2)', zIndex: 200 }}>
+          <button onClick={() => switchToMode('person')} style={{ padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20, background: appMode === 'person' ? '#667eea' : 'transparent', color: 'white', opacity: appMode === 'person' ? 1 : 0.5 }}>🧑 Person</button>
+          <button onClick={() => switchToMode('surface')} style={{ padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20, background: appMode === 'surface' ? '#00b894' : 'transparent', color: 'white', opacity: appMode === 'surface' ? 1 : 0.5 }}>📱 Surface</button>
+          <button onClick={() => switchToMode('webxr')} style={{ padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20, background: appMode === 'webxr' ? '#e17055' : 'transparent', color: 'white', opacity: appMode === 'webxr' ? 1 : webxrSupported ? 0.5 : 0.25, cursor: webxrSupported ? 'pointer' : 'not-allowed' }}>🌐 WebXR{!webxrSupported && ' ✗'}</button>
         </div>
 
         {/* Zoom controls */}
-        {showVisualization && (
+        {showControls && (
           <div style={{ position: 'absolute', top: 50, left: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <button onClick={() => setZoomLevel(z => Math.min(z + 0.2, 3))} style={{ width: 46, height: 46, borderRadius: '50%', border: '3px solid #fff', background: '#667eea', color: 'white', fontSize: 26, fontWeight: 'bold' }}>+</button>
             <div style={{ width: 46, height: 46, borderRadius: '50%', background: '#000', border: '3px solid #0f0', color: '#0f0', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{Math.round(zoomLevel * 100)}%</div>
@@ -2782,7 +2640,7 @@ export default function Home() {
         </div>
 
         {/* Environment tabs */}
-        {showVisualization && (
+        {showControls && (
           <div style={{ position: 'absolute', top: 88, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 4, background: 'rgba(0,0,0,0.7)', padding: 4, borderRadius: 20 }}>
             {envTabs.map(e => (
               <button key={e.id} onClick={() => !isAnimating && (setCurrentEnv as (val: string) => void)(e.id)}
@@ -2793,87 +2651,80 @@ export default function Home() {
           </div>
         )}
 
-        {/* Operation message */}
-        {operationMessage && (
-          <div style={{ position: 'absolute', top: 126, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.9)', color: '#0f0', padding: '10px 20px', borderRadius: 15, fontSize: 14, border: '1px solid #0f0', whiteSpace: 'nowrap' }}>
-            ⚡ {operationMessage}
-          </div>
-        )}
-
-        {/* Code display */}
-        {codeDisplay && (
-          <div style={{ position: 'absolute', top: 166, left: '50%', transform: 'translateX(-50%)', background: '#1e1e1e', color: '#0f0', padding: '10px 15px', borderRadius: 10, fontSize: 10, fontFamily: 'monospace', whiteSpace: 'pre-wrap', border: '1px solid #444' }}>
-            {codeDisplay}
-          </div>
-        )}
+        {operationMessage && <div style={{ position: 'absolute', top: 126, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.9)', color: '#0f0', padding: '10px 20px', borderRadius: 15, fontSize: 14, border: '1px solid #0f0', whiteSpace: 'nowrap' }}>⚡ {operationMessage}</div>}
+        {codeDisplay && <div style={{ position: 'absolute', top: 166, left: '50%', transform: 'translateX(-50%)', background: '#1e1e1e', color: '#0f0', padding: '10px 15px', borderRadius: 10, fontSize: 10, fontFamily: 'monospace', whiteSpace: 'pre-wrap', border: '1px solid #444' }}>{codeDisplay}</div>}
       </div>
 
       {/* BOTTOM CONTROLS */}
-      {showVisualization && (
+      {showControls && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '20px 10px 30px', background: 'linear-gradient(to top, rgba(0,0,0,0.95), transparent)', zIndex: 100 }}>
           {appMode === 'surface' && surfacePlaced && (
             <div style={{ textAlign: 'center', marginBottom: 10 }}>
               <button onClick={resetSurfacePlacement} style={{ padding: '8px 20px', fontSize: 12, fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, background: 'rgba(255,255,255,0.1)', color: 'white' }}>📍 Reposition</button>
             </div>
           )}
+          {appMode === 'webxr' && webxrPlaced && (
+            <div style={{ textAlign: 'center', marginBottom: 10 }}>
+              <button onClick={resetWebXRPlacement} style={{ padding: '8px 20px', fontSize: 12, fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, background: 'rgba(255,255,255,0.1)', color: 'white' }}>📍 Reposition</button>
+            </div>
+          )}
 
           <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-            {currentStructure === 'array' && (
-              <>
-                <OpBtn onClick={arrayAccess} disabled={isAnimating} color="#f39c12" label="📍 Access" />
-                <OpBtn onClick={arrayInsert} disabled={isAnimating || getArrayData().length >= 6} color="#2ecc71" label="➕ Insert" />
-                <OpBtn onClick={arrayDelete} disabled={isAnimating || getArrayData().length <= 2} color="#e74c3c" label="➖ Delete" />
-                <OpBtn onClick={arraySwap} disabled={isAnimating} color="#9b59b6" label="🔀 Swap" />
-              </>
-            )}
-            {currentStructure === 'linkedlist' && (
-              <>
-                <OpBtn onClick={linkedListInsertHead} disabled={isAnimating || getLinkedListData().length >= 5} color="#2ecc71" label="⬅️ +Head" />
-                <OpBtn onClick={linkedListInsertTail} disabled={isAnimating || getLinkedListData().length >= 5} color="#3498db" label="➡️ +Tail" />
-                <OpBtn onClick={linkedListDeleteHead} disabled={isAnimating || getLinkedListData().length <= 2} color="#e74c3c" label="🗑️ -Head" />
-                <OpBtn onClick={linkedListTraverse} disabled={isAnimating} color="#9b59b6" label="🔍 Traverse" />
-              </>
-            )}
-            {currentStructure === 'stack' && (
-              <>
-                <OpBtn onClick={stackPush} disabled={isAnimating || getStackData().length >= 5} color="#2ecc71" label="⬆️ Push" />
-                <OpBtn onClick={stackPop} disabled={isAnimating || getStackData().length <= 1} color="#e74c3c" label="⬇️ Pop" />
-                <OpBtn onClick={stackPeek} disabled={isAnimating} color="#f39c12" label="👁️ Peek" />
-              </>
-            )}
-            {currentStructure === 'queue' && (
-              <>
-                <OpBtn onClick={queueEnqueue} disabled={isAnimating || getQueueData().length >= 5} color="#2ecc71" label="➕ Enqueue" />
-                <OpBtn onClick={queueDequeue} disabled={isAnimating || getQueueData().length <= 1} color="#e74c3c" label="➖ Dequeue" />
-                <OpBtn onClick={queueFront} disabled={isAnimating} color="#f39c12" label="👁️ Front" />
-              </>
-            )}
+            {currentStructure === 'array' && (<>
+              <OpBtn onClick={arrayAccess} disabled={isAnimating} color="#f39c12" label="📍 Access" />
+              <OpBtn onClick={arrayInsert} disabled={isAnimating || getArrayData().length >= 6} color="#2ecc71" label="➕ Insert" />
+              <OpBtn onClick={arrayDelete} disabled={isAnimating || getArrayData().length <= 2} color="#e74c3c" label="➖ Delete" />
+              <OpBtn onClick={arraySwap} disabled={isAnimating} color="#9b59b6" label="🔀 Swap" />
+            </>)}
+            {currentStructure === 'linkedlist' && (<>
+              <OpBtn onClick={linkedListInsertHead} disabled={isAnimating || getLinkedListData().length >= 5} color="#2ecc71" label="⬅️ +Head" />
+              <OpBtn onClick={linkedListInsertTail} disabled={isAnimating || getLinkedListData().length >= 5} color="#3498db" label="➡️ +Tail" />
+              <OpBtn onClick={linkedListDeleteHead} disabled={isAnimating || getLinkedListData().length <= 2} color="#e74c3c" label="🗑️ -Head" />
+              <OpBtn onClick={linkedListTraverse} disabled={isAnimating} color="#9b59b6" label="🔍 Traverse" />
+            </>)}
+            {currentStructure === 'stack' && (<>
+              <OpBtn onClick={stackPush} disabled={isAnimating || getStackData().length >= 5} color="#2ecc71" label="⬆️ Push" />
+              <OpBtn onClick={stackPop} disabled={isAnimating || getStackData().length <= 1} color="#e74c3c" label="⬇️ Pop" />
+              <OpBtn onClick={stackPeek} disabled={isAnimating} color="#f39c12" label="👁️ Peek" />
+            </>)}
+            {currentStructure === 'queue' && (<>
+              <OpBtn onClick={queueEnqueue} disabled={isAnimating || getQueueData().length >= 5} color="#2ecc71" label="➕ Enqueue" />
+              <OpBtn onClick={queueDequeue} disabled={isAnimating || getQueueData().length <= 1} color="#e74c3c" label="➖ Dequeue" />
+              <OpBtn onClick={queueFront} disabled={isAnimating} color="#f39c12" label="👁️ Front" />
+            </>)}
           </div>
 
           <div style={{ textAlign: 'center', marginTop: 10, color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>
             Size: {currentData.length}
             {appMode === 'surface' && <span style={{ marginLeft: 10, color: '#00b894' }}>📱 Surface</span>}
+            {appMode === 'webxr' && <span style={{ marginLeft: 10, color: '#e17055' }}>🌐 WebXR</span>}
           </div>
         </div>
       )}
 
       {/* INSTRUCTIONS */}
-      {appMode === 'person' && !detectedPerson && (
+      {appMode === 'person' && !detectedPerson && !webxrActive && (
         <div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}>
-          <div style={{ fontSize: 40 }}>🧑</div>
-          <div style={{ marginTop: 8 }}>Point camera at a person</div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 5 }}>or switch to Surface mode →</div>
+          <div style={{ fontSize: 40 }}>🧑</div><div style={{ marginTop: 8 }}>Point camera at a person</div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 5 }}>or switch to Surface / WebXR →</div>
         </div>
       )}
-
-      {appMode === 'surface' && !surfacePlaced && (
+      {appMode === 'surface' && !surfacePlaced && !webxrActive && (
         <div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}>
-          <div style={{ fontSize: 40, animation: 'tapBounce 1.5s ease infinite' }}>👆</div>
-          <div style={{ marginTop: 8, fontWeight: 'bold' }}>Tap to Place</div>
+          <div style={{ fontSize: 40, animation: 'tapBounce 1.5s ease infinite' }}>👆</div><div style={{ marginTop: 8, fontWeight: 'bold' }}>Tap to Place</div>
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 5 }}>Tap anywhere to place visualization</div>
           <style>{`@keyframes tapBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }`}</style>
+        </div>
+      )}
+      {appMode === 'webxr' && webxrActive && !webxrPlaced && (
+        <div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}>
+          <div style={{ fontSize: 40, animation: 'xrPulse 2s ease infinite' }}>🌐</div>
+          <div style={{ marginTop: 8, fontWeight: 'bold', color: '#00ff00' }}>Scanning for surfaces...</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 5 }}>Point at floor or table, tap to place</div>
+          <style>{`@keyframes xrPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); opacity: 0.7; } }`}</style>
         </div>
       )}
     </div>
   );
 }
+// ==================== END OF PART 1 ====================
