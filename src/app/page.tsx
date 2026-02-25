@@ -969,32 +969,37 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
   return train;
 }
 
-// ==================== FIXED TOLL BOOTH (Barrier starts DOWN/blocking) ====================
+// ==================== FIXED TOLL BOOTH (Barrier horizontal blocking road) ====================
 
 function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
   const toll = new THREE.Group();
   const groundY = 0;
 
+  // Booth structure - ON THE SIDE of road
   const boothMat = new THREE.MeshStandardMaterial({ color: '#2c3e50', roughness: 0.6, metalness: 0.3 });
   const booth = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.65, 0.35), boothMat);
   booth.position.set(0, groundY + 0.325, -0.55);
   toll.add(booth);
 
+  // Booth window
   const windowMat = new THREE.MeshStandardMaterial({ color: '#87ceeb', metalness: 0.6, roughness: 0.1, transparent: true, opacity: 0.8 });
   const boothWindow = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.2, 0.01), windowMat);
   boothWindow.position.set(0, groundY + 0.42, -0.37);
   toll.add(boothWindow);
 
+  // Booth roof
   const roofMat = new THREE.MeshStandardMaterial({ color: '#34495e', roughness: 0.5 });
   const boothRoof = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.04, 0.45), roofMat);
   boothRoof.position.set(0, groundY + 0.67, -0.55);
   toll.add(boothRoof);
 
+  // Roof trim
   const trimMat = new THREE.MeshStandardMaterial({ color: '#f39c12', metalness: 0.5 });
   const trim = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.025, 0.47), trimMat);
   trim.position.set(0, groundY + 0.7, -0.55);
   toll.add(trim);
 
+  // TOLL sign
   const signCanvas = document.createElement('canvas');
   signCanvas.width = 120; signCanvas.height = 50;
   const sctx = signCanvas.getContext('2d')!;
@@ -1015,53 +1020,68 @@ function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
   signMesh.position.set(0, groundY + 0.58, -0.36);
   toll.add(signMesh);
 
+  // ===== GATE POST - Vertical post on the side =====
   const postMat = new THREE.MeshStandardMaterial({ color: '#f39c12', roughness: 0.5, metalness: 0.3 });
   const gatePost = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.6, 0.1), postMat);
   gatePost.position.set(0, groundY + 0.3, -0.32);
   toll.add(gatePost);
 
+  // ===== GATE ARM PIVOT - at top of post =====
   const gatePivot = new THREE.Group();
   gatePivot.position.set(0, groundY + 0.55, -0.32);
 
+  // ===== GATE ARM - extends in +X direction (HORIZONTAL across road) =====
+  // This makes it visible from camera and blocks cars moving along X-axis
   const gateArmMat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.5 });
-  const gateArm = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.7), gateArmMat);
-  gateArm.position.set(0, 0, 0.35);
+  const gateArm = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.06, 0.06), gateArmMat);
+  gateArm.position.set(0.35, 0, 0); // Extends from x=0 to x=0.7
   gatePivot.add(gateArm);
 
+  // White stripes on gate arm (along X direction)
   const stripeMat = new THREE.MeshStandardMaterial({ color: '#ffffff' });
   for (let i = 0; i < 5; i++) {
-    const stripeBox = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.065, 0.08), stripeMat);
-    stripeBox.position.set(0, 0, 0.1 + i * 0.12);
+    const stripeBox = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.065, 0.065), stripeMat);
+    stripeBox.position.set(0.1 + i * 0.12, 0, 0);
     gatePivot.add(stripeBox);
   }
 
+  // End cap with reflector
   const endCap = new THREE.Mesh(
     new THREE.BoxGeometry(0.08, 0.08, 0.08),
     new THREE.MeshStandardMaterial({ color: '#c0392b', metalness: 0.5 })
   );
-  endCap.position.set(0, 0, 0.7);
+  endCap.position.set(0.7, 0, 0);
   gatePivot.add(endCap);
 
+  // Red reflector on end
   const reflector = new THREE.Mesh(
-    new THREE.BoxGeometry(0.05, 0.05, 0.02),
+    new THREE.BoxGeometry(0.02, 0.05, 0.05),
     new THREE.MeshBasicMaterial({ color: '#ff0000' })
   );
-  reflector.position.set(0, 0, 0.75);
+  reflector.position.set(0.75, 0, 0);
   gatePivot.add(reflector);
 
-  // GATE ANIMATION - starts DOWN (horizontal/blocking), opens UP
+  // ===== GATE ANIMATION =====
+  // rotation.z = 0: arm is HORIZONTAL (blocking) - like |─────
+  // rotation.z = +90°: arm is VERTICAL (open/up) - like |
+  //                                                      |
   const easedOpen = gateOpenAmount < 0.5 
     ? 2 * gateOpenAmount * gateOpenAmount 
     : 1 - Math.pow(-2 * gateOpenAmount + 2, 2) / 2;
-  gatePivot.rotation.x = -easedOpen * Math.PI * 0.45;
+  
+  // When gateOpenAmount = 0: rotation.z = 0 (horizontal, blocking)
+  // When gateOpenAmount = 1: rotation.z = ~80° (up, open)
+  gatePivot.rotation.z = easedOpen * Math.PI * 0.45;
 
   toll.add(gatePivot);
 
+  // Payment terminal
   const terminalMat = new THREE.MeshStandardMaterial({ color: '#333', roughness: 0.4 });
   const terminal = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.25, 0.06), terminalMat);
   terminal.position.set(0, groundY + 0.3, -0.38);
   toll.add(terminal);
 
+  // Terminal screen
   const screen = new THREE.Mesh(
     new THREE.BoxGeometry(0.05, 0.05, 0.005),
     new THREE.MeshBasicMaterial({ color: gateOpenAmount > 0.5 ? '#00ff00' : '#ffff00' })
@@ -1069,6 +1089,7 @@ function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
   screen.position.set(0, groundY + 0.38, -0.345);
   toll.add(screen);
 
+  // Lane lights
   const lightHousing = new THREE.Mesh(
     new THREE.BoxGeometry(0.1, 0.14, 0.06),
     new THREE.MeshStandardMaterial({ color: '#222' })
@@ -1090,6 +1111,7 @@ function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
   redLight.position.set(0, groundY + 0.75, -0.515);
   toll.add(redLight);
 
+  // Speed bumps
   const bumpMat = new THREE.MeshStandardMaterial({ color: '#f1c40f' });
   [-0.25, 0.25].forEach(x => {
     const bump = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.015, 0.5), bumpMat);
