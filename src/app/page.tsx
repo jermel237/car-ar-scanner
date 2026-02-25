@@ -2723,7 +2723,7 @@ function buildSceneContent(
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const carObj = createCar(item.color, item.label, isHl);
-        carObj.position.set(startX + i * spacing + 0.3, groundY + isHl * 0.06, 0);
+        carObj.position.set(startX + i * spacing + 0.3, groundY + (isHl ? 0.06 : 0), 0);
         carObj.scale.setScalar(0.78);
         applyItemAnimation(carObj, i, animPhase || '', animData || {}, 'queue', animProgress);
         group.add(carObj);
