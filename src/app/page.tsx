@@ -85,71 +85,99 @@ function createArrow(fromX: number, toX: number, isHighlighted: boolean): THREE.
   return arrow;
 }
 
-// ==================== REALISTIC CHAIR (Classroom) ====================
+// ==================== CLASSROOM CHAIR (Box Style) ====================
 
 function createChair(x: number): THREE.Group {
   const chair = new THREE.Group();
-  const woodMat = new THREE.MeshStandardMaterial({ color: '#8b4513', roughness: 0.7 });
   const metalMat = new THREE.MeshStandardMaterial({ color: '#444444', metalness: 0.8, roughness: 0.3 });
 
-  // Seat cushion
+  // Seat cushion (box)
   const seatGeo = new THREE.BoxGeometry(0.28, 0.04, 0.26);
   const seatMat = new THREE.MeshStandardMaterial({ color: '#2c3e50', roughness: 0.8 });
   const seat = new THREE.Mesh(seatGeo, seatMat);
-  seat.position.y = -0.12;
+  seat.position.y = 0;
   chair.add(seat);
 
   // Seat frame
   const frameGeo = new THREE.BoxGeometry(0.3, 0.02, 0.28);
   const frame = new THREE.Mesh(frameGeo, metalMat);
-  frame.position.y = -0.15;
+  frame.position.y = -0.03;
   chair.add(frame);
 
-  // Back rest with padding
+  // Back rest (box)
   const backGeo = new THREE.BoxGeometry(0.28, 0.22, 0.03);
   const backMat = new THREE.MeshStandardMaterial({ color: '#2c3e50', roughness: 0.8 });
   const back = new THREE.Mesh(backGeo, backMat);
-  back.position.set(0, 0.02, -0.12);
+  back.position.set(0, 0.14, -0.12);
   chair.add(back);
 
   // Back frame
   const backFrameGeo = new THREE.BoxGeometry(0.3, 0.24, 0.02);
   const backFrame = new THREE.Mesh(backFrameGeo, metalMat);
-  backFrame.position.set(0, 0.02, -0.135);
+  backFrame.position.set(0, 0.14, -0.135);
   chair.add(backFrame);
 
-  // Metal legs
-  const legGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.22, 8);
-  [[-0.11, -0.27, 0.1], [0.11, -0.27, 0.1], [-0.11, -0.27, -0.1], [0.11, -0.27, -0.1]].forEach(([lx, ly, lz]) => {
+  // Metal legs (boxes)
+  const legGeo = new THREE.BoxGeometry(0.02, 0.22, 0.02);
+  [[-0.11, -0.14, 0.1], [0.11, -0.14, 0.1], [-0.11, -0.14, -0.1], [0.11, -0.14, -0.1]].forEach(([lx, ly, lz]) => {
     const leg = new THREE.Mesh(legGeo, metalMat);
     leg.position.set(lx, ly, lz);
     chair.add(leg);
   });
 
   // Cross support bars
-  const supportGeo = new THREE.CylinderGeometry(0.006, 0.006, 0.2, 6);
+  const supportGeo = new THREE.BoxGeometry(0.2, 0.015, 0.015);
   const support1 = new THREE.Mesh(supportGeo, metalMat);
-  support1.rotation.z = Math.PI / 2;
-  support1.position.set(0, -0.32, 0.1);
+  support1.position.set(0, -0.2, 0.1);
   chair.add(support1);
   const support2 = new THREE.Mesh(supportGeo, metalMat);
-  support2.rotation.z = Math.PI / 2;
-  support2.position.set(0, -0.32, -0.1);
+  support2.position.set(0, -0.2, -0.1);
   chair.add(support2);
 
   chair.position.x = x;
   return chair;
 }
 
-// ==================== CEREAL BOX (Grocery) ====================
+// ==================== CLASSROOM DESK (Box Style) ====================
 
-function createCerealBox(color: string, label: string, isHighlighted: boolean): THREE.Group {
+function createDesk(x: number): THREE.Group {
+  const desk = new THREE.Group();
+  const woodMat = new THREE.MeshStandardMaterial({ color: '#a0855b', roughness: 0.7 });
+  const metalMat = new THREE.MeshStandardMaterial({ color: '#555555', metalness: 0.6, roughness: 0.4 });
+
+  // Desktop surface
+  const topGeo = new THREE.BoxGeometry(0.4, 0.025, 0.28);
+  const top = new THREE.Mesh(topGeo, woodMat);
+  top.position.y = 0;
+  desk.add(top);
+
+  // Desk legs (4 metal legs)
+  const legGeo = new THREE.BoxGeometry(0.025, 0.28, 0.025);
+  [[-0.17, -0.15, 0.11], [0.17, -0.15, 0.11], [-0.17, -0.15, -0.11], [0.17, -0.15, -0.11]].forEach(([lx, ly, lz]) => {
+    const leg = new THREE.Mesh(legGeo, metalMat);
+    leg.position.set(lx, ly, lz);
+    desk.add(leg);
+  });
+
+  // Cross bar under desk
+  const crossGeo = new THREE.BoxGeometry(0.34, 0.02, 0.02);
+  const cross = new THREE.Mesh(crossGeo, metalMat);
+  cross.position.set(0, -0.22, 0);
+  desk.add(cross);
+
+  desk.position.x = x;
+  return desk;
+}
+
+// ==================== GROCERY PRODUCT (Cereal Box Style) ====================
+
+function createGroceryBox(color: string, label: string, isHighlighted: boolean): THREE.Group {
   const product = new THREE.Group();
   const boxWidth = 0.28;
   const boxHeight = 0.42;
   const boxDepth = 0.08;
 
-  // Main cereal box body
+  // Main cereal box body (box geometry)
   const bodyGeo = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
   const bodyMat = new THREE.MeshStandardMaterial({
     color,
@@ -185,33 +213,23 @@ function createCerealBox(color: string, label: string, isHighlighted: boolean): 
   fctx.textAlign = 'center';
   fctx.fillText('★ BREAKFAST ★', 70, 24);
 
-  // Cereal bowl illustration
+  // Bowl illustration (box style)
   fctx.fillStyle = '#f5f5dc';
-  fctx.beginPath();
-  fctx.ellipse(70, 100, 40, 25, 0, 0, Math.PI * 2);
-  fctx.fill();
+  fctx.fillRect(25, 75, 90, 50);
   fctx.strokeStyle = '#ddd';
   fctx.lineWidth = 2;
-  fctx.stroke();
+  fctx.strokeRect(25, 75, 90, 50);
 
-  // Cereal pieces in bowl
+  // Cereal pieces in bowl (squares)
   const cerealColors = ['#8B4513', '#D2691E', '#F4A460', '#DEB887'];
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 8; i++) {
     fctx.fillStyle = cerealColors[i % cerealColors.length];
-    fctx.beginPath();
-    fctx.ellipse(50 + Math.random() * 40, 90 + Math.random() * 15, 6, 4, Math.random(), 0, Math.PI * 2);
-    fctx.fill();
+    fctx.fillRect(30 + (i % 4) * 20, 80 + Math.floor(i / 4) * 18, 12, 12);
   }
-
-  // Milk splash
-  fctx.fillStyle = 'rgba(255,255,255,0.8)';
-  fctx.beginPath();
-  fctx.ellipse(90, 85, 15, 8, -0.3, 0, Math.PI * 2);
-  fctx.fill();
 
   // Product name
   fctx.fillStyle = '#2c3e50';
-  fctx.font = 'bold 18px Arial';
+  fctx.font = 'bold 16px Arial';
   fctx.fillText(label, 70, 155);
 
   // Tagline
@@ -221,13 +239,11 @@ function createCerealBox(color: string, label: string, isHighlighted: boolean): 
 
   // Nutrition badge
   fctx.fillStyle = '#27ae60';
-  fctx.beginPath();
-  fctx.arc(115, 185, 18, 0, Math.PI * 2);
-  fctx.fill();
+  fctx.fillRect(95, 175, 36, 26);
   fctx.fillStyle = '#fff';
-  fctx.font = 'bold 8px Arial';
-  fctx.fillText('WHOLE', 115, 183);
-  fctx.fillText('GRAIN', 115, 193);
+  fctx.font = 'bold 7px Arial';
+  fctx.fillText('WHOLE', 113, 185);
+  fctx.fillText('GRAIN', 113, 195);
 
   // Weight
   fctx.fillStyle = '#333';
@@ -277,9 +293,9 @@ function createCerealBox(color: string, label: string, isHighlighted: boolean): 
   // Top flap
   const topGeo = new THREE.BoxGeometry(boxWidth, 0.01, boxDepth);
   const topMat = new THREE.MeshStandardMaterial({ color, roughness: 0.5 });
-  const top = new THREE.Mesh(topGeo, topMat);
-  top.position.y = boxHeight + 0.005;
-  product.add(top);
+  const topMesh = new THREE.Mesh(topGeo, topMat);
+  topMesh.position.y = boxHeight + 0.005;
+  product.add(topMesh);
 
   // Price tag
   const tagCanvas = document.createElement('canvas');
@@ -320,7 +336,7 @@ function createCerealBox(color: string, label: string, isHighlighted: boolean): 
     glow.position.y = boxHeight / 2;
     product.add(glow);
 
-    const arrowGeo = new THREE.ConeGeometry(0.05, 0.08, 8);
+    const arrowGeo = new THREE.ConeGeometry(0.05, 0.08, 4);
     const arrowMesh = new THREE.Mesh(arrowGeo, new THREE.MeshBasicMaterial({ color: '#ffff00' }));
     arrowMesh.position.y = boxHeight + 0.12;
     arrowMesh.rotation.z = Math.PI;
@@ -330,453 +346,234 @@ function createCerealBox(color: string, label: string, isHighlighted: boolean): 
   return product;
 }
 
-// ==================== REALISTIC HUMAN 3D (Sims-like) ====================
+// ==================== SIMS-STYLE BOX HUMAN (Like your HTML example) ====================
 
 function createHuman3D(appearance: HumanAppearance, name: string, isHighlighted: boolean, isSeated: boolean = false, walkPhase: number = 0): THREE.Group {
   const human = new THREE.Group();
-  const hlEmit = isHighlighted ? 0.4 : 0;
 
-  // ===== HEAD =====
-  const headGroup = new THREE.Group();
-
-  // Head shape
-  const headGeo = new THREE.SphereGeometry(0.09, 32, 32);
-  const headMat = new THREE.MeshStandardMaterial({
-    color: appearance.skinTone,
+  // Materials
+  const skinMat = new THREE.MeshStandardMaterial({ 
+    color: appearance.skinTone, 
     roughness: 0.7,
     emissive: isHighlighted ? '#ffff00' : '#000',
-    emissiveIntensity: hlEmit * 0.3,
+    emissiveIntensity: isHighlighted ? 0.15 : 0,
   });
-  const head = new THREE.Mesh(headGeo, headMat);
-  head.scale.set(1, 1.08, 0.95);
-  headGroup.add(head);
-
-  // ===== HAIR =====
-  if (appearance.hairStyle !== 'bald') {
-    const hairMat = new THREE.MeshStandardMaterial({
-      color: appearance.hairColor,
-      roughness: 0.8,
-    });
-
-    if (appearance.hairStyle === 'long') {
-      const topHairGeo = new THREE.SphereGeometry(0.095, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.55);
-      const topHair = new THREE.Mesh(topHairGeo, hairMat);
-      topHair.position.y = 0.015;
-      headGroup.add(topHair);
-
-      const backHairGeo = new THREE.CapsuleGeometry(0.04, 0.14, 8, 16);
-      const backHair = new THREE.Mesh(backHairGeo, hairMat);
-      backHair.position.set(0, -0.08, -0.045);
-      headGroup.add(backHair);
-
-      [-0.065, 0.065].forEach(x => {
-        const sideHairGeo = new THREE.CapsuleGeometry(0.025, 0.08, 6, 12);
-        const sideHair = new THREE.Mesh(sideHairGeo, hairMat);
-        sideHair.position.set(x, -0.04, -0.02);
-        headGroup.add(sideHair);
-      });
-
-      if (appearance.gender === 'female') {
-        const bangsGeo = new THREE.BoxGeometry(0.14, 0.025, 0.04);
-        const bangs = new THREE.Mesh(bangsGeo, hairMat);
-        bangs.position.set(0, 0.065, 0.065);
-        bangs.rotation.x = 0.2;
-        headGroup.add(bangs);
-      }
-    } else {
-      const shortHairGeo = new THREE.SphereGeometry(0.093, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.4);
-      const shortHair = new THREE.Mesh(shortHairGeo, hairMat);
-      shortHair.position.y = 0.015;
-      headGroup.add(shortHair);
-
-      const fadeMat = new THREE.MeshStandardMaterial({
-        color: appearance.hairColor,
-        roughness: 0.9,
-        transparent: true,
-        opacity: 0.7,
-      });
-      [-0.082, 0.082].forEach(x => {
-        const fadeGeo = new THREE.SphereGeometry(0.03, 12, 12);
-        const fade = new THREE.Mesh(fadeGeo, fadeMat);
-        fade.position.set(x, 0.02, 0);
-        fade.scale.set(0.4, 0.8, 0.7);
-        headGroup.add(fade);
-      });
-    }
-  }
-
-  // ===== FACE DETAILS =====
-  const eyeWhiteGeo = new THREE.SphereGeometry(0.014, 16, 16);
-  const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 });
-  const irisGeo = new THREE.SphereGeometry(0.008, 12, 12);
-  const irisMat = new THREE.MeshStandardMaterial({ color: '#5d4037' });
-  const pupilGeo = new THREE.SphereGeometry(0.004, 8, 8);
-  const pupilMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a' });
-  const eyeShineGeo = new THREE.SphereGeometry(0.002, 6, 6);
-  const eyeShineMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
-
-  [-0.03, 0.03].forEach(x => {
-    const eyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
-    eyeWhite.position.set(x, 0.012, 0.072);
-    eyeWhite.scale.set(1, 0.75, 0.5);
-    headGroup.add(eyeWhite);
-
-    const iris = new THREE.Mesh(irisGeo, irisMat);
-    iris.position.set(x, 0.012, 0.082);
-    headGroup.add(iris);
-
-    const pupil = new THREE.Mesh(pupilGeo, pupilMat);
-    pupil.position.set(x, 0.012, 0.086);
-    headGroup.add(pupil);
-
-    const shine = new THREE.Mesh(eyeShineGeo, eyeShineMat);
-    shine.position.set(x + 0.003, 0.016, 0.087);
-    headGroup.add(shine);
-
-    const eyelidGeo = new THREE.SphereGeometry(0.016, 12, 12, 0, Math.PI * 2, 0, Math.PI * 0.3);
-    const eyelidMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone });
-    const eyelid = new THREE.Mesh(eyelidGeo, eyelidMat);
-    eyelid.position.set(x, 0.02, 0.07);
-    eyelid.scale.set(1, 0.5, 0.5);
-    headGroup.add(eyelid);
-  });
-
-  // Eyebrows
-  const browMat = new THREE.MeshStandardMaterial({ color: appearance.hairColor });
-  [-0.03, 0.03].forEach((x, i) => {
-    const browGeo = new THREE.BoxGeometry(0.028, 0.006, 0.008);
-    const brow = new THREE.Mesh(browGeo, browMat);
-    brow.position.set(x, 0.038, 0.072);
-    brow.rotation.z = i === 0 ? -0.12 : 0.12;
-    headGroup.add(brow);
-  });
-
-  // Nose
-  const noseGroup = new THREE.Group();
-  const noseBridgeGeo = new THREE.BoxGeometry(0.012, 0.025, 0.015);
-  const noseMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.8 });
-  const noseBridge = new THREE.Mesh(noseBridgeGeo, noseMat);
-  noseBridge.position.set(0, 0, 0.08);
-  noseGroup.add(noseBridge);
-
-  const noseTipGeo = new THREE.SphereGeometry(0.012, 8, 8);
-  const noseTip = new THREE.Mesh(noseTipGeo, noseMat);
-  noseTip.position.set(0, -0.01, 0.085);
-  noseTip.scale.set(1, 0.7, 0.8);
-  noseGroup.add(noseTip);
-
-  const nostrilGeo = new THREE.SphereGeometry(0.004, 6, 6);
-  const nostrilMat = new THREE.MeshStandardMaterial({ color: '#2c2c2c' });
-  [-0.007, 0.007].forEach(x => {
-    const nostril = new THREE.Mesh(nostrilGeo, nostrilMat);
-    nostril.position.set(x, -0.015, 0.082);
-    noseGroup.add(nostril);
-  });
-  headGroup.add(noseGroup);
-
-  // Mouth
-  const mouthGroup = new THREE.Group();
-  const upperLipGeo = new THREE.TorusGeometry(0.016, 0.003, 8, 16, Math.PI);
-  const lipMat = new THREE.MeshStandardMaterial({ color: '#c0392b', roughness: 0.6 });
-  const upperLip = new THREE.Mesh(upperLipGeo, lipMat);
-  upperLip.position.set(0, -0.032, 0.075);
-  upperLip.rotation.z = Math.PI;
-  upperLip.scale.set(1, 0.5, 1);
-  mouthGroup.add(upperLip);
-
-  const lowerLipGeo = new THREE.TorusGeometry(0.014, 0.0035, 8, 16, Math.PI);
-  const lowerLipMat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.5 });
-  const lowerLip = new THREE.Mesh(lowerLipGeo, lowerLipMat);
-  lowerLip.position.set(0, -0.038, 0.074);
-  lowerLip.scale.set(1, 0.6, 1);
-  mouthGroup.add(lowerLip);
-  headGroup.add(mouthGroup);
-
-  // Ears
-  const earMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.7 });
-  [-0.087, 0.087].forEach(x => {
-    const earGroup = new THREE.Group();
-    const outerEarGeo = new THREE.SphereGeometry(0.018, 8, 8);
-    const outerEar = new THREE.Mesh(outerEarGeo, earMat);
-    outerEar.scale.set(0.4, 0.85, 0.55);
-    earGroup.add(outerEar);
-
-    const innerEarGeo = new THREE.SphereGeometry(0.012, 6, 6);
-    const innerEarMat = new THREE.MeshStandardMaterial({
-      color: appearance.skinTone,
-      roughness: 0.5,
-      emissive: '#331111',
-      emissiveIntensity: 0.1,
-    });
-    const innerEar = new THREE.Mesh(innerEarGeo, innerEarMat);
-    innerEar.position.z = 0.003;
-    innerEar.scale.set(0.3, 0.6, 0.3);
-    earGroup.add(innerEar);
-
-    earGroup.position.set(x, 0, 0);
-    headGroup.add(earGroup);
-  });
-
-  // Chin
-  const chinGeo = new THREE.SphereGeometry(0.04, 12, 12);
-  const chinMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.7 });
-  const chin = new THREE.Mesh(chinGeo, chinMat);
-  chin.position.set(0, -0.06, 0.03);
-  chin.scale.set(1, 0.5, 0.8);
-  headGroup.add(chin);
-
-  // Cheeks
-  const cheekGeo = new THREE.SphereGeometry(0.025, 8, 8);
-  const cheekMat = new THREE.MeshStandardMaterial({
-    color: appearance.skinTone,
-    roughness: 0.6,
-    emissive: '#ff9999',
-    emissiveIntensity: 0.05,
-  });
-  [-0.05, 0.05].forEach(x => {
-    const cheek = new THREE.Mesh(cheekGeo, cheekMat);
-    cheek.position.set(x, -0.015, 0.06);
-    cheek.scale.set(0.8, 0.6, 0.4);
-    headGroup.add(cheek);
-  });
-
-  headGroup.position.y = isSeated ? 0.28 : 0.32;
-  human.add(headGroup);
-
-  // ===== NECK =====
-  const neckGeo = new THREE.CylinderGeometry(0.024, 0.03, 0.045, 16);
-  const neckMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.7 });
-  const neck = new THREE.Mesh(neckGeo, neckMat);
-  neck.position.y = isSeated ? 0.17 : 0.21;
-  human.add(neck);
-
-  // ===== TORSO =====
-  const torsoGroup = new THREE.Group();
-  const torsoGeo = new THREE.CylinderGeometry(0.075, 0.058, 0.17, 16);
-  const torsoMat = new THREE.MeshStandardMaterial({
-    color: appearance.shirtColor,
+  const shirtMat = new THREE.MeshStandardMaterial({ 
+    color: appearance.shirtColor, 
     roughness: 0.6,
     emissive: isHighlighted ? '#ffff00' : '#000',
-    emissiveIntensity: hlEmit,
+    emissiveIntensity: isHighlighted ? 0.15 : 0,
   });
-  const torso = new THREE.Mesh(torsoGeo, torsoMat);
-  torsoGroup.add(torso);
+  const pantsMat = new THREE.MeshStandardMaterial({ color: appearance.pantsColor, roughness: 0.7 });
+  const shoeMat = new THREE.MeshStandardMaterial({ color: '#222222', roughness: 0.5 });
+  const hairMat = new THREE.MeshStandardMaterial({ color: appearance.hairColor, roughness: 0.8 });
+  const eyeMat = new THREE.MeshStandardMaterial({ color: '#111111' });
+  const mouthMat = new THREE.MeshStandardMaterial({ color: '#cc6666' });
 
-  // Collar
-  const collarGeo = new THREE.TorusGeometry(0.055, 0.012, 8, 16, Math.PI * 1.2);
-  const collarMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.4 });
-  const collar = new THREE.Mesh(collarGeo, collarMat);
-  collar.position.set(0, 0.075, 0.02);
-  collar.rotation.x = Math.PI / 2;
-  collar.rotation.z = -Math.PI * 0.1;
-  torsoGroup.add(collar);
+  // Scale factor for our visualization
+  const scale = 0.12;
 
-  // Buttons
-  const buttonGeo = new THREE.SphereGeometry(0.006, 8, 8);
-  const buttonMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 });
-  [0.04, 0, -0.04].forEach(y => {
-    const button = new THREE.Mesh(buttonGeo, buttonMat);
-    button.position.set(0, y, 0.06);
-    torsoGroup.add(button);
-  });
+  // ===== HEAD GROUP =====
+  const headGroup = new THREE.Group();
 
-  // Shirt bottom
-  const shirtBottomGeo = new THREE.CylinderGeometry(0.06, 0.065, 0.02, 16);
-  const shirtBottom = new THREE.Mesh(shirtBottomGeo, torsoMat);
-  shirtBottom.position.y = -0.095;
-  torsoGroup.add(shirtBottom);
+  // Head (box)
+  const headGeo = new THREE.BoxGeometry(0.7 * scale, 0.75 * scale, 0.7 * scale);
+  const head = new THREE.Mesh(headGeo, skinMat);
+  headGroup.add(head);
 
-  torsoGroup.position.y = isSeated ? 0.07 : 0.11;
-  human.add(torsoGroup);
+  // Hair top
+  const hairTopGeo = new THREE.BoxGeometry(0.74 * scale, 0.3 * scale, 0.74 * scale);
+  const hairTop = new THREE.Mesh(hairTopGeo, hairMat);
+  hairTop.position.y = 0.3 * scale;
+  if (appearance.hairStyle !== 'bald') {
+    headGroup.add(hairTop);
+  }
+
+  // Hair back (for long hair)
+  if (appearance.hairStyle === 'long') {
+    const hairBackGeo = new THREE.BoxGeometry(0.74 * scale, 0.6 * scale, 0.15 * scale);
+    const hairBack = new THREE.Mesh(hairBackGeo, hairMat);
+    hairBack.position.set(0, 0 * scale, -0.32 * scale);
+    headGroup.add(hairBack);
+
+    // Side hair
+    const hairSideGeo = new THREE.BoxGeometry(0.15 * scale, 0.5 * scale, 0.3 * scale);
+    [-0.35, 0.35].forEach(x => {
+      const hairSide = new THREE.Mesh(hairSideGeo, hairMat);
+      hairSide.position.set(x * scale, -0.05 * scale, -0.1 * scale);
+      headGroup.add(hairSide);
+    });
+  }
+
+  // Eyes (boxes)
+  const eyeGeo = new THREE.BoxGeometry(0.1 * scale, 0.08 * scale, 0.05 * scale);
+  const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+  leftEye.position.set(-0.15 * scale, 0.05 * scale, 0.35 * scale);
+  headGroup.add(leftEye);
+  const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+  rightEye.position.set(0.15 * scale, 0.05 * scale, 0.35 * scale);
+  headGroup.add(rightEye);
+
+  // Mouth
+  const mouthGeo = new THREE.BoxGeometry(0.2 * scale, 0.05 * scale, 0.05 * scale);
+  const mouth = new THREE.Mesh(mouthGeo, mouthMat);
+  mouth.position.set(0, -0.15 * scale, 0.35 * scale);
+  headGroup.add(mouth);
+
+  // Neck
+  const neckGeo = new THREE.BoxGeometry(0.25 * scale, 0.15 * scale, 0.25 * scale);
+  const neck = new THREE.Mesh(neckGeo, skinMat);
+  neck.position.y = -0.45 * scale;
+  headGroup.add(neck);
+
+  headGroup.position.y = isSeated ? 0.32 : 0.38;
+  human.add(headGroup);
+
+  // ===== TORSO (Shirt) =====
+  const torsoGeo = new THREE.BoxGeometry(0.9 * scale, 1.0 * scale, 0.5 * scale);
+  const torso = new THREE.Mesh(torsoGeo, shirtMat);
+  torso.position.y = isSeated ? 0.2 : 0.26;
+  torso.castShadow = true;
+  human.add(torso);
 
   // ===== ARMS =====
-  const armShirtMat = new THREE.MeshStandardMaterial({ color: appearance.shirtColor, roughness: 0.6 });
-  const skinMat = new THREE.MeshStandardMaterial({ color: appearance.skinTone, roughness: 0.7 });
+  const upperArmGeo = new THREE.BoxGeometry(0.25 * scale, 0.55 * scale, 0.25 * scale);
+  const lowerArmGeo = new THREE.BoxGeometry(0.22 * scale, 0.5 * scale, 0.22 * scale);
+  const handGeo = new THREE.BoxGeometry(0.18 * scale, 0.18 * scale, 0.18 * scale);
 
-  [-1, 1].forEach(side => {
+  [-1, 1].forEach((side, idx) => {
     const armGroup = new THREE.Group();
+    armGroup.position.set(side * 0.575 * scale, isSeated ? 0.28 : 0.34, 0);
 
-    const shoulderGeo = new THREE.SphereGeometry(0.025, 12, 12);
-    const shoulder = new THREE.Mesh(shoulderGeo, armShirtMat);
-    shoulder.position.y = 0.04;
-    armGroup.add(shoulder);
-
-    const upperArmGeo = new THREE.CapsuleGeometry(0.016, 0.08, 8, 16);
-    const upperArm = new THREE.Mesh(upperArmGeo, armShirtMat);
-    armGroup.add(upperArm);
-
-    const cuffGeo = new THREE.CylinderGeometry(0.018, 0.016, 0.015, 12);
-    const cuff = new THREE.Mesh(cuffGeo, armShirtMat);
-    cuff.position.y = -0.05;
-    armGroup.add(cuff);
-
-    const lowerArmGeo = new THREE.CapsuleGeometry(0.013, 0.065, 8, 16);
-    const lowerArm = new THREE.Mesh(lowerArmGeo, skinMat);
-    lowerArm.position.y = -0.1;
-    armGroup.add(lowerArm);
-
-    const wristGeo = new THREE.CylinderGeometry(0.013, 0.012, 0.01, 10);
-    const wrist = new THREE.Mesh(wristGeo, skinMat);
-    wrist.position.y = -0.14;
-    armGroup.add(wrist);
-
-    const handGeo = new THREE.SphereGeometry(0.018, 12, 12);
-    const hand = new THREE.Mesh(handGeo, skinMat);
-    hand.position.y = -0.155;
-    hand.scale.set(0.65, 0.9, 0.45);
-    armGroup.add(hand);
-
-    const thumbGeo = new THREE.CapsuleGeometry(0.005, 0.015, 4, 8);
-    const thumb = new THREE.Mesh(thumbGeo, skinMat);
-    thumb.position.set(side * 0.012, -0.155, 0.01);
-    thumb.rotation.z = side * 0.5;
-    armGroup.add(thumb);
-
-    armGroup.position.set(side * 0.09, isSeated ? 0.06 : 0.1, 0);
+    // Upper arm pivot
+    const upperArmPivot = new THREE.Group();
     
+    // Upper arm mesh
+    const upperArm = new THREE.Mesh(upperArmGeo, shirtMat);
+    upperArm.position.y = -0.275 * scale;
+    upperArmPivot.add(upperArm);
+
+    // Lower arm pivot
+    const lowerArmPivot = new THREE.Group();
+    lowerArmPivot.position.y = -0.55 * scale;
+
+    // Lower arm mesh
+    const lowerArm = new THREE.Mesh(lowerArmGeo, skinMat);
+    lowerArm.position.y = -0.25 * scale;
+    lowerArmPivot.add(lowerArm);
+
+    // Hand
+    const hand = new THREE.Mesh(handGeo, skinMat);
+    hand.position.y = -0.55 * scale;
+    lowerArmPivot.add(hand);
+
+    upperArmPivot.add(lowerArmPivot);
+    armGroup.add(upperArmPivot);
+
+    // Arm animations
     if (isSeated) {
-      // Arms resting on desk
-      armGroup.rotation.x = -0.8;
-      armGroup.rotation.z = side * 0.3;
-    } else {
-      armGroup.rotation.z = side * 0.15;
+      // Arms resting forward on desk
+      upperArmPivot.rotation.x = -0.9;
+      lowerArmPivot.rotation.x = 0.5;
+    } else if (walkPhase > 0) {
       // Walking arm swing
-      if (walkPhase > 0) {
-        armGroup.rotation.x = Math.sin(walkPhase) * 0.3 * side;
-      }
+      const swing = Math.sin(walkPhase) * 0.7;
+      upperArmPivot.rotation.x = side === -1 ? swing : -swing;
+      lowerArmPivot.rotation.x = Math.max(0, Math.sin(walkPhase + (side === -1 ? 0 : Math.PI))) * 0.3;
     }
+
     human.add(armGroup);
   });
 
-  // ===== BELT =====
-  const beltGeo = new THREE.CylinderGeometry(0.058, 0.055, 0.018, 16);
-  const beltMat = new THREE.MeshStandardMaterial({ color: '#2c2c2c', roughness: 0.4, metalness: 0.3 });
-  const belt = new THREE.Mesh(beltGeo, beltMat);
-  belt.position.y = isSeated ? -0.01 : 0.025;
-  human.add(belt);
-
-  // Belt buckle
-  const buckleGeo = new THREE.BoxGeometry(0.02, 0.015, 0.008);
-  const buckleMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.8, roughness: 0.2 });
-  const buckle = new THREE.Mesh(buckleGeo, buckleMat);
-  buckle.position.set(0, isSeated ? -0.01 : 0.025, 0.055);
-  human.add(buckle);
-
-  // ===== HIPS / PANTS TOP =====
-  const hipsGeo = new THREE.CylinderGeometry(0.057, 0.052, 0.04, 16);
-  const hipsMat = new THREE.MeshStandardMaterial({ color: appearance.pantsColor, roughness: 0.7 });
-  const hips = new THREE.Mesh(hipsGeo, hipsMat);
-  hips.position.y = isSeated ? -0.035 : 0.005;
-  human.add(hips);
-
   // ===== LEGS =====
-  const legMat = new THREE.MeshStandardMaterial({ color: appearance.pantsColor, roughness: 0.7 });
+  const upperLegGeo = new THREE.BoxGeometry(0.3 * scale, 0.6 * scale, 0.3 * scale);
+  const lowerLegGeo = new THREE.BoxGeometry(0.28 * scale, 0.55 * scale, 0.28 * scale);
+  const shoeGeo = new THREE.BoxGeometry(0.3 * scale, 0.15 * scale, 0.4 * scale);
 
-  [-0.03, 0.03].forEach((x, legIndex) => {
+  [-1, 1].forEach((side, idx) => {
     const legGroup = new THREE.Group();
-
+    
     if (isSeated) {
-      // Seated legs - thighs horizontal, lower legs vertical
-      const thighGeo = new THREE.CapsuleGeometry(0.022, 0.08, 8, 16);
-      const thigh = new THREE.Mesh(thighGeo, legMat);
-      thigh.rotation.x = Math.PI / 2;
-      thigh.position.z = 0.06;
-      legGroup.add(thigh);
+      legGroup.position.set(side * 0.2 * scale, 0.08, 0);
 
-      const kneeGeo = new THREE.SphereGeometry(0.022, 10, 10);
-      const knee = new THREE.Mesh(kneeGeo, legMat);
-      knee.position.set(0, 0, 0.12);
-      legGroup.add(knee);
+      // Upper leg pivot (horizontal for sitting)
+      const upperLegPivot = new THREE.Group();
+      upperLegPivot.rotation.x = Math.PI / 2; // Horizontal
 
-      const shinGeo = new THREE.CapsuleGeometry(0.018, 0.08, 8, 16);
-      const shin = new THREE.Mesh(shinGeo, legMat);
-      shin.position.set(0, -0.06, 0.12);
-      legGroup.add(shin);
+      const upperLeg = new THREE.Mesh(upperLegGeo, pantsMat);
+      upperLeg.position.y = -0.3 * scale;
+      upperLegPivot.add(upperLeg);
 
-      const ankleGeo = new THREE.SphereGeometry(0.016, 8, 8);
-      const ankle = new THREE.Mesh(ankleGeo, legMat);
-      ankle.position.set(0, -0.12, 0.12);
-      legGroup.add(ankle);
+      // Lower leg pivot (vertical for sitting)
+      const lowerLegPivot = new THREE.Group();
+      lowerLegPivot.position.y = -0.6 * scale;
+      lowerLegPivot.rotation.x = -Math.PI / 2; // Back to vertical
 
-      legGroup.position.set(x, -0.06, 0);
+      const lowerLeg = new THREE.Mesh(lowerLegGeo, pantsMat);
+      lowerLeg.position.y = -0.275 * scale;
+      lowerLegPivot.add(lowerLeg);
+
+      // Shoe
+      const shoe = new THREE.Mesh(shoeGeo, shoeMat);
+      shoe.position.set(0, -0.62 * scale, 0.05 * scale);
+      lowerLegPivot.add(shoe);
+
+      upperLegPivot.add(lowerLegPivot);
+      legGroup.add(upperLegPivot);
     } else {
-      // Standing/walking legs
-      const thighGeo = new THREE.CapsuleGeometry(0.022, 0.055, 8, 16);
-      const thigh = new THREE.Mesh(thighGeo, legMat);
-      legGroup.add(thigh);
+      legGroup.position.set(side * 0.2 * scale, 0.13, 0);
 
-      const kneeGeo = new THREE.SphereGeometry(0.022, 10, 10);
-      const knee = new THREE.Mesh(kneeGeo, legMat);
-      knee.position.y = -0.04;
-      legGroup.add(knee);
+      // Upper leg pivot
+      const upperLegPivot = new THREE.Group();
 
-      const shinGeo = new THREE.CapsuleGeometry(0.018, 0.05, 8, 16);
-      const shin = new THREE.Mesh(shinGeo, legMat);
-      shin.position.y = -0.085;
-      legGroup.add(shin);
+      const upperLeg = new THREE.Mesh(upperLegGeo, pantsMat);
+      upperLeg.position.y = -0.3 * scale;
+      upperLegPivot.add(upperLeg);
 
-      const ankleGeo = new THREE.SphereGeometry(0.016, 8, 8);
-      const ankle = new THREE.Mesh(ankleGeo, legMat);
-      ankle.position.y = -0.115;
-      legGroup.add(ankle);
+      // Lower leg pivot
+      const lowerLegPivot = new THREE.Group();
+      lowerLegPivot.position.y = -0.6 * scale;
 
-      legGroup.position.set(x, -0.05, 0);
-      
-      // Walking leg swing
+      const lowerLeg = new THREE.Mesh(lowerLegGeo, pantsMat);
+      lowerLeg.position.y = -0.275 * scale;
+      lowerLegPivot.add(lowerLeg);
+
+      // Shoe
+      const shoe = new THREE.Mesh(shoeGeo, shoeMat);
+      shoe.position.set(0, -0.62 * scale, 0.05 * scale);
+      lowerLegPivot.add(shoe);
+
+      upperLegPivot.add(lowerLegPivot);
+      legGroup.add(upperLegPivot);
+
+      // Walking leg animation
       if (walkPhase > 0) {
-        const swing = Math.sin(walkPhase + (legIndex === 0 ? 0 : Math.PI)) * 0.4;
-        legGroup.rotation.x = swing;
+        const swing = Math.sin(walkPhase + (idx === 0 ? 0 : Math.PI)) * 0.5;
+        upperLegPivot.rotation.x = swing;
+        const kneeBend = Math.max(0, -Math.sin(walkPhase + (idx === 0 ? 0 : Math.PI))) * 0.6;
+        lowerLegPivot.rotation.x = kneeBend;
       }
     }
-    
+
     human.add(legGroup);
   });
 
-  // ===== SHOES =====
-  const shoeMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.5, metalness: 0.1 });
-  const soleMat = new THREE.MeshStandardMaterial({ color: '#333333', roughness: 0.8 });
-
-  [-0.03, 0.03].forEach((x, shoeIndex) => {
-    const shoeGroup = new THREE.Group();
-
-    const shoeBodyGeo = new THREE.BoxGeometry(0.035, 0.018, 0.05);
-    const shoeBody = new THREE.Mesh(shoeBodyGeo, shoeMat);
-    shoeGroup.add(shoeBody);
-
-    const toeGeo = new THREE.SphereGeometry(0.017, 8, 8);
-    const toe = new THREE.Mesh(toeGeo, shoeMat);
-    toe.position.set(0, -0.003, 0.02);
-    toe.scale.set(1, 0.5, 0.8);
-    shoeGroup.add(toe);
-
-    const soleGeo = new THREE.BoxGeometry(0.036, 0.006, 0.052);
-    const sole = new THREE.Mesh(soleGeo, soleMat);
-    sole.position.y = -0.012;
-    shoeGroup.add(sole);
-
-    const laceGeo = new THREE.BoxGeometry(0.008, 0.002, 0.025);
-    const laceMat = new THREE.MeshStandardMaterial({ color: '#ffffff' });
-    const lace = new THREE.Mesh(laceGeo, laceMat);
-    lace.position.set(0, 0.01, 0);
-    shoeGroup.add(lace);
-
-    if (isSeated) {
-      shoeGroup.position.set(x, -0.19, 0.12);
-    } else {
-      shoeGroup.position.set(x, -0.155, 0.008);
-      
-      // Walking foot movement
-      if (walkPhase > 0) {
-        const swing = Math.sin(walkPhase + (shoeIndex === 0 ? 0 : Math.PI)) * 0.4;
-        if (swing > 0) {
-          shoeGroup.position.y += swing * 0.03;
-          shoeGroup.position.z += swing * 0.02;
-        }
-      }
-    }
-    
-    human.add(shoeGroup);
-  });
+  // ===== PLUMBOB (Sims diamond) =====
+  if (isHighlighted) {
+    const plumbobGroup = new THREE.Group();
+    const plumbobGeo = new THREE.OctahedronGeometry(0.025, 0);
+    const plumbobMat = new THREE.MeshStandardMaterial({
+      color: 0x00ff00,
+      emissive: 0x00ff00,
+      emissiveIntensity: 0.6,
+      transparent: true,
+      opacity: 0.85
+    });
+    const plumbob = new THREE.Mesh(plumbobGeo, plumbobMat);
+    plumbobGroup.add(plumbob);
+    plumbobGroup.position.y = isSeated ? 0.48 : 0.54;
+    human.add(plumbobGroup);
+  }
 
   // ===== NAME LABEL =====
   const labelCanvas = document.createElement('canvas');
@@ -785,7 +582,7 @@ function createHuman3D(appearance: HumanAppearance, name: string, isHighlighted:
   const lctx = labelCanvas.getContext('2d')!;
 
   if (isHighlighted) {
-    lctx.fillStyle = '#ffff00';
+    lctx.fillStyle = '#00ff00';
     lctx.beginPath();
     lctx.roundRect(0, 0, 200, 48, 12);
     lctx.fill();
@@ -810,31 +607,17 @@ function createHuman3D(appearance: HumanAppearance, name: string, isHighlighted:
   const labelSprite = new THREE.Sprite(
     new THREE.SpriteMaterial({ map: labelTex, transparent: true })
   );
-  labelSprite.position.y = isSeated ? 0.46 : 0.5;
-  labelSprite.scale.set(0.35, 0.09, 1);
+  labelSprite.position.y = isSeated ? 0.56 : 0.62;
+  labelSprite.scale.set(0.32, 0.08, 1);
   human.add(labelSprite);
 
-  // ===== HIGHLIGHT EFFECTS =====
-  if (isHighlighted) {
-    const ringGeo = new THREE.RingGeometry(0.08, 0.13, 32);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: '#ffff00',
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.7,
-    });
-    const ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.position.y = isSeated ? -0.2 : -0.16;
-    ring.rotation.x = -Math.PI / 2;
-    human.add(ring);
-
-    const arrowGeo = new THREE.ConeGeometry(0.04, 0.08, 8);
-    const arrowMat = new THREE.MeshBasicMaterial({ color: '#ffff00' });
-    const arrowMesh = new THREE.Mesh(arrowGeo, arrowMat);
-    arrowMesh.position.y = isSeated ? 0.54 : 0.58;
-    arrowMesh.rotation.z = Math.PI;
-    human.add(arrowMesh);
-  }
+  // ===== SHADOW CIRCLE =====
+  const shadowGeo = new THREE.CircleGeometry(0.06, 16);
+  const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.2 });
+  const charShadow = new THREE.Mesh(shadowGeo, shadowMat);
+  charShadow.rotation.x = -Math.PI / 2;
+  charShadow.position.y = isSeated ? -0.15 : -0.18;
+  human.add(charShadow);
 
   return human;
 }
@@ -843,12 +626,12 @@ function createHuman3D(appearance: HumanAppearance, name: string, isHighlighted:
 // ==================== PART 2: Train, Tollgate, Cars, Boxes, Plates, Dominos ====================
 // Place right after Part 1
 
-// ==================== REALISTIC TRAIN CAR (Facing Right Direction) ====================
+// ==================== REALISTIC TRAIN CAR (Facing Right) ====================
 
 function createTrainCar(isEngine: boolean, color: string, label: string, isHighlighted: boolean): THREE.Group {
   const train = new THREE.Group();
 
-  // Main body
+  // Main body (box)
   const bodyGeo = new THREE.BoxGeometry(0.7, 0.32, 0.32);
   const bodyMat = new THREE.MeshStandardMaterial({
     color,
@@ -869,19 +652,11 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
   train.add(stripe);
 
   // Roof
-  const roofGeo = new THREE.BoxGeometry(0.66, 0.04, 0.28);
+  const roofGeo = new THREE.BoxGeometry(0.66, 0.06, 0.28);
   const roofMat = new THREE.MeshStandardMaterial({ color: '#1a1a2e', metalness: 0.5 });
   const roof = new THREE.Mesh(roofGeo, roofMat);
-  roof.position.y = 0.32;
+  roof.position.y = 0.33;
   train.add(roof);
-
-  // Curved roof top
-  const roofCurveGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.66, 16, 1, false, 0, Math.PI);
-  const roofCurve = new THREE.Mesh(roofCurveGeo, roofMat);
-  roofCurve.position.y = 0.32;
-  roofCurve.rotation.z = Math.PI / 2;
-  roofCurve.scale.y = 0.22;
-  train.add(roofCurve);
 
   // Undercarriage
   const underGeo = new THREE.BoxGeometry(0.68, 0.05, 0.26);
@@ -890,11 +665,10 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
   under.position.y = -0.04;
   train.add(under);
 
-  // Wheels (detailed)
-  const wheelGeo = new THREE.CylinderGeometry(0.055, 0.055, 0.03, 24);
+  // Wheels (box style)
+  const wheelGeo = new THREE.BoxGeometry(0.1, 0.1, 0.03);
   const wheelMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', metalness: 0.8, roughness: 0.2 });
-  const hubCapGeo = new THREE.CylinderGeometry(0.022, 0.022, 0.032, 16);
-  const hubCapMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.9, roughness: 0.1 });
+  const hubMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.9, roughness: 0.1 });
 
   const wheelPositions: [number, number, number][] = [
     [-0.22, -0.05, 0.16], [0.22, -0.05, 0.16],
@@ -903,157 +677,87 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
   
   wheelPositions.forEach(([wx, wy, wz]) => {
     const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-    wheel.rotation.x = Math.PI / 2;
     wheel.position.set(wx, wy, wz);
     train.add(wheel);
 
-    const hubCap = new THREE.Mesh(hubCapGeo, hubCapMat);
-    hubCap.rotation.x = Math.PI / 2;
-    hubCap.position.set(wx, wy, wz);
-    train.add(hubCap);
-
-    // Wheel spokes
-    const spokeGeo = new THREE.BoxGeometry(0.004, 0.08, 0.004);
-    const spokeMat = new THREE.MeshStandardMaterial({ color: '#888' });
-    [0, Math.PI / 3, Math.PI * 2 / 3].forEach(angle => {
-      const spoke = new THREE.Mesh(spokeGeo, spokeMat);
-      spoke.position.set(wx, wy, wz > 0 ? wz + 0.016 : wz - 0.016);
-      spoke.rotation.z = angle;
-      train.add(spoke);
-    });
+    const hubGeo = new THREE.BoxGeometry(0.04, 0.04, 0.035);
+    const hub = new THREE.Mesh(hubGeo, hubMat);
+    hub.position.set(wx, wy, wz);
+    train.add(hub);
   });
 
   // Windows (for passenger cars)
   if (!isEngine) {
-    const windowGeo = new THREE.PlaneGeometry(0.1, 0.09);
+    const windowGeo = new THREE.BoxGeometry(0.1, 0.09, 0.01);
     const windowMat = new THREE.MeshStandardMaterial({
       color: '#87ceeb',
-      side: THREE.DoubleSide,
       metalness: 0.5,
       roughness: 0.1,
     });
-    const windowFrameMat = new THREE.MeshStandardMaterial({ color: '#444', metalness: 0.7 });
 
     [-0.22, 0, 0.22].forEach(x => {
-      // Front side windows
       const wF = new THREE.Mesh(windowGeo, windowMat);
-      wF.position.set(x, 0.18, 0.162);
+      wF.position.set(x, 0.18, 0.165);
       train.add(wF);
 
-      // Window frame
-      const frameGeo = new THREE.BoxGeometry(0.11, 0.1, 0.008);
-      const frameF = new THREE.Mesh(frameGeo, windowFrameMat);
-      frameF.position.set(x, 0.18, 0.163);
-      train.add(frameF);
-
-      // Back side windows
       const wB = new THREE.Mesh(windowGeo, windowMat);
-      wB.position.set(x, 0.18, -0.162);
+      wB.position.set(x, 0.18, -0.165);
       train.add(wB);
     });
   }
 
-  // Engine specific parts - FACING RIGHT (positive X direction)
+  // Engine specific parts - FACING RIGHT (positive X)
   if (isEngine) {
-    // Boiler (main cylinder) - positioned at FRONT (right side)
-    const boilerGeo = new THREE.CylinderGeometry(0.11, 0.12, 0.32, 24);
+    // Boiler (box style)
+    const boilerGeo = new THREE.BoxGeometry(0.32, 0.22, 0.22);
     const boilerMat = new THREE.MeshStandardMaterial({ color: '#b71c1c', metalness: 0.5, roughness: 0.4 });
     const boiler = new THREE.Mesh(boilerGeo, boilerMat);
-    boiler.rotation.z = Math.PI / 2;
-    boiler.position.set(0.18, 0.14, 0);  // Front of engine
+    boiler.position.set(0.18, 0.14, 0);
     train.add(boiler);
 
-    // Boiler bands
-    const bandGeo = new THREE.TorusGeometry(0.125, 0.01, 8, 24);
-    const bandMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.8 });
-    [0.08, 0.2, 0.32].forEach(x => {
-      const band = new THREE.Mesh(bandGeo, bandMat);
-      band.position.set(x, 0.14, 0);
-      band.rotation.y = Math.PI / 2;
-      train.add(band);
-    });
-
     // Boiler front plate
-    const frontPlateGeo = new THREE.CircleGeometry(0.11, 24);
-    const frontPlateMat = new THREE.MeshStandardMaterial({ color: '#222', metalness: 0.7, side: THREE.DoubleSide });
+    const frontPlateGeo = new THREE.BoxGeometry(0.02, 0.2, 0.2);
+    const frontPlateMat = new THREE.MeshStandardMaterial({ color: '#222', metalness: 0.7 });
     const frontPlate = new THREE.Mesh(frontPlateGeo, frontPlateMat);
     frontPlate.position.set(0.35, 0.14, 0);
-    frontPlate.rotation.y = Math.PI / 2;
     train.add(frontPlate);
 
-    // Headlight - at the FRONT
-    const headlightGeo = new THREE.CylinderGeometry(0.035, 0.04, 0.05, 16);
+    // Headlight
+    const headlightGeo = new THREE.BoxGeometry(0.05, 0.06, 0.06);
     const headlightMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.8 });
     const headlight = new THREE.Mesh(headlightGeo, headlightMat);
     headlight.position.set(0.38, 0.22, 0);
-    headlight.rotation.z = Math.PI / 2;
     train.add(headlight);
 
-    // Headlight lens
-    const lensGeo = new THREE.CircleGeometry(0.028, 16);
-    const lensMat = new THREE.MeshBasicMaterial({ color: '#ffffcc' });
-    const lens = new THREE.Mesh(lensGeo, lensMat);
-    lens.position.set(0.405, 0.22, 0);
-    lens.rotation.y = Math.PI / 2;
-    train.add(lens);
-
-    // Chimney/Smokestack
-    const chimneyGeo = new THREE.CylinderGeometry(0.035, 0.05, 0.18, 12);
+    // Chimney
+    const chimneyGeo = new THREE.BoxGeometry(0.08, 0.18, 0.08);
     const chimneyMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', metalness: 0.6 });
     const chimney = new THREE.Mesh(chimneyGeo, chimneyMat);
     chimney.position.set(0.12, 0.38, 0);
     train.add(chimney);
 
-    // Chimney cap
-    const capGeo = new THREE.CylinderGeometry(0.05, 0.04, 0.025, 12);
-    const cap = new THREE.Mesh(capGeo, chimneyMat);
-    cap.position.set(0.12, 0.48, 0);
-    train.add(cap);
-
-    // Smoke puffs
+    // Smoke puffs (box style)
     const smokeMat = new THREE.MeshBasicMaterial({ color: '#bdc3c7', transparent: true, opacity: 0.4 });
     [
-      { y: 0.54, s: 0.04 },
-      { y: 0.62, s: 0.06 },
-      { y: 0.72, s: 0.08 },
-      { y: 0.84, s: 0.1 },
+      { y: 0.52, s: 0.06 },
+      { y: 0.62, s: 0.08 },
+      { y: 0.74, s: 0.1 },
     ].forEach(({ y, s }) => {
-      const smokeGeo = new THREE.SphereGeometry(s, 8, 8);
+      const smokeGeo = new THREE.BoxGeometry(s, s, s);
       const smoke = new THREE.Mesh(smokeGeo, smokeMat);
-      smoke.position.set(0.12 + (y - 0.54) * 0.15, y, (Math.random() - 0.5) * 0.08);
+      smoke.position.set(0.12 + (y - 0.52) * 0.15, y, (Math.random() - 0.5) * 0.06);
+      smoke.rotation.y = Math.random();
       train.add(smoke);
     });
 
-    // Cow catcher at FRONT
-    const catcherGroup = new THREE.Group();
+    // Cow catcher at FRONT (box style)
+    const catcherGeo = new THREE.BoxGeometry(0.08, 0.1, 0.25);
     const catcherMat = new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.7 });
-    
-    // V-shape bars
-    for (let i = 0; i < 5; i++) {
-      const barGeo = new THREE.BoxGeometry(0.12, 0.015, 0.015);
-      const bar = new THREE.Mesh(barGeo, catcherMat);
-      bar.position.set(0.06, -0.02 + i * 0.025, (i - 2) * 0.04);
-      bar.rotation.y = (i - 2) * 0.15;
-      catcherGroup.add(bar);
-    }
-    
-    // Base bar
-    const baseBarGeo = new THREE.BoxGeometry(0.02, 0.12, 0.22);
-    const baseBar = new THREE.Mesh(baseBarGeo, catcherMat);
-    baseBar.position.set(0, 0.02, 0);
-    catcherGroup.add(baseBar);
+    const catcher = new THREE.Mesh(catcherGeo, catcherMat);
+    catcher.position.set(0.38, 0, 0);
+    train.add(catcher);
 
-    catcherGroup.position.set(0.4, 0, 0);
-    train.add(catcherGroup);
-
-    // Steam dome
-    const domeGeo = new THREE.SphereGeometry(0.045, 12, 12, 0, Math.PI * 2, 0, Math.PI / 2);
-    const domeMat = new THREE.MeshStandardMaterial({ color: '#c0392b', metalness: 0.6 });
-    const dome = new THREE.Mesh(domeGeo, domeMat);
-    dome.position.set(-0.08, 0.26, 0);
-    train.add(dome);
-
-    // Cabin (engineer's cab) at BACK
+    // Cabin at BACK
     const cabinGeo = new THREE.BoxGeometry(0.22, 0.2, 0.3);
     const cabinMat = new THREE.MeshStandardMaterial({ color, metalness: 0.4 });
     const cabin = new THREE.Mesh(cabinGeo, cabinMat);
@@ -1061,8 +765,8 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
     train.add(cabin);
 
     // Cabin windows
-    const cabWinGeo = new THREE.PlaneGeometry(0.08, 0.08);
-    const cabWinMat = new THREE.MeshStandardMaterial({ color: '#87ceeb', metalness: 0.4, side: THREE.DoubleSide });
+    const cabWinGeo = new THREE.BoxGeometry(0.01, 0.08, 0.08);
+    const cabWinMat = new THREE.MeshStandardMaterial({ color: '#87ceeb', metalness: 0.4 });
     [-0.151, 0.151].forEach(z => {
       const cabWin = new THREE.Mesh(cabWinGeo, cabWinMat);
       cabWin.position.set(-0.24, 0.26, z);
@@ -1076,26 +780,18 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
     train.add(cabRoof);
   }
 
-  // Coupling hooks (connectors)
+  // Coupling hooks
   const hookGeo = new THREE.BoxGeometry(0.05, 0.03, 0.03);
-  const hookMat = new THREE.MeshStandardMaterial({ color: '#555', metalness: 0.8, roughness: 0.2 });
+  const hookMat = new THREE.MeshStandardMaterial({ color: '#555', metalness: 0.8 });
   [-0.375, 0.375].forEach(x => {
     const hook = new THREE.Mesh(hookGeo, hookMat);
     hook.position.set(x, 0.02, 0);
     train.add(hook);
-
-    // Hook ring
-    const ringGeo = new THREE.TorusGeometry(0.018, 0.005, 6, 12);
-    const ring = new THREE.Mesh(ringGeo, hookMat);
-    ring.position.set(x > 0 ? x + 0.035 : x - 0.035, 0.02, 0);
-    ring.rotation.y = Math.PI / 2;
-    train.add(ring);
   });
 
   // Label
   const canvas = document.createElement('canvas');
-  canvas.width = 160;
-  canvas.height = 48;
+  canvas.width = 160; canvas.height = 48;
   const ctx = canvas.getContext('2d')!;
   ctx.fillStyle = isHighlighted ? 'rgba(255,255,0,0.9)' : 'rgba(0,0,0,0.75)';
   ctx.beginPath();
@@ -1123,41 +819,32 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
   return train;
 }
 
-// ==================== REALISTIC EXPRESSWAY TOLL BOOTH ====================
+// ==================== EXPRESSWAY TOLL BOOTH ====================
 
 function createTollBooth(): THREE.Group {
   const toll = new THREE.Group();
 
-  // Main booth structure
+  // Main booth structure (box)
   const boothGeo = new THREE.BoxGeometry(0.5, 0.7, 0.4);
   const boothMat = new THREE.MeshStandardMaterial({ color: '#2c3e50', roughness: 0.6, metalness: 0.3 });
   const booth = new THREE.Mesh(boothGeo, boothMat);
   booth.position.y = 0.35;
   toll.add(booth);
 
-  // Booth window (large glass)
-  const windowGeo = new THREE.PlaneGeometry(0.35, 0.25);
+  // Booth window
+  const windowGeo = new THREE.BoxGeometry(0.01, 0.25, 0.35);
   const windowMat = new THREE.MeshStandardMaterial({ 
     color: '#87ceeb', 
     metalness: 0.6, 
     roughness: 0.1, 
     transparent: true, 
-    opacity: 0.8,
-    side: THREE.DoubleSide 
+    opacity: 0.8 
   });
   const boothWindow = new THREE.Mesh(windowGeo, windowMat);
   boothWindow.position.set(0.251, 0.45, 0);
-  boothWindow.rotation.y = Math.PI / 2;
   toll.add(boothWindow);
 
-  // Window frame
-  const frameMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', metalness: 0.5 });
-  const frameH = new THREE.BoxGeometry(0.02, 0.27, 0.38);
-  const frameTop = new THREE.Mesh(frameH, frameMat);
-  frameTop.position.set(0.252, 0.45, 0);
-  toll.add(frameTop);
-
-  // Booth roof (overhang)
+  // Booth roof overhang
   const roofGeo = new THREE.BoxGeometry(0.7, 0.05, 0.55);
   const roofMat = new THREE.MeshStandardMaterial({ color: '#34495e', roughness: 0.5 });
   const roofMesh = new THREE.Mesh(roofGeo, roofMat);
@@ -1171,8 +858,8 @@ function createTollBooth(): THREE.Group {
   trim.position.y = 0.76;
   toll.add(trim);
 
-  // Support pillars (on both sides of road)
-  const pillarGeo = new THREE.CylinderGeometry(0.05, 0.06, 1.2, 12);
+  // Support pillars
+  const pillarGeo = new THREE.BoxGeometry(0.08, 1.2, 0.08);
   const pillarMat = new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.6 });
   [-0.4, 0.4].forEach(z => {
     const pillar = new THREE.Mesh(pillarGeo, pillarMat);
@@ -1186,10 +873,9 @@ function createTollBooth(): THREE.Group {
   gantry.position.set(-0.28, 1.2, 0);
   toll.add(gantry);
 
-  // TOLL sign on gantry
+  // TOLL sign
   const signCanvas = document.createElement('canvas');
-  signCanvas.width = 200;
-  signCanvas.height = 80;
+  signCanvas.width = 200; signCanvas.height = 80;
   const sctx = signCanvas.getContext('2d')!;
   sctx.fillStyle = '#006400';
   sctx.fillRect(0, 0, 200, 80);
@@ -1209,7 +895,7 @@ function createTollBooth(): THREE.Group {
   signMesh.rotation.y = Math.PI / 2;
   toll.add(signMesh);
 
-  // Barrier arm (gate)
+  // Barrier arm (box style)
   const barrierPivot = new THREE.Group();
   
   const barrierArmGeo = new THREE.BoxGeometry(1.2, 0.06, 0.06);
@@ -1218,7 +904,7 @@ function createTollBooth(): THREE.Group {
   barrierArm.position.x = 0.6;
   barrierPivot.add(barrierArm);
 
-  // Red and white stripes on barrier
+  // Stripes on barrier
   const stripeMat = new THREE.MeshStandardMaterial({ color: '#ffffff' });
   for (let i = 0; i < 6; i++) {
     const stripeGeo = new THREE.BoxGeometry(0.08, 0.065, 0.065);
@@ -1227,7 +913,7 @@ function createTollBooth(): THREE.Group {
     barrierPivot.add(stripeBox);
   }
 
-  // Reflective end cap
+  // End cap
   const endCapGeo = new THREE.BoxGeometry(0.08, 0.1, 0.1);
   const endCapMat = new THREE.MeshStandardMaterial({ color: '#f39c12', metalness: 0.7 });
   const endCap = new THREE.Mesh(endCapGeo, endCapMat);
@@ -1237,7 +923,7 @@ function createTollBooth(): THREE.Group {
   barrierPivot.position.set(0.3, 0.5, 0);
   toll.add(barrierPivot);
 
-  // Barrier motor housing
+  // Motor housing
   const motorGeo = new THREE.BoxGeometry(0.15, 0.2, 0.15);
   const motorMat = new THREE.MeshStandardMaterial({ color: '#f39c12', roughness: 0.5 });
   const motor = new THREE.Mesh(motorGeo, motorMat);
@@ -1252,82 +938,29 @@ function createTollBooth(): THREE.Group {
   toll.add(terminal);
 
   // Terminal screen
-  const screenGeo = new THREE.PlaneGeometry(0.08, 0.06);
+  const screenGeo = new THREE.BoxGeometry(0.005, 0.06, 0.08);
   const screenMat = new THREE.MeshBasicMaterial({ color: '#00ff00' });
   const screen = new THREE.Mesh(screenGeo, screenMat);
   screen.position.set(0.41, 0.42, -0.2);
-  screen.rotation.y = Math.PI / 2;
   toll.add(screen);
 
-  // Card slot
-  const slotGeo = new THREE.BoxGeometry(0.005, 0.04, 0.06);
-  const slotMat = new THREE.MeshBasicMaterial({ color: '#111' });
-  const slot = new THREE.Mesh(slotGeo, slotMat);
-  slot.position.set(0.415, 0.32, -0.2);
-  toll.add(slot);
-
-  // Lane lights (green = open)
-  const lightGeo = new THREE.CircleGeometry(0.05, 16);
-  const greenLightMat = new THREE.MeshBasicMaterial({ color: '#00ff00', side: THREE.DoubleSide });
+  // Lane light (green)
+  const lightGeo = new THREE.BoxGeometry(0.08, 0.08, 0.02);
+  const greenLightMat = new THREE.MeshBasicMaterial({ color: '#00ff00' });
   const greenLight = new THREE.Mesh(lightGeo, greenLightMat);
   greenLight.position.set(-0.28, 0.9, 0);
   greenLight.rotation.y = Math.PI / 2;
   toll.add(greenLight);
 
-  // Lane number
-  const laneCanvas = document.createElement('canvas');
-  laneCanvas.width = 64;
-  laneCanvas.height = 64;
-  const lctx = laneCanvas.getContext('2d')!;
-  lctx.fillStyle = '#1a1a1a';
-  lctx.fillRect(0, 0, 64, 64);
-  lctx.fillStyle = '#fff';
-  lctx.font = 'bold 40px Arial';
-  lctx.textAlign = 'center';
-  lctx.fillText('1', 32, 48);
-  const laneTex = new THREE.CanvasTexture(laneCanvas);
-  const laneSign = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.15, 0.15),
-    new THREE.MeshBasicMaterial({ map: laneTex })
-  );
-  laneSign.position.set(-0.28, 1.35, 0);
-  laneSign.rotation.y = Math.PI / 2;
-  toll.add(laneSign);
-
-  // Ground marking arrows
-  const arrowCanvas = document.createElement('canvas');
-  arrowCanvas.width = 64;
-  arrowCanvas.height = 128;
-  const actx = arrowCanvas.getContext('2d')!;
-  actx.fillStyle = '#fff';
-  actx.beginPath();
-  actx.moveTo(32, 10);
-  actx.lineTo(54, 50);
-  actx.lineTo(42, 50);
-  actx.lineTo(42, 118);
-  actx.lineTo(22, 118);
-  actx.lineTo(22, 50);
-  actx.lineTo(10, 50);
-  actx.closePath();
-  actx.fill();
-  const arrowTex = new THREE.CanvasTexture(arrowCanvas);
-  const groundArrow = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.15, 0.3),
-    new THREE.MeshBasicMaterial({ map: arrowTex, transparent: true })
-  );
-  groundArrow.rotation.x = -Math.PI / 2;
-  groundArrow.position.set(0.8, 0.01, 0);
-  toll.add(groundArrow);
-
   return toll;
 }
 
-// ==================== REALISTIC CAR (Facing Toll - Left Direction) ====================
+// ==================== CAR (Box Style, Facing Left toward Toll) ====================
 
 function createCar(color: string, label: string, isHighlighted: boolean, drivePhase: number = 0): THREE.Group {
   const car = new THREE.Group();
 
-  // Car body - sedan style
+  // Car body (box)
   const bodyGeo = new THREE.BoxGeometry(0.55, 0.14, 0.26);
   const bodyMat = new THREE.MeshStandardMaterial({
     color,
@@ -1340,31 +973,27 @@ function createCar(color: string, label: string, isHighlighted: boolean, drivePh
   body.position.y = 0.1;
   car.add(body);
 
-  // Body contour (side panels)
+  // Lower panel
   const panelGeo = new THREE.BoxGeometry(0.53, 0.04, 0.27);
-  const panelMat = new THREE.MeshStandardMaterial({ color, metalness: 0.6, roughness: 0.35 });
-  const panel = new THREE.Mesh(panelGeo, panelMat);
+  const panel = new THREE.Mesh(panelGeo, bodyMat);
   panel.position.y = 0.04;
   car.add(panel);
 
-  // Hood (front - LEFT side since car faces left toward toll)
+  // Hood (front - LEFT side, facing toll)
   const hoodGeo = new THREE.BoxGeometry(0.18, 0.04, 0.24);
   const hood = new THREE.Mesh(hoodGeo, bodyMat);
   hood.position.set(-0.18, 0.19, 0);
-  hood.rotation.z = 0.12;
   car.add(hood);
 
   // Trunk (back - RIGHT side)
   const trunkGeo = new THREE.BoxGeometry(0.12, 0.035, 0.24);
   const trunk = new THREE.Mesh(trunkGeo, bodyMat);
   trunk.position.set(0.22, 0.185, 0);
-  trunk.rotation.z = -0.08;
   car.add(trunk);
 
-  // Cabin (greenhouse)
+  // Cabin (box)
   const cabinGeo = new THREE.BoxGeometry(0.24, 0.12, 0.23);
-  const cabinMat = new THREE.MeshStandardMaterial({ color, metalness: 0.65, roughness: 0.35 });
-  const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+  const cabin = new THREE.Mesh(cabinGeo, bodyMat);
   cabin.position.set(0.02, 0.23, 0);
   car.add(cabin);
 
@@ -1374,57 +1003,38 @@ function createCar(color: string, label: string, isHighlighted: boolean, drivePh
   roofMesh.position.set(0.02, 0.3, 0);
   car.add(roofMesh);
 
-  // Windshield (front - faces LEFT)
-  const windshieldGeo = new THREE.PlaneGeometry(0.21, 0.1);
+  // Windows (box style glass)
   const glassMat = new THREE.MeshStandardMaterial({
     color: '#a8d8ea',
     metalness: 0.6,
     roughness: 0.05,
     transparent: true,
     opacity: 0.75,
-    side: THREE.DoubleSide,
   });
+
+  // Windshield (front - faces LEFT)
+  const windshieldGeo = new THREE.BoxGeometry(0.01, 0.1, 0.21);
   const windshield = new THREE.Mesh(windshieldGeo, glassMat);
   windshield.position.set(-0.1, 0.24, 0);
-  windshield.rotation.y = Math.PI / 2;
-  windshield.rotation.z = 0.22;
   car.add(windshield);
 
-  // Rear window (faces RIGHT)
+  // Rear window
   const rearWindow = new THREE.Mesh(windshieldGeo, glassMat);
   rearWindow.position.set(0.14, 0.24, 0);
-  rearWindow.rotation.y = Math.PI / 2;
-  rearWindow.rotation.z = -0.22;
   car.add(rearWindow);
 
   // Side windows
-  const sideWinGeo = new THREE.PlaneGeometry(0.1, 0.08);
+  const sideWinGeo = new THREE.BoxGeometry(0.1, 0.08, 0.01);
   [-0.131, 0.131].forEach(z => {
-    // Front side window
-    const swF = new THREE.Mesh(sideWinGeo, glassMat);
-    swF.position.set(-0.02, 0.24, z);
-    car.add(swF);
-    
-    // Rear side window
-    const swR = new THREE.Mesh(sideWinGeo, glassMat);
-    swR.position.set(0.08, 0.24, z);
-    car.add(swR);
+    const sw = new THREE.Mesh(sideWinGeo, glassMat);
+    sw.position.set(0.02, 0.24, z);
+    car.add(sw);
   });
 
-  // B-pillar (between windows)
-  const pillarGeo = new THREE.BoxGeometry(0.015, 0.12, 0.012);
-  const pillarMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a' });
-  [-0.131, 0.131].forEach(z => {
-    const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-    pillar.position.set(0.03, 0.23, z);
-    car.add(pillar);
-  });
-
-  // Wheels with rotation animation
-  const wheelRotation = drivePhase * 3;
-  const tireGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.025, 24);
+  // Wheels (box style)
+  const tireGeo = new THREE.BoxGeometry(0.08, 0.08, 0.025);
   const tireMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.9 });
-  const rimGeo = new THREE.CylinderGeometry(0.028, 0.028, 0.028, 16);
+  const rimGeo = new THREE.BoxGeometry(0.05, 0.05, 0.028);
   const rimMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.9, roughness: 0.1 });
 
   const wheelPos: [number, number, number][] = [
@@ -1433,55 +1043,22 @@ function createCar(color: string, label: string, isHighlighted: boolean, drivePh
   ];
 
   wheelPos.forEach(([wx, wy, wz]) => {
-    const wheelGroup = new THREE.Group();
-    
-    // Tire
     const tire = new THREE.Mesh(tireGeo, tireMat);
-    tire.rotation.x = Math.PI / 2;
-    wheelGroup.add(tire);
+    tire.position.set(wx, wy, wz);
+    car.add(tire);
 
-    // Rim
     const rim = new THREE.Mesh(rimGeo, rimMat);
-    rim.rotation.x = Math.PI / 2;
-    wheelGroup.add(rim);
-
-    // Spokes
-    const spokeGeo = new THREE.BoxGeometry(0.003, 0.04, 0.003);
-    const spokeMat = new THREE.MeshStandardMaterial({ color: '#ddd', metalness: 0.8 });
-    for (let i = 0; i < 5; i++) {
-      const spoke = new THREE.Mesh(spokeGeo, spokeMat);
-      spoke.position.z = wz > 0 ? 0.014 : -0.014;
-      spoke.rotation.z = (i / 5) * Math.PI * 2 + wheelRotation;
-      wheelGroup.add(spoke);
-    }
-
-    wheelGroup.position.set(wx, wy, wz);
-    
-    // Wheel spin animation
-    if (drivePhase > 0) {
-      wheelGroup.rotation.z = wheelRotation;
-    }
-    
-    car.add(wheelGroup);
+    rim.position.set(wx, wy, wz);
+    car.add(rim);
   });
 
   // Headlights (FRONT - LEFT side)
   const headlightGeo = new THREE.BoxGeometry(0.015, 0.035, 0.055);
   const headlightMat = new THREE.MeshBasicMaterial({ color: '#ffffee' });
-  const headlightHousing = new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.6 });
   [-0.09, 0.09].forEach(z => {
-    // Light
     const hl = new THREE.Mesh(headlightGeo, headlightMat);
     hl.position.set(-0.275, 0.1, z);
     car.add(hl);
-    
-    // Housing
-    const housing = new THREE.Mesh(
-      new THREE.BoxGeometry(0.02, 0.045, 0.065),
-      headlightHousing
-    );
-    housing.position.set(-0.278, 0.1, z);
-    car.add(housing);
   });
 
   // Tail lights (BACK - RIGHT side)
@@ -1500,36 +1077,9 @@ function createCar(color: string, label: string, isHighlighted: boolean, drivePh
   grille.position.set(-0.28, 0.08, 0);
   car.add(grille);
 
-  // Chrome grille bars
-  const barMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.9 });
-  for (let i = -2; i <= 2; i++) {
-    const barGeo = new THREE.BoxGeometry(0.012, 0.008, 0.11);
-    const bar = new THREE.Mesh(barGeo, barMat);
-    bar.position.set(-0.282, 0.06 + i * 0.012, 0);
-    car.add(bar);
-  }
-
-  // Side mirrors
-  const mirrorMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a' });
-  [-0.135, 0.135].forEach(z => {
-    const mirrorGeo = new THREE.BoxGeometry(0.025, 0.018, 0.03);
-    const mirror = new THREE.Mesh(mirrorGeo, mirrorMat);
-    mirror.position.set(-0.06, 0.2, z);
-    car.add(mirror);
-
-    // Mirror glass
-    const mirrorGlass = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.015, 0.012),
-      glassMat
-    );
-    mirrorGlass.position.set(-0.06, 0.2, z > 0 ? z + 0.016 : z - 0.016);
-    car.add(mirrorGlass);
-  });
-
   // License plate (FRONT - faces LEFT toward toll)
   const plateCanvas = document.createElement('canvas');
-  plateCanvas.width = 96;
-  plateCanvas.height = 36;
+  plateCanvas.width = 96; plateCanvas.height = 36;
   const pctx = plateCanvas.getContext('2d')!;
   pctx.fillStyle = '#fff';
   pctx.fillRect(0, 0, 96, 36);
@@ -1549,14 +1099,6 @@ function createCar(color: string, label: string, isHighlighted: boolean, drivePh
   plateMesh.rotation.y = -Math.PI / 2;
   car.add(plateMesh);
 
-  // Exhaust pipe
-  const exhaustGeo = new THREE.CylinderGeometry(0.01, 0.012, 0.05, 10);
-  const exhaustMat = new THREE.MeshStandardMaterial({ color: '#444', metalness: 0.8, roughness: 0.3 });
-  const exhaust = new THREE.Mesh(exhaustGeo, exhaustMat);
-  exhaust.position.set(0.26, 0.02, 0.08);
-  exhaust.rotation.z = Math.PI / 2;
-  car.add(exhaust);
-
   // Highlight glow
   if (isHighlighted) {
     const glowGeo = new THREE.BoxGeometry(0.6, 0.32, 0.32);
@@ -1569,13 +1111,13 @@ function createCar(color: string, label: string, isHighlighted: boolean, drivePh
   return car;
 }
 
-// ==================== REALISTIC FRIED CHICKEN & RICE PLATE ====================
+// ==================== FRIED CHICKEN & RICE PLATE (Box Style) ====================
 
 function createPlate(label: string, isHighlighted: boolean): THREE.Group {
   const plate = new THREE.Group();
 
-  // Main plate
-  const plateGeo = new THREE.CylinderGeometry(0.28, 0.24, 0.025, 36);
+  // Main plate (box, slightly rounded look)
+  const plateGeo = new THREE.BoxGeometry(0.5, 0.03, 0.38);
   const plateMat = new THREE.MeshStandardMaterial({
     color: '#f5f5f0',
     roughness: 0.25,
@@ -1585,137 +1127,113 @@ function createPlate(label: string, isHighlighted: boolean): THREE.Group {
   });
   plate.add(new THREE.Mesh(plateGeo, plateMat));
 
-  // Plate rim
-  const rimGeo = new THREE.TorusGeometry(0.27, 0.015, 12, 36);
+  // Plate rim (box)
+  const rimGeo = new THREE.BoxGeometry(0.52, 0.025, 0.4);
   const rimMat = new THREE.MeshStandardMaterial({ color: '#e8e8e0', roughness: 0.3, metalness: 0.15 });
   const rim = new THREE.Mesh(rimGeo, rimMat);
-  rim.rotation.x = Math.PI / 2;
-  rim.position.y = 0.012;
+  rim.position.y = 0.01;
   plate.add(rim);
 
-  // Decorative blue band
-  const bandGeo = new THREE.TorusGeometry(0.22, 0.006, 8, 32);
-  const bandMat = new THREE.MeshStandardMaterial({ color: '#2980b9', roughness: 0.4 });
-  const band = new THREE.Mesh(bandGeo, bandMat);
-  band.rotation.x = Math.PI / 2;
-  band.position.y = 0.014;
-  plate.add(band);
+  // Decorative blue stripe
+  const stripeGeo = new THREE.BoxGeometry(0.46, 0.005, 0.34);
+  const stripeMat = new THREE.MeshStandardMaterial({ color: '#2980b9', roughness: 0.4 });
+  const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+  stripe.position.y = 0.018;
+  plate.add(stripe);
 
-  // ===== RICE (mound on one side) =====
-  const riceGeo = new THREE.SphereGeometry(0.08, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+  // ===== RICE (box mound) =====
+  const riceGeo = new THREE.BoxGeometry(0.14, 0.06, 0.12);
   const riceMat = new THREE.MeshStandardMaterial({ color: '#fffef0', roughness: 0.9 });
   const rice = new THREE.Mesh(riceGeo, riceMat);
-  rice.position.set(-0.08, 0.015, 0.02);
-  rice.scale.set(1.2, 0.6, 1);
+  rice.position.set(-0.12, 0.045, 0);
   plate.add(rice);
 
-  // Rice grains texture (small bumps)
-  for (let i = 0; i < 25; i++) {
-    const grainGeo = new THREE.SphereGeometry(0.008, 6, 6);
-    const grain = new THREE.Mesh(grainGeo, riceMat);
-    const angle = Math.random() * Math.PI * 2;
-    const radius = Math.random() * 0.06;
-    grain.position.set(
-      -0.08 + Math.cos(angle) * radius,
-      0.04 + Math.random() * 0.015,
-      0.02 + Math.sin(angle) * radius
-    );
-    grain.scale.set(1, 0.4, 0.5);
-    grain.rotation.y = Math.random() * Math.PI;
-    plate.add(grain);
-  }
+  // Rice top (smaller box for mound effect)
+  const riceTopGeo = new THREE.BoxGeometry(0.1, 0.03, 0.08);
+  const riceTop = new THREE.Mesh(riceTopGeo, riceMat);
+  riceTop.position.set(-0.12, 0.08, 0);
+  plate.add(riceTop);
 
-  // ===== FRIED CHICKEN PIECES =====
+  // ===== FRIED CHICKEN (box pieces) =====
   const chickenMat = new THREE.MeshStandardMaterial({ color: '#d4a054', roughness: 0.65 });
   const crispyMat = new THREE.MeshStandardMaterial({ color: '#c9883a', roughness: 0.8 });
 
-  // Main chicken piece (drumstick)
-  const drumstickGeo = new THREE.CapsuleGeometry(0.035, 0.08, 8, 16);
+  // Main chicken piece (drumstick - box)
+  const drumstickGeo = new THREE.BoxGeometry(0.12, 0.06, 0.06);
   const drumstick = new THREE.Mesh(drumstickGeo, chickenMat);
-  drumstick.position.set(0.06, 0.05, -0.02);
-  drumstick.rotation.z = 0.4;
-  drumstick.rotation.x = 0.2;
+  drumstick.position.set(0.08, 0.045, 0);
+  drumstick.rotation.z = 0.2;
   plate.add(drumstick);
 
-  // Drumstick bone tip
-  const boneGeo = new THREE.CylinderGeometry(0.006, 0.004, 0.03, 8);
+  // Drumstick bone (small box)
+  const boneGeo = new THREE.BoxGeometry(0.04, 0.02, 0.02);
   const boneMat = new THREE.MeshStandardMaterial({ color: '#f5ebe0' });
   const bone = new THREE.Mesh(boneGeo, boneMat);
-  bone.position.set(0.02, 0.08, -0.04);
-  bone.rotation.z = 0.4;
+  bone.position.set(0.02, 0.05, 0);
   plate.add(bone);
 
-  // Chicken thigh piece
-  const thighGeo = new THREE.SphereGeometry(0.045, 12, 12);
+  // Chicken thigh (box)
+  const thighGeo = new THREE.BoxGeometry(0.1, 0.05, 0.08);
   const thigh = new THREE.Mesh(thighGeo, chickenMat);
-  thigh.position.set(0.08, 0.04, 0.04);
-  thigh.scale.set(1.2, 0.7, 1);
+  thigh.position.set(0.1, 0.04, 0.08);
+  thigh.rotation.y = 0.3;
   plate.add(thigh);
 
-  // Crispy coating details
-  for (let i = 0; i < 8; i++) {
-    const crispGeo = new THREE.SphereGeometry(0.012, 6, 6);
+  // Crispy bits (small boxes)
+  for (let i = 0; i < 5; i++) {
+    const crispGeo = new THREE.BoxGeometry(0.025, 0.015, 0.025);
     const crisp = new THREE.Mesh(crispGeo, crispyMat);
     crisp.position.set(
-      0.06 + (Math.random() - 0.5) * 0.06,
-      0.04 + Math.random() * 0.02,
-      (Math.random() - 0.5) * 0.06
+      0.06 + (Math.random() - 0.5) * 0.08,
+      0.03,
+      (Math.random() - 0.5) * 0.1
     );
-    crisp.scale.set(1, 0.5, 1);
+    crisp.rotation.y = Math.random();
     plate.add(crisp);
   }
 
-  // Wing piece
-  const wingGeo = new THREE.CapsuleGeometry(0.02, 0.04, 6, 12);
+  // Wing piece (box)
+  const wingGeo = new THREE.BoxGeometry(0.06, 0.03, 0.04);
   const wing = new THREE.Mesh(wingGeo, chickenMat);
-  wing.position.set(0.12, 0.035, -0.04);
-  wing.rotation.z = -0.3;
+  wing.position.set(0.14, 0.03, -0.06);
+  wing.rotation.z = -0.2;
   plate.add(wing);
 
-  // ===== VEGETABLES (small garnish) =====
-  // Cucumber slices
+  // ===== VEGETABLES (box style) =====
+  // Cucumber slices (small green boxes)
   const cucumberMat = new THREE.MeshStandardMaterial({ color: '#27ae60', roughness: 0.5 });
-  const cucumberInnerMat = new THREE.MeshStandardMaterial({ color: '#a8e6cf', roughness: 0.4 });
-  
   for (let i = 0; i < 3; i++) {
-    const cucumberGeo = new THREE.CylinderGeometry(0.018, 0.018, 0.008, 12);
+    const cucumberGeo = new THREE.BoxGeometry(0.035, 0.01, 0.035);
     const cucumber = new THREE.Mesh(cucumberGeo, cucumberMat);
-    cucumber.position.set(-0.15 + i * 0.025, 0.018, -0.08);
+    cucumber.position.set(-0.16 + i * 0.03, 0.02, -0.12);
     plate.add(cucumber);
-
-    const innerGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.009, 12);
-    const inner = new THREE.Mesh(innerGeo, cucumberInnerMat);
-    inner.position.set(-0.15 + i * 0.025, 0.019, -0.08);
-    plate.add(inner);
   }
 
-  // Tomato slice
-  const tomatoGeo = new THREE.CylinderGeometry(0.022, 0.022, 0.008, 12);
+  // Tomato slice (red box)
+  const tomatoGeo = new THREE.BoxGeometry(0.04, 0.01, 0.04);
   const tomatoMat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.5 });
   const tomato = new THREE.Mesh(tomatoGeo, tomatoMat);
-  tomato.position.set(-0.12, 0.018, 0.1);
+  tomato.position.set(-0.08, 0.02, 0.12);
   plate.add(tomato);
 
-  // Lettuce leaf
-  const lettuceMat = new THREE.MeshStandardMaterial({ color: '#2ecc71', roughness: 0.7, side: THREE.DoubleSide });
-  const lettuceGeo = new THREE.PlaneGeometry(0.06, 0.04);
+  // Lettuce (green box)
+  const lettuceMat = new THREE.MeshStandardMaterial({ color: '#2ecc71', roughness: 0.7 });
+  const lettuceGeo = new THREE.BoxGeometry(0.06, 0.015, 0.04);
   const lettuce = new THREE.Mesh(lettuceGeo, lettuceMat);
-  lettuce.position.set(0.14, 0.02, 0.08);
-  lettuce.rotation.x = -0.3;
-  lettuce.rotation.z = 0.2;
+  lettuce.position.set(0.16, 0.025, 0.1);
+  lettuce.rotation.y = 0.3;
   plate.add(lettuce);
 
-  // ===== SAUCE =====
-  const sauceGeo = new THREE.SphereGeometry(0.025, 12, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+  // ===== SAUCE (red box) =====
+  const sauceGeo = new THREE.BoxGeometry(0.04, 0.015, 0.04);
   const sauceMat = new THREE.MeshStandardMaterial({ color: '#8b0000', roughness: 0.4 });
   const sauce = new THREE.Mesh(sauceGeo, sauceMat);
-  sauce.position.set(0.16, 0.015, -0.06);
-  sauce.scale.set(1.2, 0.4, 1);
+  sauce.position.set(0.18, 0.025, -0.1);
   plate.add(sauce);
 
   // Highlight
   if (isHighlighted) {
-    const glowGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.04, 32);
+    const glowGeo = new THREE.BoxGeometry(0.54, 0.05, 0.42);
     const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.15 });
     plate.add(new THREE.Mesh(glowGeo, glowMat));
   }
@@ -1723,37 +1241,38 @@ function createPlate(label: string, isHighlighted: boolean): THREE.Group {
   return plate;
 }
 
-// ==================== REALISTIC CARDBOARD BOX ====================
+// ==================== CARDBOARD BOX (No highlight on peek) ====================
 
-function createCardboardBox(label: string, color: string, isHighlighted: boolean, isOpen?: boolean): THREE.Group {
+function createCardboardBox(label: string, color: string, isHighlighted: boolean, isOpen?: boolean, isPeeking?: boolean): THREE.Group {
   const box = new THREE.Group();
 
   const boxW = 0.48;
   const boxH = 0.34;
   const boxD = 0.38;
 
-  // Main body with cardboard texture
+  // Main body (box)
   const bodyGeo = new THREE.BoxGeometry(boxW, boxH, boxD);
   const bodyMat = new THREE.MeshStandardMaterial({
     color,
     roughness: 0.85,
-    emissive: isHighlighted ? '#ffff00' : '#000',
-    emissiveIntensity: isHighlighted ? 0.3 : 0,
+    // NO HIGHLIGHT when peeking - only highlight when not peeking
+    emissive: (isHighlighted && !isPeeking) ? '#ffff00' : '#000',
+    emissiveIntensity: (isHighlighted && !isPeeking) ? 0.3 : 0,
   });
   const body = new THREE.Mesh(bodyGeo, bodyMat);
   body.castShadow = true;
   box.add(body);
 
-  // Corrugation lines (texture effect)
+  // Corrugation lines
   const lineMat = new THREE.MeshBasicMaterial({ color: '#a0734a', transparent: true, opacity: 0.3 });
   for (let y = -boxH / 2 + 0.03; y < boxH / 2; y += 0.025) {
-    const lineGeo = new THREE.BoxGeometry(boxW + 0.001, 0.002, boxD + 0.001);
+    const lineGeo = new THREE.BoxGeometry(boxW + 0.001, 0.003, boxD + 0.001);
     const line = new THREE.Mesh(lineGeo, lineMat);
     line.position.y = y;
     box.add(line);
   }
 
-  // Corner edges (darker creases)
+  // Corner creases
   const creaseMat = new THREE.MeshStandardMaterial({ color: '#7a5530', roughness: 0.9 });
   const vCreaseGeo = new THREE.BoxGeometry(0.015, boxH, 0.015);
   [
@@ -1804,7 +1323,7 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
     insideBottom.position.y = -boxH / 2 + 0.01;
     box.add(insideBottom);
 
-    // Items inside
+    // Items inside (box style)
     const item1Geo = new THREE.BoxGeometry(0.1, 0.08, 0.08);
     const item1Mat = new THREE.MeshStandardMaterial({ color: '#3498db', roughness: 0.6 });
     const item1 = new THREE.Mesh(item1Geo, item1Mat);
@@ -1812,13 +1331,13 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
     item1.rotation.y = 0.15;
     box.add(item1);
 
-    const item2Geo = new THREE.CylinderGeometry(0.035, 0.035, 0.1, 12);
+    const item2Geo = new THREE.BoxGeometry(0.06, 0.1, 0.06);
     const item2Mat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.5 });
     const item2 = new THREE.Mesh(item2Geo, item2Mat);
     item2.position.set(0.06, -0.06, 0.04);
     box.add(item2);
 
-    const item3Geo = new THREE.SphereGeometry(0.04, 12, 12);
+    const item3Geo = new THREE.BoxGeometry(0.07, 0.07, 0.07);
     const item3Mat = new THREE.MeshStandardMaterial({ color: '#f39c12', roughness: 0.6 });
     const item3 = new THREE.Mesh(item3Geo, item3Mat);
     item3.position.set(0.02, -0.1, -0.06);
@@ -1844,11 +1363,9 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
 
   // Front label
   const labelCanvas = document.createElement('canvas');
-  labelCanvas.width = 180;
-  labelCanvas.height = 120;
+  labelCanvas.width = 180; labelCanvas.height = 120;
   const lctx = labelCanvas.getContext('2d')!;
 
-  // White label background
   lctx.fillStyle = '#ffffff';
   lctx.fillRect(0, 0, 180, 120);
   lctx.strokeStyle = '#333';
@@ -1886,43 +1403,17 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   labelMesh.position.set(0, 0, boxD / 2 + 0.001);
   box.add(labelMesh);
 
-  // Side handles
+  // Side handles (box style cutouts)
   [-boxW / 2 - 0.001, boxW / 2 + 0.001].forEach((x, i) => {
-    // Handle cutout
-    const handleGeo = new THREE.TorusGeometry(0.04, 0.01, 6, 12, Math.PI);
+    const handleGeo = new THREE.BoxGeometry(0.01, 0.04, 0.08);
     const handleMat = new THREE.MeshStandardMaterial({ color: '#5d3a1a', roughness: 0.8 });
     const handle = new THREE.Mesh(handleGeo, handleMat);
     handle.position.set(x, 0.05, 0);
-    handle.rotation.y = i === 0 ? -Math.PI / 2 : Math.PI / 2;
-    handle.rotation.z = Math.PI;
     box.add(handle);
   });
 
-  // Weight/shipping info on side
-  const sideCanvas = document.createElement('canvas');
-  sideCanvas.width = 80;
-  sideCanvas.height = 60;
-  const sctx = sideCanvas.getContext('2d')!;
-  sctx.fillStyle = '#fff';
-  sctx.fillRect(0, 0, 80, 60);
-  sctx.strokeStyle = '#999';
-  sctx.strokeRect(1, 1, 78, 58);
-  sctx.fillStyle = '#333';
-  sctx.font = '10px Arial';
-  sctx.textAlign = 'center';
-  sctx.fillText('WT: 5.2 kg', 40, 25);
-  sctx.fillText('VOL: 0.06m³', 40, 42);
-  const sideTex = new THREE.CanvasTexture(sideCanvas);
-  const sideMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.14, 0.1),
-    new THREE.MeshBasicMaterial({ map: sideTex })
-  );
-  sideMesh.position.set(boxW / 2 + 0.001, -0.05, 0);
-  sideMesh.rotation.y = Math.PI / 2;
-  box.add(sideMesh);
-
-  // Highlight glow
-  if (isHighlighted) {
+  // Highlight glow - NOT shown when peeking
+  if (isHighlighted && !isPeeking) {
     const glowGeo = new THREE.BoxGeometry(boxW + 0.06, boxH + 0.06, boxD + 0.06);
     const glowMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 });
     box.add(new THREE.Mesh(glowGeo, glowMat));
@@ -1931,12 +1422,12 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   return box;
 }
 
-// ==================== IMPROVED DOMINO ====================
+// ==================== DOMINO (Box Style) ====================
 
 function createDomino(value: string, isHighlighted: boolean): THREE.Group {
   const domino = new THREE.Group();
 
-  // Main tile (white with black dots - classic domino)
+  // Main tile (box)
   const tileGeo = new THREE.BoxGeometry(0.22, 0.44, 0.06);
   const tileMat = new THREE.MeshStandardMaterial({
     color: isHighlighted ? '#1abc9c' : '#fafafa',
@@ -1947,30 +1438,30 @@ function createDomino(value: string, isHighlighted: boolean): THREE.Group {
   });
   domino.add(new THREE.Mesh(tileGeo, tileMat));
 
-  // Black border
+  // Black border (box behind)
   const borderGeo = new THREE.BoxGeometry(0.23, 0.45, 0.055);
   const borderMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.5 });
   const border = new THREE.Mesh(borderGeo, borderMat);
   border.position.z = -0.005;
   domino.add(border);
 
-  // Center dividing line
-  const lineGeo = new THREE.BoxGeometry(0.18, 0.015, 0.008);
+  // Center dividing line (box)
+  const lineGeo = new THREE.BoxGeometry(0.18, 0.02, 0.008);
   const lineMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.3 });
   const line = new THREE.Mesh(lineGeo, lineMat);
   line.position.z = 0.028;
   domino.add(line);
 
-  // Dots
+  // Dots (box style)
   const val = parseInt(value) || 1;
-  const dotGeo = new THREE.CylinderGeometry(0.018, 0.018, 0.012, 16);
+  const dotGeo = new THREE.BoxGeometry(0.03, 0.03, 0.012);
   const dotMat = new THREE.MeshStandardMaterial({
     color: isHighlighted ? '#fff' : '#1a1a1a',
     roughness: 0.3,
     metalness: 0.1,
   });
 
-  // Dot positions for standard domino patterns
+  // Dot patterns
   const dotPatterns: Record<number, [number, number][]> = {
     1: [[0, 0]],
     2: [[-0.05, 0.05], [0.05, -0.05]],
@@ -1988,15 +1479,7 @@ function createDomino(value: string, isHighlighted: boolean): THREE.Group {
   topDots.forEach(([x, y]) => {
     const dot = new THREE.Mesh(dotGeo, dotMat);
     dot.position.set(x, y * 0.8 + 0.12, 0.028);
-    dot.rotation.x = Math.PI / 2;
     domino.add(dot);
-
-    // Dot inset (shadow)
-    const insetGeo = new THREE.CircleGeometry(0.02, 12);
-    const insetMat = new THREE.MeshBasicMaterial({ color: '#e0e0e0', side: THREE.DoubleSide });
-    const inset = new THREE.Mesh(insetGeo, insetMat);
-    inset.position.set(x, y * 0.8 + 0.12, 0.031);
-    domino.add(inset);
   });
 
   // Bottom half dots
@@ -2004,20 +1487,12 @@ function createDomino(value: string, isHighlighted: boolean): THREE.Group {
   bottomDots.forEach(([x, y]) => {
     const dot = new THREE.Mesh(dotGeo, dotMat);
     dot.position.set(x, y * 0.8 - 0.12, 0.028);
-    dot.rotation.x = Math.PI / 2;
     domino.add(dot);
-
-    const insetGeo = new THREE.CircleGeometry(0.02, 12);
-    const insetMat = new THREE.MeshBasicMaterial({ color: '#e0e0e0', side: THREE.DoubleSide });
-    const inset = new THREE.Mesh(insetGeo, insetMat);
-    inset.position.set(x, y * 0.8 - 0.12, 0.031);
-    domino.add(inset);
   });
 
-  // Value label (small, on side)
+  // Value label (side)
   const numCanvas = document.createElement('canvas');
-  numCanvas.width = 32;
-  numCanvas.height = 32;
+  numCanvas.width = 32; numCanvas.height = 32;
   const nctx = numCanvas.getContext('2d')!;
   nctx.fillStyle = isHighlighted ? '#fff' : '#555';
   nctx.font = 'bold 20px Arial';
@@ -2039,12 +1514,12 @@ function createDomino(value: string, isHighlighted: boolean): THREE.Group {
   return domino;
 }
 
-// ==================== IMPROVED CLIPBOARD (To-Do) ====================
+// ==================== CLIPBOARD (Box Style) ====================
 
 function createClipboard(label: string, color: string, isHighlighted: boolean): THREE.Group {
   const clipboard = new THREE.Group();
 
-  // Wooden board
+  // Wooden board (box)
   const boardGeo = new THREE.BoxGeometry(0.38, 0.5, 0.02);
   const boardMat = new THREE.MeshStandardMaterial({
     color: '#6d4c2a',
@@ -2061,7 +1536,7 @@ function createClipboard(label: string, color: string, isHighlighted: boolean): 
   edge.position.z = -0.01;
   clipboard.add(edge);
 
-  // Metal clip
+  // Metal clip (box)
   const clipBaseGeo = new THREE.BoxGeometry(0.12, 0.04, 0.025);
   const clipMat = new THREE.MeshStandardMaterial({ color: '#8a8a8a', metalness: 0.9, roughness: 0.2 });
   const clipBase = new THREE.Mesh(clipBaseGeo, clipMat);
@@ -2076,8 +1551,7 @@ function createClipboard(label: string, color: string, isHighlighted: boolean): 
 
   // Paper
   const paperCanvas = document.createElement('canvas');
-  paperCanvas.width = 190;
-  paperCanvas.height = 280;
+  paperCanvas.width = 190; paperCanvas.height = 280;
   const pctx = paperCanvas.getContext('2d')!;
 
   // Paper background
@@ -2115,7 +1589,7 @@ function createClipboard(label: string, color: string, isHighlighted: boolean): 
     pctx.lineTo(180, y + 18);
     pctx.stroke();
 
-    // Checkbox
+    // Checkbox (box style)
     pctx.strokeStyle = '#666';
     pctx.lineWidth = 2;
     pctx.strokeRect(12, y, 16, 16);
@@ -2165,20 +1639,20 @@ function createClipboard(label: string, color: string, isHighlighted: boolean): 
   paper.position.z = 0.012;
   clipboard.add(paper);
 
-  // Pencil
+  // Pencil (box style)
   const pencilGroup = new THREE.Group();
-  const pencilBodyGeo = new THREE.CylinderGeometry(0.006, 0.006, 0.16, 6);
+  const pencilBodyGeo = new THREE.BoxGeometry(0.015, 0.16, 0.015);
   const pencilMat = new THREE.MeshStandardMaterial({ color: '#f4d03f' });
   const pencilBody = new THREE.Mesh(pencilBodyGeo, pencilMat);
   pencilGroup.add(pencilBody);
 
-  const pencilTipGeo = new THREE.ConeGeometry(0.006, 0.018, 6);
+  const pencilTipGeo = new THREE.BoxGeometry(0.015, 0.02, 0.015);
   const pencilTipMat = new THREE.MeshStandardMaterial({ color: '#f5deb3' });
   const pencilTip = new THREE.Mesh(pencilTipGeo, pencilTipMat);
   pencilTip.position.y = -0.09;
   pencilGroup.add(pencilTip);
 
-  const eraserGeo = new THREE.CylinderGeometry(0.007, 0.006, 0.014, 6);
+  const eraserGeo = new THREE.BoxGeometry(0.018, 0.015, 0.018);
   const eraserMat = new THREE.MeshStandardMaterial({ color: '#e88b8b' });
   const eraser = new THREE.Mesh(eraserGeo, eraserMat);
   eraser.position.y = 0.088;
@@ -2198,12 +1672,12 @@ function createClipboard(label: string, color: string, isHighlighted: boolean): 
   return clipboard;
 }
 
-// ==================== IMPROVED TICKET ====================
+// ==================== TICKET (Box Style) ====================
 
 function createTicket(label: string, color: string, isHighlighted: boolean): THREE.Group {
   const ticket = new THREE.Group();
 
-  // Main ticket body
+  // Main ticket body (box)
   const ticketGeo = new THREE.BoxGeometry(0.4, 0.22, 0.012);
   const ticketMat = new THREE.MeshStandardMaterial({
     color,
@@ -2213,26 +1687,25 @@ function createTicket(label: string, color: string, isHighlighted: boolean): THR
   });
   ticket.add(new THREE.Mesh(ticketGeo, ticketMat));
 
-  // Tear-off stub
+  // Tear-off stub (box)
   const stubGeo = new THREE.BoxGeometry(0.09, 0.22, 0.012);
   const stubMat = new THREE.MeshStandardMaterial({ color, roughness: 0.5 });
   const stub = new THREE.Mesh(stubGeo, stubMat);
   stub.position.x = 0.245;
   ticket.add(stub);
 
-  // Perforation
-  const dotGeo = new THREE.CircleGeometry(0.004, 8);
-  const dotMat = new THREE.MeshBasicMaterial({ color: '#fff', side: THREE.DoubleSide });
-  for (let y = -0.09; y <= 0.09; y += 0.012) {
+  // Perforation (small boxes)
+  const dotMat = new THREE.MeshBasicMaterial({ color: '#fff' });
+  for (let y = -0.09; y <= 0.09; y += 0.015) {
+    const dotGeo = new THREE.BoxGeometry(0.008, 0.006, 0.014);
     const dot = new THREE.Mesh(dotGeo, dotMat);
-    dot.position.set(0.195, y, 0.007);
+    dot.position.set(0.195, y, 0);
     ticket.add(dot);
   }
 
   // Front design
   const frontCanvas = document.createElement('canvas');
-  frontCanvas.width = 200;
-  frontCanvas.height = 110;
+  frontCanvas.width = 200; frontCanvas.height = 110;
   const fctx = frontCanvas.getContext('2d')!;
 
   // Background pattern
@@ -2284,16 +1757,16 @@ function createTicket(label: string, color: string, isHighlighted: boolean): THR
   frontFace.position.z = 0.007;
   ticket.add(frontFace);
 
-  // Gold borders
+  // Gold borders (boxes)
   const borderMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.6, roughness: 0.3 });
-  const hBorderGeo = new THREE.BoxGeometry(0.41, 0.006, 0.015);
+  const hBorderGeo = new THREE.BoxGeometry(0.41, 0.008, 0.015);
   [0.11, -0.11].forEach(y => {
     const border = new THREE.Mesh(hBorderGeo, borderMat);
     border.position.y = y;
     ticket.add(border);
   });
 
-  const vBorderGeo = new THREE.BoxGeometry(0.006, 0.22, 0.015);
+  const vBorderGeo = new THREE.BoxGeometry(0.008, 0.22, 0.015);
   [-0.2, 0.29].forEach(x => {
     const border = new THREE.Mesh(vBorderGeo, borderMat);
     border.position.x = x;
@@ -2310,12 +1783,12 @@ function createTicket(label: string, color: string, isHighlighted: boolean): THR
   return ticket;
 }
 
-// ==================== IMPROVED BOOK ====================
+// ==================== BOOK (Box Style) ====================
 
 function createBook(label: string, color: string, isHighlighted: boolean): THREE.Group {
   const book = new THREE.Group();
 
-  // Cover
+  // Cover (box)
   const coverGeo = new THREE.BoxGeometry(0.55, 0.07, 0.38);
   const coverMat = new THREE.MeshStandardMaterial({
     color,
@@ -2328,7 +1801,7 @@ function createBook(label: string, color: string, isHighlighted: boolean): THREE
 
   // Cover edges
   const edgeMat = new THREE.MeshStandardMaterial({ color, roughness: 0.3, metalness: 0.15 });
-  const topEdgeGeo = new THREE.BoxGeometry(0.55, 0.004, 0.38);
+  const topEdgeGeo = new THREE.BoxGeometry(0.55, 0.005, 0.38);
   const topEdge = new THREE.Mesh(topEdgeGeo, edgeMat);
   topEdge.position.y = 0.037;
   book.add(topEdge);
@@ -2336,24 +1809,23 @@ function createBook(label: string, color: string, isHighlighted: boolean): THREE
   bottomEdge.position.y = -0.037;
   book.add(bottomEdge);
 
-  // Pages
+  // Pages (box)
   const pagesGeo = new THREE.BoxGeometry(0.52, 0.055, 0.36);
   const pagesMat = new THREE.MeshStandardMaterial({ color: '#f5f0e0', roughness: 0.9 });
   const pages = new THREE.Mesh(pagesGeo, pagesMat);
   pages.position.x = 0.012;
   book.add(pages);
 
-  // Page lines on side
+  // Page lines on side (boxes)
   const lineMat = new THREE.MeshBasicMaterial({ color: '#e8e0d0' });
-  for (let y = -0.022; y <= 0.022; y += 0.003) {
-    const lineGeo = new THREE.PlaneGeometry(0.055, 0.001);
+  for (let y = -0.022; y <= 0.022; y += 0.004) {
+    const lineGeo = new THREE.BoxGeometry(0.055, 0.002, 0.001);
     const line = new THREE.Mesh(lineGeo, lineMat);
     line.position.set(0.27, y, 0);
-    line.rotation.y = Math.PI / 2;
     book.add(line);
   }
 
-  // Spine
+  // Spine (box)
   const spineGeo = new THREE.BoxGeometry(0.025, 0.075, 0.38);
   const spineMat = new THREE.MeshStandardMaterial({
     color: new THREE.Color(color).multiplyScalar(0.7),
@@ -2363,8 +1835,8 @@ function createBook(label: string, color: string, isHighlighted: boolean): THREE
   spine.position.x = -0.288;
   book.add(spine);
 
-  // Spine ridges
-  const ridgeGeo = new THREE.BoxGeometry(0.004, 0.078, 0.012);
+  // Spine ridges (boxes)
+  const ridgeGeo = new THREE.BoxGeometry(0.005, 0.078, 0.015);
   const ridgeMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.6 });
   [-0.14, -0.05, 0.05, 0.14].forEach(z => {
     const ridge = new THREE.Mesh(ridgeGeo, ridgeMat);
@@ -2374,8 +1846,7 @@ function createBook(label: string, color: string, isHighlighted: boolean): THREE
 
   // Cover title
   const coverCanvas = document.createElement('canvas');
-  coverCanvas.width = 180;
-  coverCanvas.height = 140;
+  coverCanvas.width = 180; coverCanvas.height = 140;
   const cctx = coverCanvas.getContext('2d')!;
 
   // Gold border
@@ -2404,12 +1875,11 @@ function createBook(label: string, color: string, isHighlighted: boolean): THREE
   coverLabel.rotation.x = -Math.PI / 2;
   book.add(coverLabel);
 
-  // Bookmark
-  const ribbonGeo = new THREE.PlaneGeometry(0.012, 0.1);
-  const ribbonMat = new THREE.MeshStandardMaterial({ color: '#e74c3c', side: THREE.DoubleSide, roughness: 0.6 });
+  // Bookmark (box)
+  const ribbonGeo = new THREE.BoxGeometry(0.015, 0.1, 0.003);
+  const ribbonMat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.6 });
   const ribbon = new THREE.Mesh(ribbonGeo, ribbonMat);
   ribbon.position.set(0.08, 0, 0.19);
-  ribbon.rotation.x = 0.1;
   book.add(ribbon);
 
   // Highlight
@@ -2434,14 +1904,14 @@ function applyItemAnimation(
   animPhase: string,
   animData: Record<string, any>,
   structure: DataStructure,
-  animProgress: number = 1 // 0 to 1 for smooth interpolation
+  animProgress: number = 1
 ): void {
   if (!animPhase) return;
 
   const isTarget = animData.index === itemIndex;
   const isTarget1 = animData.index1 === itemIndex;
   const isTarget2 = animData.index2 === itemIndex;
-  const ease = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; // easeInOutCubic
+  const ease = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   const p = ease(animProgress);
 
   if (structure === 'array') {
@@ -2594,7 +2064,7 @@ function buildSceneContent(
   // ========================================================
   if (structure === 'array') {
 
-    // ---------- GROCERY (Cereal Shelf) ----------
+    // ---------- GROCERY SHELF ----------
     if (environment === 'grocery') {
       const shelfWidth = data.length * spacing + 0.8;
 
@@ -2602,7 +2072,7 @@ function buildSceneContent(
       data.forEach((item, i) => {
         const isHl = highlightIndex === i || highlightIndex2 === i;
         const cerealLabels = ['Coco Crunch', 'Corn Flakes', 'Froot Loops', 'Cheerios', 'Frosted'];
-        const product = createCerealBox(item.color, cerealLabels[i % cerealLabels.length] || item.label, isHl);
+        const product = createGroceryBox(item.color, cerealLabels[i % cerealLabels.length] || item.label, isHl);
         product.position.set(startX + i * spacing, 0.08, 0);
         if (isHl) product.position.y += 0.08;
         applyItemAnimation(product, i, animPhase || '', animData || {}, 'array', animProgress);
@@ -2626,7 +2096,7 @@ function buildSceneContent(
 
       // Shelf poles
       const poleMat = new THREE.MeshStandardMaterial({ color: '#888', metalness: 0.8 });
-      const poleGeo = new THREE.CylinderGeometry(0.018, 0.018, 0.8, 12);
+      const poleGeo = new THREE.BoxGeometry(0.03, 0.8, 0.03);
       [-shelfWidth / 2 + 0.05, shelfWidth / 2 - 0.05].forEach(x => {
         [0.14, -0.12].forEach(z => {
           const pole = new THREE.Mesh(poleGeo, poleMat);
@@ -2635,7 +2105,7 @@ function buildSceneContent(
         });
       });
 
-      // Price strip
+      // Price strip sign
       const stripCanvas = document.createElement('canvas');
       stripCanvas.width = 512; stripCanvas.height = 32;
       const sctx = stripCanvas.getContext('2d')!;
@@ -2644,7 +2114,7 @@ function buildSceneContent(
       sctx.fillStyle = '#fff';
       sctx.font = 'bold 16px Arial';
       sctx.textAlign = 'center';
-      sctx.fillText('★ BREAKFAST CEREALS ★ SPECIAL OFFERS ★ BREAKFAST CEREALS ★', 256, 22);
+      sctx.fillText('★ GROCERY SHELF ★ SPECIAL OFFERS ★ GROCERY SHELF ★', 256, 22);
       const strip = new THREE.Mesh(
         new THREE.PlaneGeometry(shelfWidth, 0.055),
         new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(stripCanvas) })
@@ -2669,53 +2139,54 @@ function buildSceneContent(
       floor.position.y = -0.45;
       group.add(floor);
 
-    // ---------- CLASSROOM (Seated Students) ----------
+    // ---------- CLASSROOM (Seated Students with Fixed Desks) ----------
     } else if (environment === 'classroom') {
       const roomWidth = data.length * spacing + 1.2;
+      const floorY = -0.28;
+      const scale = 0.75;
 
       data.forEach((item, i) => {
         const isHl = highlightIndex === i || highlightIndex2 === i;
-        if (item.appearance) {
-          // Create seated human
-          const human = createHuman3D(item.appearance, item.label, isHl, true, 0);
-          human.position.set(startX + i * spacing, isHl ? 0.06 : 0, 0);
-          human.scale.setScalar(0.75);
-          applyItemAnimation(human, i, animPhase || '', animData || {}, 'array', animProgress);
-          group.add(human);
+        const posX = startX + i * spacing;
 
-          // Chair (positioned so human sits on it)
-          const chair = createChair(startX + i * spacing);
-          chair.position.y = 0.05;
-          chair.scale.setScalar(0.75);
+        if (item.appearance) {
+          // Chair on floor
+          const chair = createChair(0);
+          chair.position.set(posX * scale, floorY + 0.25, 0);
+          chair.scale.setScalar(scale);
           group.add(chair);
 
-          // Desk in front
-          const deskGeo = new THREE.BoxGeometry(0.35, 0.025, 0.22);
-          const deskMat = new THREE.MeshStandardMaterial({ color: '#a0855b', roughness: 0.7 });
-          const desk = new THREE.Mesh(deskGeo, deskMat);
-          desk.position.set(startX + i * spacing, 0.02, 0.22);
-          desk.scale.setScalar(0.75);
+          // Desk in front of chair (properly aligned on floor)
+          const desk = createDesk(0);
+          desk.position.set(posX * scale, floorY + 0.28, 0.18 * scale);
+          desk.scale.setScalar(scale);
           group.add(desk);
 
-          // Desk legs
-          const dlegGeo = new THREE.CylinderGeometry(0.01, 0.01, 0.28, 6);
-          const dlegMat = new THREE.MeshStandardMaterial({ color: '#555' });
-          [[-0.14, 0.1], [0.14, 0.1], [-0.14, -0.08], [0.14, -0.08]].forEach(([dx, dz]) => {
-            const dleg = new THREE.Mesh(dlegGeo, dlegMat);
-            dleg.position.set((startX + i * spacing + dx) * 0.75, -0.12, (0.22 + dz) * 0.75);
-            group.add(dleg);
-          });
-
-          // Book/notebook on desk
-          const bookGeo = new THREE.BoxGeometry(0.12, 0.015, 0.08);
+          // Book on desk
+          const bookGeo = new THREE.BoxGeometry(0.1, 0.015, 0.07);
           const bookMat = new THREE.MeshStandardMaterial({ color: '#3498db' });
           const bookOnDesk = new THREE.Mesh(bookGeo, bookMat);
-          bookOnDesk.position.set((startX + i * spacing) * 0.75, 0.04, 0.18);
+          bookOnDesk.position.set(posX * scale, floorY + 0.3, 0.18 * scale);
           group.add(bookOnDesk);
+
+          // Pencil on desk
+          const pencilGeo = new THREE.BoxGeometry(0.08, 0.008, 0.008);
+          const pencilMat = new THREE.MeshStandardMaterial({ color: '#f4d03f' });
+          const pencil = new THREE.Mesh(pencilGeo, pencilMat);
+          pencil.position.set(posX * scale + 0.06, floorY + 0.295, 0.2 * scale);
+          pencil.rotation.y = 0.2;
+          group.add(pencil);
+
+          // Seated human on chair
+          const human = createHuman3D(item.appearance, item.label, isHl, true, 0);
+          human.position.set(posX * scale, floorY + 0.25, 0);
+          human.scale.setScalar(scale);
+          applyItemAnimation(human, i, animPhase || '', animData || {}, 'array', animProgress);
+          group.add(human);
         }
 
         const idx = createTextSprite(`[${i}]`, isHl ? '#ffff00' : '#ffffff', 20);
-        idx.position.set(startX + i * spacing, -0.35, 0);
+        idx.position.set(posX * scale, floorY - 0.08, 0);
         idx.scale.set(0.22, 0.11, 1);
         group.add(idx);
       });
@@ -2726,28 +2197,37 @@ function buildSceneContent(
         new THREE.MeshStandardMaterial({ color: '#c4a882', side: THREE.DoubleSide, roughness: 0.8 })
       );
       floor.rotation.x = -Math.PI / 2;
-      floor.position.y = -0.28;
+      floor.position.y = floorY;
       group.add(floor);
+
+      // Floor tiles pattern
+      const tileLineMat = new THREE.MeshBasicMaterial({ color: '#b39b7a', side: THREE.DoubleSide });
+      for (let tx = -roomWidth / 2; tx <= roomWidth / 2; tx += 0.3) {
+        const line = new THREE.Mesh(new THREE.PlaneGeometry(0.005, 1.4), tileLineMat);
+        line.rotation.x = -Math.PI / 2;
+        line.position.set(tx, floorY + 0.001, 0);
+        group.add(line);
+      }
 
       // Back wall
       const wallMat = new THREE.MeshStandardMaterial({ color: '#f0e6d2', roughness: 0.9 });
       const backWall = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, 0.9), wallMat);
-      backWall.position.set(0, 0.12, -0.45);
+      backWall.position.set(0, floorY + 0.45, -0.45);
       group.add(backWall);
 
       // Whiteboard
       const boardGeo = new THREE.BoxGeometry(roomWidth * 0.6, 0.4, 0.02);
       const boardMat2 = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 });
       const board = new THREE.Mesh(boardGeo, boardMat2);
-      board.position.set(0, 0.22, -0.43);
+      board.position.set(0, floorY + 0.55, -0.43);
       group.add(board);
 
       // Board frame
       const frameMat = new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.5 });
       const hFrame = new THREE.BoxGeometry(roomWidth * 0.62, 0.02, 0.025);
-      [0.43, 0.01].forEach(y => {
+      [0.76, 0.34].forEach(y => {
         const frame = new THREE.Mesh(hFrame, frameMat);
-        frame.position.set(0, y, -0.42);
+        frame.position.set(0, floorY + y, -0.42);
         group.add(frame);
       });
 
@@ -2767,7 +2247,7 @@ function buildSceneContent(
         new THREE.PlaneGeometry(roomWidth * 0.5, 0.32),
         new THREE.MeshBasicMaterial({ map: boardTex, transparent: true })
       );
-      boardText.position.set(0, 0.22, -0.418);
+      boardText.position.set(0, floorY + 0.55, -0.418);
       group.add(boardText);
 
       // Ceiling
@@ -2776,7 +2256,7 @@ function buildSceneContent(
         new THREE.MeshStandardMaterial({ color: '#f5f5f0', side: THREE.DoubleSide })
       );
       ceiling.rotation.x = Math.PI / 2;
-      ceiling.position.y = 0.55;
+      ceiling.position.y = floorY + 0.88;
       group.add(ceiling);
 
       // Ceiling lights
@@ -2785,7 +2265,7 @@ function buildSceneContent(
           new THREE.BoxGeometry(0.28, 0.012, 0.07),
           new THREE.MeshBasicMaterial({ color: '#ffffee' })
         );
-        lightFixture.position.set(lx, 0.54, 0);
+        lightFixture.position.set(lx, floorY + 0.87, 0);
         group.add(lightFixture);
       }
 
@@ -2815,9 +2295,8 @@ function buildSceneContent(
       group.add(desk);
 
       // Desk edge
-      const edgeGeo = new THREE.CylinderGeometry(0.02, 0.02, deskWidth, 16);
+      const edgeGeo = new THREE.BoxGeometry(deskWidth, 0.04, 0.04);
       const edge = new THREE.Mesh(edgeGeo, new THREE.MeshStandardMaterial({ color: '#4a3520' }));
-      edge.rotation.z = Math.PI / 2;
       edge.position.set(0, -0.28, 0.24);
       group.add(edge);
     }
@@ -2834,11 +2313,9 @@ function buildSceneContent(
         const trainCar = createTrainCar(i === 0, item.color, item.label, isHl);
         trainCar.position.set(startX + i * spacing, isHl ? 0.1 : 0, 0);
         trainCar.scale.setScalar(0.82);
-        // Train faces RIGHT (positive X) - no rotation needed
         applyItemAnimation(trainCar, i, animPhase || '', animData || {}, 'linkedlist', animProgress);
         group.add(trainCar);
 
-        // Connection arrows between cars
         if (i < data.length - 1) {
           const arrow = createArrow(startX + i * spacing + 0.35, startX + (i + 1) * spacing - 0.35, highlightIndex === i || highlightIndex === i + 1);
           arrow.position.y = -0.12;
@@ -2889,7 +2366,7 @@ function buildSceneContent(
         group.add(tie);
       }
 
-      // Ground (gravel)
+      // Ground
       const ground = new THREE.Mesh(
         new THREE.PlaneGeometry(data.length * spacing + 1.8, 0.9),
         new THREE.MeshStandardMaterial({ color: '#8b7355', side: THREE.DoubleSide })
@@ -2900,7 +2377,6 @@ function buildSceneContent(
 
     // ---------- PEOPLE LINE (Walking toward door) ----------
     } else if (environment === 'people') {
-      // Create house/room with door
       const roomX = startX - 1.2;
 
       // House front wall
@@ -2915,15 +2391,15 @@ function buildSceneContent(
       doorFrame.position.set(roomX + 0.02, 0.1, 0);
       group.add(doorFrame);
 
-      // Door (open position - swung inward)
+      // Door (open)
       const doorMat = new THREE.MeshStandardMaterial({ color: '#6d4c2a', roughness: 0.7 });
       const door = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.5, 0.32), doorMat);
       door.position.set(roomX - 0.08, 0.08, 0.15);
-      door.rotation.y = -0.9; // Door swung open
+      door.rotation.y = -0.9;
       group.add(door);
 
       // Door handle
-      const handleGeo = new THREE.SphereGeometry(0.02, 8, 8);
+      const handleGeo = new THREE.BoxGeometry(0.03, 0.03, 0.03);
       const handleMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.8 });
       const handle = new THREE.Mesh(handleGeo, handleMat);
       handle.position.set(roomX - 0.06, 0.08, 0.02);
@@ -2937,14 +2413,13 @@ function buildSceneContent(
       group.add(roof);
 
       // Welcome mat
-      const matGeo = new THREE.PlaneGeometry(0.25, 0.15);
-      const matMat = new THREE.MeshStandardMaterial({ color: '#2e7d32', side: THREE.DoubleSide });
+      const matGeo = new THREE.BoxGeometry(0.25, 0.01, 0.15);
+      const matMat = new THREE.MeshStandardMaterial({ color: '#2e7d32' });
       const welcomeMat = new THREE.Mesh(matGeo, matMat);
-      welcomeMat.rotation.x = -Math.PI / 2;
       welcomeMat.position.set(roomX + 0.2, -0.155, 0);
       group.add(welcomeMat);
 
-      // "WELCOME" sign
+      // Welcome sign
       const signCanvas = document.createElement('canvas');
       signCanvas.width = 180; signCanvas.height = 50;
       const sctx = signCanvas.getContext('2d')!;
@@ -2964,16 +2439,14 @@ function buildSceneContent(
       signSprite.scale.set(0.45, 0.12, 1);
       group.add(signSprite);
 
-      // People in line (walking toward door)
+      // People in line
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         if (item.appearance) {
-          // Calculate walk phase based on position (closer to door = more walking animation)
           const walkPhase = (animPhase === 'll-traverse' && isHl) ? Math.PI * 0.5 : 0;
           const human = createHuman3D(item.appearance, item.label, isHl, false, walkPhase);
           human.position.set(startX + i * spacing, isHl ? 0.06 : 0, 0);
           human.scale.setScalar(0.72);
-          // Face toward door (left/negative X)
           human.rotation.y = -Math.PI / 2;
           applyItemAnimation(human, i, animPhase || '', animData || {}, 'linkedlist', animProgress);
           group.add(human);
@@ -2991,13 +2464,11 @@ function buildSceneContent(
         }
       });
 
-      // HEAD label
       const headSprite = createTextSprite('HEAD', '#ff0000', 18);
       headSprite.position.set(startX, 0.5, 0);
       headSprite.scale.set(0.28, 0.1, 1);
       group.add(headSprite);
 
-      // NULL at end
       const nullSprite = createTextSprite('NULL', '#ff0000', 20);
       nullSprite.position.set(startX + data.length * spacing, 0.08, 0);
       nullSprite.scale.set(0.28, 0.18, 1);
@@ -3007,7 +2478,7 @@ function buildSceneContent(
       nullArrow.position.y = 0.08;
       group.add(nullArrow);
 
-      // Floor/pathway
+      // Floor
       const floor = new THREE.Mesh(
         new THREE.PlaneGeometry(data.length * spacing + 2, 0.55),
         new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
@@ -3101,20 +2572,20 @@ function buildSceneContent(
 
     // ---------- PLATES (Fried Chicken & Rice) ----------
     } else if (environment === 'plates') {
-      const plateSpacing = 0.045;
+      const plateSpacing = 0.05;
       const plateBaseY = -data.length * plateSpacing / 2;
 
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const plateItem = createPlate(item.label, isHl);
         plateItem.position.set(isHl ? 0.12 : 0, plateBaseY + i * plateSpacing, 0);
-        plateItem.scale.setScalar(0.62);
+        plateItem.scale.setScalar(0.55);
         applyItemAnimation(plateItem, i, animPhase || '', animData || {}, 'stack', animProgress);
         group.add(plateItem);
 
         if (i === data.length - 1) {
           const topSprite = createTextSprite('← TOP', '#ff0000', 22);
-          topSprite.position.set(0.48, plateBaseY + i * plateSpacing, 0);
+          topSprite.position.set(0.45, plateBaseY + i * plateSpacing, 0);
           topSprite.scale.set(0.32, 0.11, 1);
           group.add(topSprite);
         }
@@ -3122,18 +2593,18 @@ function buildSceneContent(
 
       // Counter
       const counter = new THREE.Mesh(
-        new THREE.BoxGeometry(0.95, 0.055, 0.55),
+        new THREE.BoxGeometry(0.9, 0.055, 0.5),
         new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.4, roughness: 0.4 })
       );
       counter.position.y = plateBaseY - 0.05;
       group.add(counter);
 
-      // Counter front panel
+      // Counter front
       const panel = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.95, 0.28),
+        new THREE.PlaneGeometry(0.9, 0.25),
         new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
       );
-      panel.position.set(0, plateBaseY - 0.18, 0.28);
+      panel.position.set(0, plateBaseY - 0.16, 0.26);
       group.add(panel);
 
       // CAFETERIA sign
@@ -3149,11 +2620,11 @@ function buildSceneContent(
       const signSprite = new THREE.Sprite(
         new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(signCanvas), transparent: true })
       );
-      signSprite.position.set(0, plateBaseY + data.length * plateSpacing + 0.28, 0);
-      signSprite.scale.set(0.75, 0.14, 1);
+      signSprite.position.set(0, plateBaseY + data.length * plateSpacing + 0.25, 0);
+      signSprite.scale.set(0.7, 0.13, 1);
       group.add(signSprite);
 
-    // ---------- BOXES ----------
+    // ---------- BOXES (No highlight on peek) ----------
     } else if (environment === 'boxes') {
       const boxSpacing = 0.4;
       const boxBaseY = -data.length * boxSpacing / 2 + 0.18;
@@ -3161,9 +2632,10 @@ function buildSceneContent(
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const isTop = i === data.length - 1;
-        const isPeeking = animPhase === 'stack-peek-open' && isTop && isHl;
-        const cardboardBox = createCardboardBox(item.label, item.color, isHl, isPeeking);
-        cardboardBox.position.set(isHl ? 0.18 : 0, boxBaseY + i * boxSpacing, 0);
+        const isPeeking = animPhase === 'stack-peek-open' && isTop;
+        // Pass isPeeking to disable highlight during peek
+        const cardboardBox = createCardboardBox(item.label, item.color, isHl, isPeeking, isPeeking);
+        cardboardBox.position.set(isHl && !isPeeking ? 0.18 : 0, boxBaseY + i * boxSpacing, 0);
         cardboardBox.rotation.y = (i % 2 === 0) ? 0 : 0.05;
         cardboardBox.scale.setScalar(0.78);
         applyItemAnimation(cardboardBox, i, animPhase || '', animData || {}, 'stack', animProgress);
@@ -3202,21 +2674,20 @@ function buildSceneContent(
 
     // ---------- TOLLGATE (Expressway) ----------
     if (environment === 'tollgate') {
-      // Create toll booth
+      // Toll booth
       const tollBooth = createTollBooth();
       tollBooth.position.set(startX - 0.9, 0, 0);
       tollBooth.scale.setScalar(0.85);
       group.add(tollBooth);
 
-      // Cars in queue (facing LEFT toward toll booth)
+      // Cars facing LEFT toward toll
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const drivePhase = (animPhase === 'queue-dequeue-exit' && isHl) ? animProgress || 0 : 0;
         const carObj = createCar(item.color, item.label, isHl, drivePhase);
         carObj.position.set(startX + i * spacing, isHl ? 0.06 : 0, 0);
         carObj.scale.setScalar(0.78);
-        // Car faces LEFT (toward toll) - rotate 180 degrees
-        carObj.rotation.y = Math.PI;
+        carObj.rotation.y = Math.PI; // Face left toward toll
         applyItemAnimation(carObj, i, animPhase || '', animData || {}, 'queue', animProgress);
         group.add(carObj);
       });
@@ -3241,7 +2712,7 @@ function buildSceneContent(
       road.position.y = -0.06;
       group.add(road);
 
-      // Road markings (dashed center line)
+      // Road dashes
       const dashMat = new THREE.MeshStandardMaterial({ color: '#ffffff', side: THREE.DoubleSide });
       for (let x = startX - 0.8; x <= startX + data.length * spacing + 0.5; x += 0.22) {
         const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.022), dashMat);
@@ -3319,13 +2790,12 @@ function buildSceneContent(
       servingSprite.scale.set(0.42, 0.14, 1);
       group.add(servingSprite);
 
-    // ---------- STUDENTS (Queue with School Building) ----------
+    // ---------- STUDENTS (School Queue) ----------
     } else if (environment === 'students') {
-      // School building entrance
       const buildingX = startX - 1.0;
       const wallMat = new THREE.MeshStandardMaterial({ color: '#c0392b', roughness: 0.7 });
 
-      // Main building front
+      // Building front
       const frontWall = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.9), wallMat);
       frontWall.position.set(buildingX, 0.22, 0);
       group.add(frontWall);
@@ -3337,7 +2807,7 @@ function buildSceneContent(
       arch.position.set(buildingX + 0.02, 0.12, 0);
       group.add(arch);
 
-      // Door (double doors, open)
+      // Doors (open)
       const doorMat = new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.6 });
       [-0.12, 0.12].forEach((z, di) => {
         const doorGeo = new THREE.BoxGeometry(0.02, 0.5, 0.15);
@@ -3347,13 +2817,12 @@ function buildSceneContent(
         group.add(doorMesh);
       });
 
-      // School windows
+      // Windows
       const winMat = new THREE.MeshStandardMaterial({ color: '#87ceeb', metalness: 0.4 });
       [-0.35, 0.35].forEach(z => {
-        const winGeo = new THREE.PlaneGeometry(0.08, 0.12);
+        const winGeo = new THREE.BoxGeometry(0.01, 0.12, 0.08);
         const win = new THREE.Mesh(winGeo, winMat);
         win.position.set(buildingX + 0.052, 0.38, z);
-        win.rotation.y = Math.PI / 2;
         group.add(win);
       });
 
@@ -3384,7 +2853,7 @@ function buildSceneContent(
       roofMesh.position.set(buildingX, 0.63, 0);
       group.add(roofMesh);
 
-      // Students in queue (facing left toward door)
+      // Students
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         if (item.appearance) {
@@ -3392,7 +2861,6 @@ function buildSceneContent(
           const human = createHuman3D(item.appearance, item.label, isHl, false, walkPhase);
           human.position.set(startX + i * spacing, isHl ? 0.06 : 0, 0);
           human.scale.setScalar(0.65);
-          // Face toward school entrance (left)
           human.rotation.y = -Math.PI / 2;
           applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue', animProgress);
           group.add(human);
@@ -3409,7 +2877,7 @@ function buildSceneContent(
       rearSprite.scale.set(0.26, 0.09, 1);
       group.add(rearSprite);
 
-      // Floor/pathway
+      // Pathway
       const pathway = new THREE.Mesh(
         new THREE.PlaneGeometry(data.length * spacing + 1.8, 0.48),
         new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
@@ -3418,7 +2886,7 @@ function buildSceneContent(
       pathway.position.y = -0.13;
       group.add(pathway);
 
-      // Path guide lines
+      // Path lines
       const pathLineMat = new THREE.MeshBasicMaterial({ color: '#95a5a6', side: THREE.DoubleSide });
       [-0.18, 0.18].forEach(z => {
         const pathLine = new THREE.Mesh(new THREE.PlaneGeometry(data.length * spacing + 1.5, 0.008), pathLineMat);
@@ -3478,8 +2946,6 @@ export default function Home() {
   const xrReticleRef = useRef<THREE.Mesh | null>(null);
   const xrHitTestSourceRef = useRef<any>(null);
   const xrContainerRef = useRef<HTMLDivElement>(null);
-
-  // Animation frame ref for smooth animations
   const animFrameRef = useRef<number | null>(null);
 
   // ==================== DATA ====================
@@ -3493,10 +2959,10 @@ export default function Home() {
   ]);
 
   const [students, setStudents] = useState<DataItem[]>([
-    { id: 1, label: 'Alex', color: '#3498db', appearance: { skinTone: '#ffdbac', shirtColor: '#3498db', pantsColor: '#2c3e50', hairColor: '#4a3728', hairStyle: 'short', gender: 'male' } },
-    { id: 2, label: 'Beth', color: '#e91e63', appearance: { skinTone: '#f5d0c5', shirtColor: '#e91e63', pantsColor: '#8e44ad', hairColor: '#2c1810', hairStyle: 'long', gender: 'female' } },
+    { id: 1, label: 'Alex', color: '#3498db', appearance: { skinTone: '#f5c6a0', shirtColor: '#3498db', pantsColor: '#2c3e50', hairColor: '#3d2314', hairStyle: 'short', gender: 'male' } },
+    { id: 2, label: 'Beth', color: '#e91e63', appearance: { skinTone: '#f5c6a0', shirtColor: '#e91e63', pantsColor: '#1a1a2e', hairColor: '#2c1810', hairStyle: 'long', gender: 'female' } },
     { id: 3, label: 'Carl', color: '#27ae60', appearance: { skinTone: '#8d5524', shirtColor: '#27ae60', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } },
-    { id: 4, label: 'Dana', color: '#f39c12', appearance: { skinTone: '#ffcd94', shirtColor: '#f39c12', pantsColor: '#3498db', hairColor: '#d4a574', hairStyle: 'long', gender: 'female' } },
+    { id: 4, label: 'Dana', color: '#f39c12', appearance: { skinTone: '#c68642', shirtColor: '#f39c12', pantsColor: '#3498db', hairColor: '#3d2314', hairStyle: 'long', gender: 'female' } },
   ]);
 
   const [tasks, setTasks] = useState<DataItem[]>([
@@ -3514,9 +2980,9 @@ export default function Home() {
   ]);
 
   const [peopleLine, setPeopleLine] = useState<DataItem[]>([
-    { id: 1, label: 'Alice', color: '#e74c3c', appearance: { skinTone: '#ffdbac', shirtColor: '#e74c3c', pantsColor: '#2c3e50', hairColor: '#2c1810', hairStyle: 'long', gender: 'female' } },
+    { id: 1, label: 'Alice', color: '#e74c3c', appearance: { skinTone: '#f5c6a0', shirtColor: '#e74c3c', pantsColor: '#2c3e50', hairColor: '#2c1810', hairStyle: 'long', gender: 'female' } },
     { id: 2, label: 'Bob', color: '#3498db', appearance: { skinTone: '#8d5524', shirtColor: '#3498db', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } },
-    { id: 3, label: 'Carol', color: '#2ecc71', appearance: { skinTone: '#f5d0c5', shirtColor: '#2ecc71', pantsColor: '#8e44ad', hairColor: '#d4a574', hairStyle: 'long', gender: 'female' } },
+    { id: 3, label: 'Carol', color: '#2ecc71', appearance: { skinTone: '#c68642', shirtColor: '#2ecc71', pantsColor: '#1a1a2e', hairColor: '#3d2314', hairStyle: 'long', gender: 'female' } },
   ]);
 
   const [dominoNodes, setDominoNodes] = useState<DataItem[]>([
@@ -3557,8 +3023,8 @@ export default function Home() {
   ]);
 
   const [studentQueue, setStudentQueue] = useState<DataItem[]>([
-    { id: 1, label: 'Stu 1', color: '#3498db', appearance: { skinTone: '#ffdbac', shirtColor: '#3498db', pantsColor: '#2c3e50', hairColor: '#4a3728', hairStyle: 'short', gender: 'male' } },
-    { id: 2, label: 'Stu 2', color: '#2ecc71', appearance: { skinTone: '#f5d0c5', shirtColor: '#2ecc71', pantsColor: '#8e44ad', hairColor: '#2c1810', hairStyle: 'long', gender: 'female' } },
+    { id: 1, label: 'Stu 1', color: '#3498db', appearance: { skinTone: '#f5c6a0', shirtColor: '#3498db', pantsColor: '#2c3e50', hairColor: '#3d2314', hairStyle: 'short', gender: 'male' } },
+    { id: 2, label: 'Stu 2', color: '#2ecc71', appearance: { skinTone: '#c68642', shirtColor: '#2ecc71', pantsColor: '#1a1a2e', hairColor: '#2c1810', hairStyle: 'long', gender: 'female' } },
     { id: 3, label: 'Stu 3', color: '#9b59b6', appearance: { skinTone: '#8d5524', shirtColor: '#9b59b6', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } },
   ]);
 
@@ -3566,7 +3032,6 @@ export default function Home() {
 
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
   
-  // Smooth animation helper
   const smoothAnimate = (duration: number, phase: string, data: Record<string, any>) => {
     return new Promise<void>(resolve => {
       const startTime = Date.now();
@@ -3861,7 +3326,7 @@ export default function Home() {
     setOperationMessage(`Inserting at [${insertIndex}]...`);
     setCodeDisplay(`// O(n) Insert\narray.splice(${insertIndex}, 0, item)`);
     for (let i = data.length - 1; i >= insertIndex; i--) { setHighlightIndex(i); await delay(200); }
-    const newLabel = arrayEnv === 'grocery' ? 'New Cereal' : 'New';
+    const newLabel = arrayEnv === 'grocery' ? 'New' : 'New';
     (setArrayData as any)((prev: DataItem[]) => {
       const arr = [...prev]; arr.splice(insertIndex, 0, { id: Date.now(), label: newLabel, color: '#1abc9c' }); return arr;
     });
@@ -3913,7 +3378,7 @@ export default function Home() {
     setOperationMessage('Inserting at HEAD...');
     setCodeDisplay('// O(1)\nnewNode.next = head\nhead = newNode');
     const newItem: DataItem = linkedListEnv === 'people'
-      ? { id: Date.now(), label: 'New', color: '#1abc9c', appearance: { skinTone: '#ffdbac', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#4a3728', hairStyle: 'short', gender: 'male' } }
+      ? { id: Date.now(), label: 'New', color: '#1abc9c', appearance: { skinTone: '#f5c6a0', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#3d2314', hairStyle: 'short', gender: 'male' } }
       : { id: Date.now(), label: 'New', color: '#1abc9c' };
     (setLinkedListData as any)((prev: DataItem[]) => [newItem, ...prev]);
     setHighlightIndex(0);
@@ -4025,7 +3490,7 @@ export default function Home() {
     if (isAnimating || getQueueData().length >= 5) return; setIsAnimating(true);
     const data = getQueueData();
     const newItem: DataItem = queueEnv === 'students'
-      ? { id: Date.now(), label: `Stu ${data.length + 1}`, color: '#1abc9c', appearance: { skinTone: '#ffdbac', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#4a3728', hairStyle: 'short', gender: 'male' } }
+      ? { id: Date.now(), label: `Stu ${data.length + 1}`, color: '#1abc9c', appearance: { skinTone: '#f5c6a0', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#3d2314', hairStyle: 'short', gender: 'male' } }
       : queueEnv === 'tollgate'
         ? { id: Date.now(), label: `NEW-${Math.floor(Math.random() * 900) + 100}`, color: '#1abc9c' }
         : { id: Date.now(), label: `T-00${data.length + 1}`, color: '#1abc9c' };
@@ -4084,8 +3549,9 @@ export default function Home() {
     </div>
   );
 
+  // Tab labels - GROCERY SHELF stays as "Shelf"
   const envTabs = currentStructure === 'array'
-    ? [{ id: 'grocery', icon: '🥣', label: 'Cereals' }, { id: 'classroom', icon: '🧑‍🎓', label: 'Class' }, { id: 'todo', icon: '📝', label: 'Tasks' }]
+    ? [{ id: 'grocery', icon: '🛒', label: 'Shelf' }, { id: 'classroom', icon: '🧑‍🎓', label: 'Class' }, { id: 'todo', icon: '📝', label: 'Tasks' }]
     : currentStructure === 'linkedlist'
       ? [{ id: 'train', icon: '🚂', label: 'Train' }, { id: 'people', icon: '🚪', label: 'Queue' }, { id: 'domino', icon: '🁡', label: 'Domino' }]
       : currentStructure === 'stack'
