@@ -1215,19 +1215,19 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
   return train;
 }
 
-// ==================== TOLL BOOTH (Barrier LOWERED, on side, across road) ====================
+// ==================== FIXED TOLL BOOTH (Gate on SIDE, barrier ACROSS road) ====================
 
 function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
   const toll = new THREE.Group();
   const groundY = 0;
 
-  // Booth structure - on the side
+  // Booth structure - ON THE SIDE of road (at negative Z edge)
   const boothMat = new THREE.MeshStandardMaterial({ color: '#2c3e50', roughness: 0.6, metalness: 0.3 });
   const booth = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.65, 0.35), boothMat);
   booth.position.set(0, groundY + 0.325, -0.55);
   toll.add(booth);
 
-  // Booth window
+  // Booth window facing road
   const windowMat = new THREE.MeshStandardMaterial({ color: '#87ceeb', metalness: 0.6, roughness: 0.1, transparent: true, opacity: 0.8 });
   const boothWindow = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.2, 0.01), windowMat);
   boothWindow.position.set(0, groundY + 0.42, -0.37);
@@ -1245,7 +1245,7 @@ function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
   trim.position.set(0, groundY + 0.7, -0.55);
   toll.add(trim);
 
-  // TOLL sign
+  // TOLL sign on booth
   const signCanvas = document.createElement('canvas');
   signCanvas.width = 120; signCanvas.height = 50;
   const sctx = signCanvas.getContext('2d')!;
@@ -1259,75 +1259,96 @@ function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
   sctx.textAlign = 'center';
   sctx.fillText('TOLL', 60, 35);
   const signTex = new THREE.CanvasTexture(signCanvas);
-  const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.12), new THREE.MeshBasicMaterial({ map: signTex }));
+  const signMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.3, 0.12),
+    new THREE.MeshBasicMaterial({ map: signTex })
+  );
   signMesh.position.set(0, groundY + 0.58, -0.36);
   toll.add(signMesh);
 
-  // Gate post - SHORTER (lowered)
+  // Gate post - ON THE SIDE of road (at edge, negative Z)
   const postMat = new THREE.MeshStandardMaterial({ color: '#f39c12', roughness: 0.5, metalness: 0.3 });
-  const gatePost = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.35, 0.1), postMat);
-  gatePost.position.set(0, groundY + 0.175, -0.32);
+  const gatePost = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.6, 0.1), postMat);
+  gatePost.position.set(0, groundY + 0.3, -0.32);
   toll.add(gatePost);
 
-  // Gate arm pivot - LOWERED position
+  // Gate arm pivot - barrier extends ACROSS the road (in +Z direction)
   const gatePivot = new THREE.Group();
-  gatePivot.position.set(0, groundY + 0.32, -0.32);
+  gatePivot.position.set(0, groundY + 0.55, -0.32);
 
-  // Gate arm - extends across road
+  // Gate arm - extends ACROSS road (in Z direction to block cars)
   const gateArmMat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.5 });
-  const gateArm = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.7), gateArmMat);
+  const gateArm = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.7), gateArmMat);
   gateArm.position.set(0, 0, 0.35);
   gatePivot.add(gateArm);
 
   // White stripes on gate arm
   const stripeMat = new THREE.MeshStandardMaterial({ color: '#ffffff' });
   for (let i = 0; i < 5; i++) {
-    const stripeBox = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.055, 0.08), stripeMat);
+    const stripeBox = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.065, 0.08), stripeMat);
     stripeBox.position.set(0, 0, 0.1 + i * 0.12);
     gatePivot.add(stripeBox);
   }
 
-  // End cap
-  const endCap = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.06), new THREE.MeshStandardMaterial({ color: '#c0392b', metalness: 0.5 }));
+  // End cap with reflector
+  const endCap = new THREE.Mesh(
+    new THREE.BoxGeometry(0.08, 0.08, 0.08),
+    new THREE.MeshStandardMaterial({ color: '#c0392b', metalness: 0.5 })
+  );
   endCap.position.set(0, 0, 0.7);
   gatePivot.add(endCap);
 
-  // Red reflector
-  const reflector = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.02), new THREE.MeshBasicMaterial({ color: '#ff0000' }));
-  reflector.position.set(0, 0, 0.74);
+  // Red reflector on end
+  const reflector = new THREE.Mesh(
+    new THREE.BoxGeometry(0.05, 0.05, 0.02),
+    new THREE.MeshBasicMaterial({ color: '#ff0000' })
+  );
+  reflector.position.set(0, 0, 0.75);
   gatePivot.add(reflector);
 
-  // ANIMATE GATE OPENING - rotates UP
+  // ANIMATE GATE OPENING - rotates UP around X axis
   if (gateOpenAmount > 0) {
     const easedOpen = gateOpenAmount < 0.5 
       ? 2 * gateOpenAmount * gateOpenAmount 
       : 1 - Math.pow(-2 * gateOpenAmount + 2, 2) / 2;
-    gatePivot.rotation.x = -easedOpen * Math.PI * 0.45;
+    gatePivot.rotation.x = -easedOpen * Math.PI * 0.45; // Opens upward ~80 degrees
   }
 
   toll.add(gatePivot);
 
-  // Payment terminal
+  // Payment terminal (on the side)
   const terminalMat = new THREE.MeshStandardMaterial({ color: '#333', roughness: 0.4 });
   const terminal = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.25, 0.06), terminalMat);
   terminal.position.set(0, groundY + 0.3, -0.38);
   toll.add(terminal);
 
   // Terminal screen
-  const screen = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.005), new THREE.MeshBasicMaterial({ color: gateOpenAmount > 0.5 ? '#00ff00' : '#ffff00' }));
+  const screen = new THREE.Mesh(
+    new THREE.BoxGeometry(0.05, 0.05, 0.005),
+    new THREE.MeshBasicMaterial({ color: gateOpenAmount > 0.5 ? '#00ff00' : '#ffff00' })
+  );
   screen.position.set(0, groundY + 0.38, -0.345);
   toll.add(screen);
 
   // Lane lights
-  const lightHousing = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.14, 0.06), new THREE.MeshStandardMaterial({ color: '#222' }));
+  const lightHousing = new THREE.Mesh(
+    new THREE.BoxGeometry(0.1, 0.14, 0.06),
+    new THREE.MeshStandardMaterial({ color: '#222' })
+  );
   lightHousing.position.set(0, groundY + 0.78, -0.55);
   toll.add(lightHousing);
 
-  const greenLight = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.02), new THREE.MeshBasicMaterial({ color: gateOpenAmount > 0.5 ? '#00ff00' : '#003300' }));
+  const greenLight = new THREE.Mesh(
+    new THREE.BoxGeometry(0.05, 0.05, 0.02),
+    new THREE.MeshBasicMaterial({ color: gateOpenAmount > 0.5 ? '#00ff00' : '#003300' })
+  );
   greenLight.position.set(0, groundY + 0.81, -0.515);
   toll.add(greenLight);
 
-  const redLight = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.02), new THREE.MeshBasicMaterial({ color: gateOpenAmount > 0.5 ? '#330000' : '#ff0000' }));
+  const redLight = new THREE.Mesh(
+    new THREE.BoxGeometry(0.05, 0.05, 0.02),
+    new THREE.MeshBasicMaterial({ color: gateOpenAmount > 0.5 ? '#330000' : '#ff0000' })
+  );
   redLight.position.set(0, groundY + 0.75, -0.515);
   toll.add(redLight);
 
@@ -1348,7 +1369,9 @@ function createCar(color: string, label: string, isHighlighted: boolean): THREE.
   const car = new THREE.Group();
 
   const bodyMat = new THREE.MeshStandardMaterial({
-    color, metalness: 0.7, roughness: 0.3,
+    color,
+    metalness: 0.7,
+    roughness: 0.3,
     emissive: isHighlighted ? '#ffff00' : '#000',
     emissiveIntensity: isHighlighted ? 0.3 : 0,
   });
@@ -1632,7 +1655,7 @@ function createTicket(label: string, color: string, isHighlighted: boolean): THR
   return ticket;
 }
 
-// ==================== SCHOOL BUILDING (No teacher, stairs fixed) ====================
+// ==================== SCHOOL BUILDING (uses createTeacher from Part 1) ====================
 
 function createSchoolBuilding(): THREE.Group {
   const school = new THREE.Group();
@@ -1704,14 +1727,11 @@ function createSchoolBuilding(): THREE.Group {
   clockFace.rotation.y = Math.PI / 2;
   school.add(clockFace);
 
-  // FIXED STAIRS - facing LEFT toward building (negative X direction)
+  // Steps facing RIGHT
   const stepMat = new THREE.MeshStandardMaterial({ color: '#808080', roughness: 0.7 });
-  // Stairs go from right to left, smallest step closest to door
-  [0, 1, 2].forEach((i) => {
-    const stepWidth = 0.5 - i * 0.05;
-    const step = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, stepWidth), stepMat);
-    // Position: start from door (-0.04) and go outward (+X)
-    step.position.set(-0.04 + i * 0.08, groundY + 0.02 + i * 0.04, 0);
+  [0, 0.04, 0.08].forEach((y, i) => {
+    const step = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.04, 0.6 - i * 0.06), stepMat);
+    step.position.set(0.05 + i * 0.08, groundY + y + 0.02, 0);
     school.add(step);
   });
 
@@ -1747,9 +1767,16 @@ function createSchoolBuilding(): THREE.Group {
   const grassMat = new THREE.MeshStandardMaterial({ color: '#228b22', roughness: 0.9 });
   [-0.7, 0.7].forEach(z => {
     const grass = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.015, 0.25), grassMat);
-    grass.position.set(0.2, groundY + 0.008, z);
+    grass.position.set(0.1, groundY + 0.008, z);
     school.add(grass);
   });
+
+  // Teacher at door (createTeacher is defined in Part 1)
+  const teacher = createTeacher();
+  teacher.position.set(0.3, groundY, 0);
+  teacher.rotation.y = -Math.PI / 2;
+  teacher.scale.setScalar(0.85);
+  school.add(teacher);
 
   return school;
 }
@@ -1874,12 +1901,17 @@ function applyItemAnimation(
       obj.position.x += 0.2 * (1 - p);
       obj.scale.setScalar(1 + 0.05 * (1 - p));
     } else if (animPhase === 'queue-dequeue-gate-open' && isTarget) {
-      // Phase 1: Gate opens, car/student stays still
+      // Phase 1: Gate opens, car stays still
+      // Car doesn't move, just highlight
     } else if (animPhase === 'queue-dequeue-drive' && isTarget) {
-      // Phase 2: Car/student drives/walks through and exits to the LEFT (no shrinking!)
-      obj.position.x -= 2.5 * p;  // Just move far to the left
+      // Phase 2: Car drives forward and disappears
+      obj.position.x -= 1.5 * p;
+      if (p > 0.7) {
+        obj.scale.setScalar(Math.max(0.01, 1 - (p - 0.7) / 0.3));
+      }
     } else if (animPhase === 'queue-dequeue-gate-close') {
-      // Phase 3: Gate closes, item already gone
+      // Phase 3: Gate closes, car already gone
+      // Nothing to do for car
     } else if (animPhase === 'queue-front-peek' && isTarget) {
       obj.position.y += 0.2 * p;
       obj.scale.setScalar(1 + 0.15 * p);
@@ -1900,6 +1932,7 @@ function buildSceneContent(
   animData?: Record<string, any>,
   animProgress?: number
 ): void {
+  // Clear existing
   while (group.children.length > 0) {
     const child = group.children[0];
     group.remove(child);
@@ -1919,8 +1952,10 @@ function buildSceneContent(
 
   // ==================== ARRAY ====================
   if (structure === 'array') {
+
     if (environment === 'grocery') {
       const shelfWidth = data.length * spacing + 0.8;
+
       data.forEach((item, i) => {
         const isHl = highlightIndex === i || highlightIndex2 === i;
         const cerealLabels = ['Coco Crunch', 'Corn Flakes', 'Froot Loops', 'Cheerios', 'Frosted'];
@@ -1929,52 +1964,93 @@ function buildSceneContent(
         if (isHl) product.position.y += 0.08;
         applyItemAnimation(product, i, animPhase || '', animData || {}, 'array', animProgress);
         group.add(product);
+
         const idx = createTextSprite(`[${i}]`, isHl ? '#ffff00' : '#ffffff', 22);
         idx.position.set(startX + i * spacing, groundY - 0.12, 0);
         idx.scale.set(0.28, 0.14, 1);
         group.add(idx);
       });
+
       const shelfMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.7, roughness: 0.3 });
       const mainShelf = new THREE.Mesh(new THREE.BoxGeometry(shelfWidth, 0.025, 0.32), shelfMat);
       mainShelf.position.y = groundY + 0.06;
       group.add(mainShelf);
-      const backPanel = new THREE.Mesh(new THREE.PlaneGeometry(shelfWidth, 0.75), new THREE.MeshStandardMaterial({ color: '#f0f0f0', side: THREE.DoubleSide, roughness: 0.9 }));
+
+      const lip = new THREE.Mesh(new THREE.BoxGeometry(shelfWidth, 0.035, 0.012), shelfMat);
+      lip.position.set(0, groundY + 0.075, 0.16);
+      group.add(lip);
+
+      const poleMat = new THREE.MeshStandardMaterial({ color: '#888', metalness: 0.8 });
+      [-shelfWidth / 2 + 0.05, shelfWidth / 2 - 0.05].forEach(x => {
+        [0.14, -0.12].forEach(z => {
+          const pole = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.8, 0.03), poleMat);
+          pole.position.set(x, groundY - 0.05, z);
+          group.add(pole);
+        });
+      });
+
+      const backPanel = new THREE.Mesh(
+        new THREE.PlaneGeometry(shelfWidth, 0.75),
+        new THREE.MeshStandardMaterial({ color: '#f0f0f0', side: THREE.DoubleSide, roughness: 0.9 })
+      );
       backPanel.position.set(0, groundY, -0.14);
       group.add(backPanel);
+
     } else if (environment === 'classroom') {
       const roomWidth = data.length * spacing + 1.2;
       const floorY = groundY - 0.25;
       const scale = 0.75;
+
       data.forEach((item, i) => {
         const isHl = highlightIndex === i || highlightIndex2 === i;
         const posX = startX + i * spacing;
+
         if (item.appearance) {
           const chair = createChair(0);
           chair.position.set(posX * scale, floorY + 0.25, -0.05 * scale);
           chair.scale.setScalar(scale);
           group.add(chair);
+
           const desk = createDesk(0);
           desk.position.set(posX * scale, floorY + 0.28, 0.22 * scale);
           desk.scale.setScalar(scale);
           group.add(desk);
+
           const human = createHuman3D(item.appearance, item.label, isHl, true, 0);
           human.position.set(posX * scale, floorY + 0.25, -0.05 * scale);
           human.scale.setScalar(scale);
           applyItemAnimation(human, i, animPhase || '', animData || {}, 'array', animProgress);
           group.add(human);
         }
+
         const idx = createTextSprite(`[${i}]`, isHl ? '#ffff00' : '#ffffff', 20);
         idx.position.set(posX * scale, floorY - 0.06, 0);
         idx.scale.set(0.22, 0.11, 1);
         group.add(idx);
       });
-      const floor = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, 1.4), new THREE.MeshStandardMaterial({ color: '#c4a882', side: THREE.DoubleSide, roughness: 0.8 }));
+
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(roomWidth, 1.4),
+        new THREE.MeshStandardMaterial({ color: '#c4a882', side: THREE.DoubleSide, roughness: 0.8 })
+      );
       floor.rotation.x = -Math.PI / 2;
       floor.position.y = floorY;
       group.add(floor);
-      const backWall = new THREE.Mesh(new THREE.PlaneGeometry(roomWidth, 0.9), new THREE.MeshStandardMaterial({ color: '#f0e6d2', roughness: 0.9 }));
+
+      const backWall = new THREE.Mesh(
+        new THREE.PlaneGeometry(roomWidth, 0.9),
+        new THREE.MeshStandardMaterial({ color: '#f0e6d2', roughness: 0.9 })
+      );
       backWall.position.set(0, floorY + 0.45, -0.4);
       group.add(backWall);
+
+      const board = new THREE.Mesh(
+        new THREE.BoxGeometry(roomWidth * 0.6, 0.4, 0.02),
+        new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 })
+      );
+      board.position.set(0, floorY + 0.55, -0.38);
+      group.add(board);
+
     } else if (environment === 'todo') {
       data.forEach((item, i) => {
         const isHl = highlightIndex === i || highlightIndex2 === i;
@@ -1983,18 +2059,24 @@ function buildSceneContent(
         clipboard.scale.setScalar(0.68);
         applyItemAnimation(clipboard, i, animPhase || '', animData || {}, 'array', animProgress);
         group.add(clipboard);
+
         const idx = createTextSprite(`[${i}]`, isHl ? '#ffff00' : '#ffffff', 20);
         idx.position.set(startX + i * spacing, -0.42, 0);
         idx.scale.set(0.22, 0.11, 1);
         group.add(idx);
       });
-      const desk = new THREE.Mesh(new THREE.BoxGeometry(data.length * spacing + 0.5, 0.04, 0.45), new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.7 }));
+
+      const desk = new THREE.Mesh(
+        new THREE.BoxGeometry(data.length * spacing + 0.5, 0.04, 0.45),
+        new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.7 })
+      );
       desk.position.y = -0.28;
       group.add(desk);
     }
 
   // ==================== LINKED LIST ====================
   } else if (structure === 'linkedlist') {
+
     if (environment === 'train') {
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
@@ -2003,32 +2085,72 @@ function buildSceneContent(
         trainCar.scale.setScalar(0.82);
         applyItemAnimation(trainCar, i, animPhase || '', animData || {}, 'linkedlist', animProgress);
         group.add(trainCar);
+
         if (i < data.length - 1) {
           const arrow = createArrow(startX + i * spacing + 0.35, startX + (i + 1) * spacing - 0.35, highlightIndex === i || highlightIndex === i + 1);
           arrow.position.y = -0.12;
           group.add(arrow);
         }
       });
+
       const headSprite = createTextSprite('HEAD', '#ff0000', 20);
       headSprite.position.set(startX, 0.55, 0);
       headSprite.scale.set(0.32, 0.12, 1);
       group.add(headSprite);
+
+      const tailSprite = createTextSprite('TAIL', '#0066ff', 20);
+      tailSprite.position.set(startX + (data.length - 1) * spacing, 0.55, 0);
+      tailSprite.scale.set(0.32, 0.12, 1);
+      group.add(tailSprite);
+
+      const nullSprite = createTextSprite('NULL', '#ff0000', 22);
+      nullSprite.position.set(startX + data.length * spacing, 0, 0);
+      nullSprite.scale.set(0.32, 0.22, 1);
+      group.add(nullSprite);
+
       const railMat = new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.7 });
       [-0.11, 0.11].forEach(z => {
         const rail = new THREE.Mesh(new THREE.BoxGeometry(data.length * spacing + 1.4, 0.018, 0.025), railMat);
         rail.position.set(0, -0.1, z);
         group.add(rail);
       });
-      const ground = new THREE.Mesh(new THREE.PlaneGeometry(data.length * spacing + 1.8, 0.9), new THREE.MeshStandardMaterial({ color: '#8b7355', side: THREE.DoubleSide }));
+
+      const tieMat = new THREE.MeshStandardMaterial({ color: '#5d4037' });
+      for (let x = startX - 0.5; x <= startX + data.length * spacing + 0.5; x += 0.15) {
+        const tie = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.012, 0.32), tieMat);
+        tie.position.set(x, -0.11, 0);
+        group.add(tie);
+      }
+
+      const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(data.length * spacing + 1.8, 0.9),
+        new THREE.MeshStandardMaterial({ color: '#8b7355', side: THREE.DoubleSide })
+      );
       ground.rotation.x = -Math.PI / 2;
       ground.position.y = -0.12;
       group.add(ground);
+
     } else if (environment === 'people') {
       const roomX = startX - 1.2;
+
       const wallMat = new THREE.MeshStandardMaterial({ color: '#d4a373', roughness: 0.8 });
       const frontWall = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.75, 0.9), wallMat);
       frontWall.position.set(roomX, 0.2, 0);
       group.add(frontWall);
+
+      const doorFrameMat = new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.6 });
+      const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.55, 0.38), doorFrameMat);
+      doorFrame.position.set(roomX + 0.02, 0.1, 0);
+      group.add(doorFrame);
+
+      const door = new THREE.Mesh(
+        new THREE.BoxGeometry(0.03, 0.5, 0.32),
+        new THREE.MeshStandardMaterial({ color: '#6d4c2a', roughness: 0.7 })
+      );
+      door.position.set(roomX - 0.08, 0.08, 0.15);
+      door.rotation.y = -0.9;
+      group.add(door);
+
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         if (item.appearance) {
@@ -2040,16 +2162,27 @@ function buildSceneContent(
           applyItemAnimation(human, i, animPhase || '', animData || {}, 'linkedlist', animProgress);
           group.add(human);
         }
+
         if (i < data.length - 1) {
           const arrow = createArrow(startX + i * spacing + 0.3, startX + (i + 1) * spacing - 0.3, false);
           arrow.position.y = 0.08;
           group.add(arrow);
         }
       });
-      const floor = new THREE.Mesh(new THREE.PlaneGeometry(data.length * spacing + 2, 0.55), new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide }));
+
+      const headSprite = createTextSprite('HEAD', '#ff0000', 18);
+      headSprite.position.set(startX, 0.5, 0);
+      headSprite.scale.set(0.28, 0.1, 1);
+      group.add(headSprite);
+
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(data.length * spacing + 2, 0.55),
+        new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
+      );
       floor.rotation.x = -Math.PI / 2;
       floor.position.y = -0.16;
       group.add(floor);
+
     } else if (environment === 'domino') {
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
@@ -2058,31 +2191,46 @@ function buildSceneContent(
         domino.scale.setScalar(0.82);
         applyItemAnimation(domino, i, animPhase || '', animData || {}, 'linkedlist', animProgress);
         group.add(domino);
+
         if (i < data.length - 1) {
           const arrow = createArrow(startX + i * spacing + 0.25, startX + (i + 1) * spacing - 0.25, false);
           arrow.position.y = -0.32;
           group.add(arrow);
         }
       });
-      const table = new THREE.Mesh(new THREE.BoxGeometry(data.length * spacing + 0.75, 0.035, 0.55), new THREE.MeshStandardMaterial({ color: '#1b5e20', roughness: 0.9 }));
+
+      const headSprite = createTextSprite('HEAD', '#ff0000', 18);
+      headSprite.position.set(startX, 0.38, 0);
+      headSprite.scale.set(0.28, 0.1, 1);
+      group.add(headSprite);
+
+      const table = new THREE.Mesh(
+        new THREE.BoxGeometry(data.length * spacing + 0.75, 0.035, 0.55),
+        new THREE.MeshStandardMaterial({ color: '#1b5e20', roughness: 0.9 })
+      );
       table.position.y = -0.28;
       group.add(table);
     }
 
   // ==================== STACK ====================
   } else if (structure === 'stack') {
+
     if (environment === 'books') {
       const stackSpacing = 0.11;
       const baseY = -data.length * stackSpacing / 2;
+
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const isTop = i === data.length - 1;
         const isPeeking = isTop && (animPhase === 'stack-peek-open');
         const openAmount = isPeeking ? (animProgress || 0) : 0;
+        
         const book = createBook(item.label, item.color, isHl, isPeeking, openAmount);
         book.position.set(isHl && !isPeeking ? 0.18 : 0, baseY + i * stackSpacing, 0);
+        book.rotation.y = (i % 2 === 0) ? 0 : 0.04;
         applyItemAnimation(book, i, animPhase || '', animData || {}, 'stack', animProgress);
         group.add(book);
+
         if (isTop) {
           const topSprite = createTextSprite('← TOP', '#ff0000', 22);
           topSprite.position.set(0.65, baseY + i * stackSpacing, 0);
@@ -2090,12 +2238,18 @@ function buildSceneContent(
           group.add(topSprite);
         }
       });
-      const desk = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.035, 0.65), new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.7 }));
+
+      const desk = new THREE.Mesh(
+        new THREE.BoxGeometry(1.3, 0.035, 0.65),
+        new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.7 })
+      );
       desk.position.y = baseY - 0.08;
       group.add(desk);
+
     } else if (environment === 'plates') {
       const plateSpacing = 0.05;
       const plateBaseY = -data.length * plateSpacing / 2;
+
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const plateItem = createPlate(item.label, isHl);
@@ -2103,6 +2257,7 @@ function buildSceneContent(
         plateItem.scale.setScalar(0.55);
         applyItemAnimation(plateItem, i, animPhase || '', animData || {}, 'stack', animProgress);
         group.add(plateItem);
+
         if (i === data.length - 1) {
           const topSprite = createTextSprite('← TOP', '#ff0000', 22);
           topSprite.position.set(0.45, plateBaseY + i * plateSpacing, 0);
@@ -2110,21 +2265,30 @@ function buildSceneContent(
           group.add(topSprite);
         }
       });
-      const counter = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.055, 0.5), new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.4, roughness: 0.4 }));
+
+      const counter = new THREE.Mesh(
+        new THREE.BoxGeometry(0.9, 0.055, 0.5),
+        new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.4, roughness: 0.4 })
+      );
       counter.position.y = plateBaseY - 0.05;
       group.add(counter);
+
     } else if (environment === 'boxes') {
       const boxSpacing = 0.4;
       const boxBaseY = -data.length * boxSpacing / 2 + 0.18;
+
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const isTop = i === data.length - 1;
         const isPeeking = isTop && (animPhase === 'stack-peek-open');
+        
         const cardboardBox = createCardboardBox(item.label, item.color, isHl, isPeeking, isPeeking);
         cardboardBox.position.set(isHl && !isPeeking ? 0.18 : 0, boxBaseY + i * boxSpacing, 0);
+        cardboardBox.rotation.y = (i % 2 === 0) ? 0 : 0.05;
         cardboardBox.scale.setScalar(0.78);
         applyItemAnimation(cardboardBox, i, animPhase || '', animData || {}, 'stack', animProgress);
         group.add(cardboardBox);
+
         if (isTop) {
           const topSprite = createTextSprite('← TOP', '#ff0000', 22);
           topSprite.position.set(0.55, boxBaseY + i * boxSpacing, 0);
@@ -2132,24 +2296,36 @@ function buildSceneContent(
           group.add(topSprite);
         }
       });
-      const pallet = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.055, 0.6), new THREE.MeshStandardMaterial({ color: '#a0522d', roughness: 0.9 }));
+
+      const pallet = new THREE.Mesh(
+        new THREE.BoxGeometry(0.8, 0.055, 0.6),
+        new THREE.MeshStandardMaterial({ color: '#a0522d', roughness: 0.9 })
+      );
       pallet.position.y = boxBaseY - 0.22;
       group.add(pallet);
     }
 
   // ==================== QUEUE ====================
   } else if (structure === 'queue') {
-    if (environment === 'tollgate') {
-      let gateOpenAmount = 0;
-      if (animPhase === 'queue-dequeue-gate-open') gateOpenAmount = animProgress || 0;
-      else if (animPhase === 'queue-dequeue-drive') gateOpenAmount = 1;
-      else if (animPhase === 'queue-dequeue-gate-close') gateOpenAmount = 1 - (animProgress || 0);
 
+    if (environment === 'tollgate') {
+      // Calculate gate open amount based on animation phase
+      let gateOpenAmount = 0;
+      if (animPhase === 'queue-dequeue-gate-open') {
+        gateOpenAmount = animProgress || 0;
+      } else if (animPhase === 'queue-dequeue-drive') {
+        gateOpenAmount = 1; // Gate stays open while car drives
+      } else if (animPhase === 'queue-dequeue-gate-close') {
+        gateOpenAmount = 1 - (animProgress || 0); // Gate closes
+      }
+
+      // Toll booth with animated gate
       const tollBooth = createTollBooth(gateOpenAmount);
       tollBooth.position.set(startX - 0.3, groundY, 0);
       tollBooth.scale.setScalar(0.85);
       group.add(tollBooth);
 
+      // Cars
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const carObj = createCar(item.color, item.label, isHl);
@@ -2159,6 +2335,7 @@ function buildSceneContent(
         group.add(carObj);
       });
 
+      // Labels
       const frontSprite = createTextSprite('FRONT', '#00ff00', 18);
       frontSprite.position.set(startX + 0.5, groundY - 0.22, 0);
       frontSprite.scale.set(0.28, 0.1, 1);
@@ -2169,13 +2346,26 @@ function buildSceneContent(
       rearSprite.scale.set(0.28, 0.1, 1);
       group.add(rearSprite);
 
-      const road = new THREE.Mesh(new THREE.PlaneGeometry(data.length * spacing + 3.0, 0.7), new THREE.MeshStandardMaterial({ color: '#34495e', side: THREE.DoubleSide }));
+      // Road
+      const road = new THREE.Mesh(
+        new THREE.PlaneGeometry(data.length * spacing + 3.0, 0.7),
+        new THREE.MeshStandardMaterial({ color: '#34495e', side: THREE.DoubleSide })
+      );
       road.rotation.x = -Math.PI / 2;
       road.position.y = groundY - 0.01;
       group.add(road);
 
+      // Road markings
+      const dashMat = new THREE.MeshStandardMaterial({ color: '#ffffff', side: THREE.DoubleSide });
+      for (let x = startX - 1.0; x <= startX + data.length * spacing + 0.8; x += 0.22) {
+        const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.022), dashMat);
+        dash.rotation.x = -Math.PI / 2;
+        dash.position.set(x, groundY, 0);
+        group.add(dash);
+      }
+
       const exitSprite = createTextSprite('← EXIT', '#00ff00', 20);
-      exitSprite.position.set(startX - 1.5, groundY + 0.28, 0);
+      exitSprite.position.set(startX - 1.2, groundY + 0.28, 0);
       exitSprite.scale.set(0.32, 0.1, 1);
       group.add(exitSprite);
 
@@ -2199,17 +2389,21 @@ function buildSceneContent(
       rearSprite.scale.set(0.28, 0.1, 1);
       group.add(rearSprite);
 
-      const counter = new THREE.Mesh(new THREE.BoxGeometry(data.length * spacing + 0.55, 0.035, 0.38), new THREE.MeshStandardMaterial({ color: '#2c3e50', metalness: 0.3 }));
+      const counter = new THREE.Mesh(
+        new THREE.BoxGeometry(data.length * spacing + 0.55, 0.035, 0.38),
+        new THREE.MeshStandardMaterial({ color: '#2c3e50', metalness: 0.3 })
+      );
       counter.position.y = -0.14;
       group.add(counter);
 
     } else if (environment === 'students') {
+      // School on LEFT side
       const schoolBuilding = createSchoolBuilding();
       schoolBuilding.position.set(startX - 0.3, groundY, 0);
       schoolBuilding.scale.setScalar(0.5);
       group.add(schoolBuilding);
 
-      // Students facing LEFT toward school
+      // Students facing LEFT toward school (rotation.y = -Math.PI/2 faces -X direction)
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         if (item.appearance) {
@@ -2219,7 +2413,8 @@ function buildSceneContent(
           const human = createHuman3D(item.appearance, item.label, isHl, false, walkPhase);
           human.position.set(startX + i * spacing + 0.6, groundY, 0);
           human.scale.setScalar(0.55);
-          human.rotation.y = -Math.PI / 2; // Face LEFT toward school
+          // Face LEFT toward school (-X direction)
+          human.rotation.y = -Math.PI / 2;
           applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue', animProgress);
           group.add(human);
         }
@@ -2235,11 +2430,16 @@ function buildSceneContent(
       rearSprite.scale.set(0.26, 0.09, 1);
       group.add(rearSprite);
 
-      const pathway = new THREE.Mesh(new THREE.PlaneGeometry(data.length * spacing + 2.5, 0.5), new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide }));
+      // Pathway
+      const pathway = new THREE.Mesh(
+        new THREE.PlaneGeometry(data.length * spacing + 2.5, 0.5),
+        new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
+      );
       pathway.rotation.x = -Math.PI / 2;
       pathway.position.set(0.3, groundY - 0.01, 0);
       group.add(pathway);
 
+      // Grass
       const grassMat = new THREE.MeshStandardMaterial({ color: '#228b22', side: THREE.DoubleSide });
       [-0.35, 0.35].forEach(z => {
         const grass = new THREE.Mesh(new THREE.PlaneGeometry(data.length * spacing + 2.5, 0.3), grassMat);
@@ -2250,3 +2450,873 @@ function buildSceneContent(
     }
   }
 }
+
+// ==================== HOME COMPONENT ====================
+
+export default function Home() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadingText, setLoadingText] = useState('Starting...');
+  const [model, setModel] = useState<any>(null);
+  const [detectedPerson, setDetectedPerson] = useState<Detection | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [personPosition, setPersonPosition] = useState<Position | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(1.0);
+
+  const [currentStructure, setCurrentStructure] = useState<DataStructure>('array');
+  const [arrayEnv, setArrayEnv] = useState<ArrayEnvironment>('grocery');
+  const [linkedListEnv, setLinkedListEnv] = useState<LinkedListEnvironment>('train');
+  const [stackEnv, setStackEnv] = useState<StackEnvironment>('books');
+  const [queueEnv, setQueueEnv] = useState<QueueEnvironment>('tollgate');
+
+  const [highlightIndex, setHighlightIndex] = useState<number | null>(null);
+  const [highlightIndex2, setHighlightIndex2] = useState<number | null>(null);
+  const [operationMessage, setOperationMessage] = useState('');
+  const [codeDisplay, setCodeDisplay] = useState('');
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [animPhase, setAnimPhase] = useState('');
+  const [animData, setAnimData] = useState<Record<string, any>>({});
+  const [animProgress, setAnimProgress] = useState(1);
+
+  const [appMode, setAppMode] = useState<AppMode>('person');
+  const [surfacePosition, setSurfacePosition] = useState<Position | null>(null);
+  const [surfacePlaced, setSurfacePlaced] = useState(false);
+  const [isDraggingSurface, setIsDraggingSurface] = useState(false);
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
+
+  const [webxrSupported, setWebxrSupported] = useState(false);
+  const [webxrActive, setWebxrActive] = useState(false);
+  const [webxrPlaced, setWebxrPlaced] = useState(false);
+  const xrSessionRef = useRef<any>(null);
+  const xrRendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const xrSceneRef = useRef<THREE.Scene | null>(null);
+  const xrCameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const xrGroupRef = useRef<THREE.Group | null>(null);
+  const xrReticleRef = useRef<THREE.Mesh | null>(null);
+  const xrHitTestSourceRef = useRef<any>(null);
+  const xrContainerRef = useRef<HTMLDivElement>(null);
+  const animFrameRef = useRef<number | null>(null);
+
+  // Data
+  const [groceryItems, setGroceryItems] = useState<DataItem[]>([
+    { id: 1, label: 'Coco Crunch', color: '#8B4513' },
+    { id: 2, label: 'Corn Flakes', color: '#f39c12' },
+    { id: 3, label: 'Froot Loops', color: '#e74c3c' },
+    { id: 4, label: 'Cheerios', color: '#f1c40f' },
+    { id: 5, label: 'Frosted', color: '#3498db' },
+  ]);
+
+  const [students, setStudents] = useState<DataItem[]>([
+    { id: 1, label: 'Alex', color: '#3498db', appearance: { skinTone: '#f5c6a0', shirtColor: '#3498db', pantsColor: '#2c3e50', hairColor: '#3d2314', hairStyle: 'short', gender: 'male' } },
+    { id: 2, label: 'Beth', color: '#e91e63', appearance: { skinTone: '#f5c6a0', shirtColor: '#e91e63', pantsColor: '#1a1a2e', hairColor: '#2c1810', hairStyle: 'long', gender: 'female' } },
+    { id: 3, label: 'Carl', color: '#27ae60', appearance: { skinTone: '#8d5524', shirtColor: '#27ae60', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } },
+    { id: 4, label: 'Dana', color: '#f39c12', appearance: { skinTone: '#c68642', shirtColor: '#f39c12', pantsColor: '#3498db', hairColor: '#3d2314', hairStyle: 'long', gender: 'female' } },
+  ]);
+
+  const [tasks, setTasks] = useState<DataItem[]>([
+    { id: 1, label: 'Study', color: '#e74c3c' },
+    { id: 2, label: 'Code', color: '#3498db' },
+    { id: 3, label: 'Read', color: '#f39c12' },
+    { id: 4, label: 'Rest', color: '#2ecc71' },
+  ]);
+
+  const [trainCars, setTrainCars] = useState<DataItem[]>([
+    { id: 1, label: 'Engine', color: '#e74c3c' },
+    { id: 2, label: 'Coal', color: '#34495e' },
+    { id: 3, label: 'Cargo', color: '#2ecc71' },
+    { id: 4, label: 'Pass', color: '#9b59b6' },
+  ]);
+
+  const [peopleLine, setPeopleLine] = useState<DataItem[]>([
+    { id: 1, label: 'Alice', color: '#e74c3c', appearance: { skinTone: '#f5c6a0', shirtColor: '#e74c3c', pantsColor: '#2c3e50', hairColor: '#2c1810', hairStyle: 'long', gender: 'female' } },
+    { id: 2, label: 'Bob', color: '#3498db', appearance: { skinTone: '#8d5524', shirtColor: '#3498db', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } },
+    { id: 3, label: 'Carol', color: '#2ecc71', appearance: { skinTone: '#c68642', shirtColor: '#2ecc71', pantsColor: '#1a1a2e', hairColor: '#3d2314', hairStyle: 'long', gender: 'female' } },
+  ]);
+
+  const [dominoNodes, setDominoNodes] = useState<DataItem[]>([
+    { id: 1, label: '1', color: '#ecf0f1' },
+    { id: 2, label: '2', color: '#ecf0f1' },
+    { id: 3, label: '3', color: '#ecf0f1' },
+    { id: 4, label: '4', color: '#ecf0f1' },
+  ]);
+
+  const [bookStack, setBookStack] = useState<DataItem[]>([
+    { id: 1, label: 'Math', color: '#3498db' },
+    { id: 2, label: 'Science', color: '#2ecc71' },
+    { id: 3, label: 'History', color: '#e67e22' },
+  ]);
+
+  const [plateStack, setPlateStack] = useState<DataItem[]>([
+    { id: 1, label: 'Plate 1', color: '#ecf0f1' },
+    { id: 2, label: 'Plate 2', color: '#bdc3c7' },
+    { id: 3, label: 'Plate 3', color: '#95a5a6' },
+  ]);
+
+  const [boxStack, setBoxStack] = useState<DataItem[]>([
+    { id: 1, label: 'Box A', color: '#e67e22' },
+    { id: 2, label: 'Box B', color: '#d35400' },
+    { id: 3, label: 'Box C', color: '#c0392b' },
+  ]);
+
+  const [tollGate, setTollGate] = useState<DataItem[]>([
+    { id: 1, label: 'ABC-123', color: '#e74c3c' },
+    { id: 2, label: 'XYZ-789', color: '#3498db' },
+    { id: 3, label: 'QWE-456', color: '#27ae60' },
+  ]);
+
+  const [ticketQueue, setTicketQueue] = useState<DataItem[]>([
+    { id: 1, label: 'T-001', color: '#f39c12' },
+    { id: 2, label: 'T-002', color: '#e74c3c' },
+    { id: 3, label: 'T-003', color: '#9b59b6' },
+  ]);
+
+  const [studentQueue, setStudentQueue] = useState<DataItem[]>([
+    { id: 1, label: 'Stu 1', color: '#3498db', appearance: { skinTone: '#f5c6a0', shirtColor: '#3498db', pantsColor: '#2c3e50', hairColor: '#3d2314', hairStyle: 'short', gender: 'male' } },
+    { id: 2, label: 'Stu 2', color: '#2ecc71', appearance: { skinTone: '#c68642', shirtColor: '#2ecc71', pantsColor: '#1a1a2e', hairColor: '#2c1810', hairStyle: 'long', gender: 'female' } },
+    { id: 3, label: 'Stu 3', color: '#9b59b6', appearance: { skinTone: '#8d5524', shirtColor: '#9b59b6', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } },
+  ]);
+
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  
+  const smoothAnimate = (duration: number, phase: string, data: Record<string, any>) => {
+    return new Promise<void>(resolve => {
+      const startTime = Date.now();
+      setAnimPhase(phase);
+      setAnimData(data);
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        setAnimProgress(progress);
+        if (progress < 1) {
+          animFrameRef.current = requestAnimationFrame(animate);
+        } else {
+          resolve();
+        }
+      };
+      animFrameRef.current = requestAnimationFrame(animate);
+    });
+  };
+
+  const getArrayData = () => arrayEnv === 'grocery' ? groceryItems : arrayEnv === 'classroom' ? students : tasks;
+  const setArrayData = arrayEnv === 'grocery' ? setGroceryItems : arrayEnv === 'classroom' ? setStudents : setTasks;
+  const getLinkedListData = () => linkedListEnv === 'train' ? trainCars : linkedListEnv === 'people' ? peopleLine : dominoNodes;
+  const setLinkedListData = linkedListEnv === 'train' ? setTrainCars : linkedListEnv === 'people' ? setPeopleLine : setDominoNodes;
+  const getStackData = () => stackEnv === 'books' ? bookStack : stackEnv === 'plates' ? plateStack : boxStack;
+  const setStackData = stackEnv === 'books' ? setBookStack : stackEnv === 'plates' ? setPlateStack : setBoxStack;
+  const getQueueData = () => queueEnv === 'tollgate' ? tollGate : queueEnv === 'tickets' ? ticketQueue : studentQueue;
+  const setQueueData = queueEnv === 'tollgate' ? setTollGate : queueEnv === 'tickets' ? setTicketQueue : setStudentQueue;
+  const getCurrentData = () => currentStructure === 'array' ? getArrayData() : currentStructure === 'linkedlist' ? getLinkedListData() : currentStructure === 'stack' ? getStackData() : getQueueData();
+  const currentEnvId = currentStructure === 'array' ? arrayEnv : currentStructure === 'linkedlist' ? linkedListEnv : currentStructure === 'stack' ? stackEnv : queueEnv;
+  const setCurrentEnv = currentStructure === 'array' ? setArrayEnv : currentStructure === 'linkedlist' ? setLinkedListEnv : currentStructure === 'stack' ? setStackEnv : setQueueEnv;
+  const currentData = getCurrentData();
+
+  const zoomIn = useCallback(() => setZoomLevel(prev => Math.min(prev + 0.25, 3)), []);
+  const zoomOut = useCallback(() => setZoomLevel(prev => Math.max(prev - 0.25, 0.3)), []);
+  const resetZoom = useCallback(() => setZoomLevel(1.0), []);
+
+  const startCamera = useCallback(async (facing: 'environment' | 'user') => {
+    try {
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = newStream;
+        await new Promise<void>((resolve) => {
+          if (videoRef.current) videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); resolve(); };
+        });
+      }
+      setStream(newStream);
+    } catch (err) { throw new Error('Cannot access camera.'); }
+  }, [stream]);
+
+  const switchCamera = async () => {
+    const newFacing = cameraFacing === 'environment' ? 'user' : 'environment';
+    setCameraFacing(newFacing);
+    try { await startCamera(newFacing); } catch (err) { console.error(err); }
+  };
+
+  const loadModel = async () => {
+    setLoadingText('Loading AI...');
+    const tf = await import('@tensorflow/tfjs');
+    await tf.ready(); await tf.setBackend('webgl');
+    setLoadingText('Loading detector...');
+    const cocoSsd = await import('@tensorflow-models/coco-ssd');
+    return await cocoSsd.load({ base: 'lite_mobilenet_v2' });
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        setLoadingText('Starting camera...');
+        await startCamera('environment');
+        const loadedModel = await loadModel();
+        setModel(loadedModel);
+        setIsLoading(false);
+      } catch (err: any) { setError(err.message); setIsLoading(false); }
+    };
+    init();
+    return () => { 
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!model || !videoRef.current || !canvasRef.current || appMode !== 'person') return;
+    let animationId: number, running = true, lastDetection = 0;
+    const detect = async () => {
+      if (!running || !videoRef.current || !canvasRef.current) return;
+      const now = Date.now();
+      if (now - lastDetection < 100) { animationId = requestAnimationFrame(detect); return; }
+      lastDetection = now;
+      const video = videoRef.current, canvas = canvasRef.current;
+      if (video.readyState !== 4) { animationId = requestAnimationFrame(detect); return; }
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+      try {
+        const predictions = await model.detect(video);
+        const humans = predictions.filter((p: any) => p.class === 'person' && p.score > 0.5);
+        if (humans.length > 0) {
+          const [x, y, width, height] = humans[0].bbox;
+          const scaleX = window.innerWidth / canvas.width, scaleY = window.innerHeight / canvas.height;
+          setDetectedPerson({ bbox: humans[0].bbox, class: humans[0].class, score: humans[0].score });
+          setPersonPosition({ x: x * scaleX, y: y * scaleY, width: width * scaleX, height: height * scaleY });
+        } else { setDetectedPerson(null); setPersonPosition(null); }
+      } catch (e) { console.error(e); }
+      if (running) animationId = requestAnimationFrame(detect);
+    };
+    detect();
+    return () => { running = false; if (animationId) cancelAnimationFrame(animationId); };
+  }, [model, appMode]);
+
+  useEffect(() => {
+    const checkXR = async () => {
+      try {
+        if ((navigator as any).xr) {
+          const supported = await (navigator as any).xr.isSessionSupported('immersive-ar');
+          setWebxrSupported(supported);
+        }
+      } catch { setWebxrSupported(false); }
+    };
+    checkXR();
+  }, []);
+
+  const cleanupWebXR = useCallback(() => {
+    if (xrRendererRef.current) {
+      xrRendererRef.current.setAnimationLoop(null);
+      xrRendererRef.current.dispose();
+      if (xrContainerRef.current && xrRendererRef.current.domElement.parentNode === xrContainerRef.current)
+        xrContainerRef.current.removeChild(xrRendererRef.current.domElement);
+    }
+    xrSessionRef.current = null; xrRendererRef.current = null; xrSceneRef.current = null;
+    xrCameraRef.current = null; xrGroupRef.current = null; xrReticleRef.current = null;
+    xrHitTestSourceRef.current = null;
+    setWebxrActive(false); setWebxrPlaced(false); setAppMode('surface');
+  }, []);
+
+  const stopWebXR = useCallback(() => {
+    if (xrSessionRef.current) { try { xrSessionRef.current.end(); } catch (e) { cleanupWebXR(); } }
+    else cleanupWebXR();
+  }, [cleanupWebXR]);
+
+  const startWebXR = async () => {
+    const xr = (navigator as any).xr;
+    if (!xr) { alert('WebXR not available.'); setAppMode('surface'); return; }
+    try {
+      const sessionInit: any = { requiredFeatures: ['hit-test'], optionalFeatures: ['dom-overlay'] };
+      const overlayEl = document.getElementById('ar-overlay');
+      if (overlayEl) sessionInit.domOverlay = { root: overlayEl };
+      const session = await xr.requestSession('immersive-ar', sessionInit);
+      xrSessionRef.current = session;
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.xr.enabled = true; renderer.xr.setReferenceSpaceType('local');
+      xrRendererRef.current = renderer;
+      if (xrContainerRef.current) xrContainerRef.current.appendChild(renderer.domElement);
+      await renderer.xr.setSession(session);
+      const scene = new THREE.Scene(); xrSceneRef.current = scene;
+      scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(5, 10, 7); dirLight.castShadow = true; scene.add(dirLight);
+      const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 100);
+      xrCameraRef.current = camera;
+      const group = new THREE.Group(); group.visible = false; scene.add(group); xrGroupRef.current = group;
+      const reticle = new THREE.Mesh(
+        new THREE.RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2),
+        new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+      );
+      reticle.matrixAutoUpdate = false; reticle.visible = false; scene.add(reticle); xrReticleRef.current = reticle;
+      const viewerSpace = await session.requestReferenceSpace('viewer');
+      const hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
+      xrHitTestSourceRef.current = hitTestSource;
+      session.addEventListener('select', () => {
+        if (xrReticleRef.current?.visible && xrGroupRef.current && !xrGroupRef.current.visible) {
+          xrGroupRef.current.position.setFromMatrixPosition(xrReticleRef.current.matrix);
+          xrGroupRef.current.visible = true; xrGroupRef.current.scale.setScalar(0.3 * zoomLevel);
+          xrReticleRef.current.visible = false; setWebxrPlaced(true);
+        }
+      });
+      session.addEventListener('end', () => cleanupWebXR());
+      renderer.setAnimationLoop((_ts: number, frame: any) => {
+        if (frame && xrHitTestSourceRef.current && xrGroupRef.current && !xrGroupRef.current.visible) {
+          const refSpace = renderer.xr.getReferenceSpace();
+          if (refSpace) {
+            const results = frame.getHitTestResults(xrHitTestSourceRef.current);
+            if (results.length > 0) {
+              const pose = results[0].getPose(refSpace);
+              if (pose && xrReticleRef.current) { xrReticleRef.current.visible = true; xrReticleRef.current.matrix.fromArray(pose.transform.matrix); }
+            } else if (xrReticleRef.current) xrReticleRef.current.visible = false;
+          }
+        }
+        renderer.render(scene, camera);
+      });
+      setWebxrActive(true); setWebxrPlaced(false); setAppMode('webxr');
+    } catch (err: any) { console.error(err); alert('WebXR failed.'); setAppMode('surface'); }
+  };
+
+  useEffect(() => {
+    if (appMode !== 'webxr' || !webxrPlaced || !xrGroupRef.current) return;
+    buildSceneContent(xrGroupRef.current, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData, animProgress);
+  }, [appMode, webxrPlaced, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData, animProgress]);
+
+  useEffect(() => {
+    if (xrGroupRef.current && webxrActive && webxrPlaced) xrGroupRef.current.scale.setScalar(0.3 * zoomLevel);
+  }, [zoomLevel, webxrActive, webxrPlaced]);
+
+  const resetWebXRPlacement = useCallback(() => {
+    if (xrGroupRef.current) xrGroupRef.current.visible = false;
+    setWebxrPlaced(false);
+  }, []);
+
+  const switchToMode = useCallback((mode: AppMode) => {
+    if (appMode === 'webxr' && mode !== 'webxr') stopWebXR();
+    if (mode === 'webxr') {
+      if (!webxrSupported) { alert('WebXR not supported.'); mode = 'surface'; }
+      else { startWebXR(); return; }
+    }
+    setAppMode(mode);
+    if (mode === 'surface') { setDetectedPerson(null); setPersonPosition(null); setSurfacePlaced(false); setSurfacePosition(null); }
+    else if (mode === 'person') { setSurfacePlaced(false); setSurfacePosition(null); }
+  }, [appMode, webxrSupported, stopWebXR]);
+
+  const handleSurfaceTap = useCallback((e: React.MouseEvent) => {
+    if (appMode !== 'surface' || surfacePlaced) return;
+    const { clientX, clientY } = e;
+    if (clientY < 160 || clientY > window.innerHeight - 180) return;
+    const vizWidth = Math.min(window.innerWidth - 20, 380);
+    const vizHeight = currentStructure === 'stack' ? 300 : 220;
+    setSurfacePosition({ x: clientX - vizWidth / 2, y: clientY - vizHeight / 2, width: vizWidth, height: vizHeight });
+    setSurfacePlaced(true);
+  }, [appMode, surfacePlaced, currentStructure]);
+
+  const handleDragStart = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    if (appMode !== 'surface' || !surfacePlaced || !surfacePosition) return;
+    let clientX: number, clientY: number;
+    if ('touches' in e) { if (e.touches.length !== 1) return; clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; }
+    else { clientX = e.clientX; clientY = e.clientY; }
+    const v = surfacePosition;
+    if (clientX >= v.x && clientX <= v.x + v.width && clientY >= v.y && clientY <= v.y + v.height) {
+      setIsDraggingSurface(true); dragOffsetRef.current = { x: clientX - v.x, y: clientY - v.y };
+    }
+  }, [appMode, surfacePlaced, surfacePosition]);
+
+  const handleDragMove = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    if (!isDraggingSurface || !surfacePosition) return;
+    let clientX: number, clientY: number;
+    if ('touches' in e) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; }
+    else { clientX = e.clientX; clientY = e.clientY; }
+    setSurfacePosition(prev => prev ? { ...prev, x: clientX - dragOffsetRef.current.x, y: clientY - dragOffsetRef.current.y } : null);
+  }, [isDraggingSurface, surfacePosition]);
+
+  const handleDragEnd = useCallback(() => setIsDraggingSurface(false), []);
+  const resetSurfacePlacement = useCallback(() => { setSurfacePlaced(false); setSurfacePosition(null); }, []);
+
+  const activePosition = appMode === 'person' ? personPosition : surfacePosition;
+  const showVisualization = appMode === 'person' ? !!detectedPerson : appMode === 'surface' ? surfacePlaced : false;
+  const showControls = showVisualization || (appMode === 'webxr' && webxrPlaced);
+
+  // Array operations
+  const arrayAccess = async () => {
+    if (isAnimating) return; setIsAnimating(true);
+    const data = getArrayData(), index = Math.floor(Math.random() * data.length);
+    setHighlightIndex(index);
+    setOperationMessage(`Accessing [${index}]...`);
+    setCodeDisplay(`// O(1) Access\narray[${index}]`);
+    await smoothAnimate(400, 'access-lift', { index });
+    setOperationMessage(`Found: "${data[index].label}"`);
+    await smoothAnimate(600, 'access-bounce', { index });
+    await smoothAnimate(350, 'access-settle', { index });
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const arrayInsert = async () => {
+    if (isAnimating || getArrayData().length >= 6) return; setIsAnimating(true);
+    const data = getArrayData(), insertIndex = Math.floor(Math.random() * (data.length + 1));
+    setOperationMessage(`Inserting at [${insertIndex}]...`);
+    setCodeDisplay(`// O(n) Insert`);
+    for (let i = data.length - 1; i >= insertIndex; i--) { setHighlightIndex(i); await delay(200); }
+    (setArrayData as any)((prev: DataItem[]) => {
+      const arr = [...prev]; arr.splice(insertIndex, 0, { id: Date.now(), label: 'New', color: '#1abc9c' }); return arr;
+    });
+    setHighlightIndex(insertIndex);
+    await smoothAnimate(450, 'insert-drop', { index: insertIndex });
+    await smoothAnimate(350, 'insert-settle', { index: insertIndex });
+    setOperationMessage('Inserted!'); await delay(600);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const arrayDelete = async () => {
+    if (isAnimating || getArrayData().length <= 2) return; setIsAnimating(true);
+    const data = getArrayData(), deleteIndex = Math.floor(Math.random() * data.length);
+    setHighlightIndex(deleteIndex);
+    setOperationMessage(`Deleting [${deleteIndex}]`);
+    setCodeDisplay(`// O(n) Delete`);
+    await smoothAnimate(450, 'delete-lift', { index: deleteIndex });
+    await smoothAnimate(400, 'delete-shrink', { index: deleteIndex });
+    setHighlightIndex(null);
+    (setArrayData as any)((prev: DataItem[]) => prev.filter((_: any, i: number) => i !== deleteIndex));
+    await smoothAnimate(350, 'delete-close', { deleteIndex });
+    setAnimPhase(''); setAnimData({});
+    setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const arraySwap = async () => {
+    if (isAnimating) return; setIsAnimating(true);
+    const data = getArrayData();
+    const idx1 = Math.floor(Math.random() * data.length);
+    let idx2 = Math.floor(Math.random() * data.length);
+    while (idx2 === idx1) idx2 = Math.floor(Math.random() * data.length);
+    setHighlightIndex(idx1); setHighlightIndex2(idx2);
+    setOperationMessage(`Swapping [${idx1}] ↔ [${idx2}]`);
+    await smoothAnimate(400, 'swap-lift', { index1: idx1, index2: idx2 });
+    await smoothAnimate(350, 'swap-cross', { index1: idx1, index2: idx2 });
+    (setArrayData as any)((prev: DataItem[]) => { const a = [...prev]; [a[idx1], a[idx2]] = [a[idx2], a[idx1]]; return a; });
+    await smoothAnimate(400, 'swap-drop', { index1: idx1, index2: idx2 });
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setHighlightIndex2(null);
+    setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  // Linked list operations
+  const linkedListInsertHead = async () => {
+    if (isAnimating || getLinkedListData().length >= 5) return; setIsAnimating(true);
+    setOperationMessage('Inserting at HEAD...');
+    const newItem: DataItem = linkedListEnv === 'people'
+      ? { id: Date.now(), label: 'New', color: '#1abc9c', appearance: { skinTone: '#f5c6a0', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#3d2314', hairStyle: 'short', gender: 'male' } }
+      : { id: Date.now(), label: 'New', color: '#1abc9c' };
+    (setLinkedListData as any)((prev: DataItem[]) => [newItem, ...prev]);
+    setHighlightIndex(0);
+    await smoothAnimate(450, 'll-insert-head', { index: 0 });
+    await smoothAnimate(350, 'll-insert-head-settle', { index: 0 });
+    setOperationMessage('Inserted at HEAD!'); await delay(700);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const linkedListInsertTail = async () => {
+    if (isAnimating || getLinkedListData().length >= 5) return; setIsAnimating(true);
+    const data = getLinkedListData();
+    setOperationMessage('Traversing to TAIL...');
+    for (let i = 0; i < data.length; i++) {
+      setHighlightIndex(i);
+      await smoothAnimate(300, 'll-traverse', { index: i });
+    }
+    const newItem: DataItem = linkedListEnv === 'people'
+      ? { id: Date.now(), label: 'Last', color: '#e74c3c', appearance: { skinTone: '#8d5524', shirtColor: '#e74c3c', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } }
+      : { id: Date.now(), label: 'New', color: '#e74c3c' };
+    (setLinkedListData as any)((prev: DataItem[]) => [...prev, newItem]);
+    setHighlightIndex(data.length);
+    await smoothAnimate(450, 'll-insert-tail', { index: data.length });
+    await smoothAnimate(350, 'll-insert-tail-settle', { index: data.length });
+    setOperationMessage('Inserted at TAIL!'); await delay(700);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const linkedListDeleteHead = async () => {
+    if (isAnimating || getLinkedListData().length <= 2) return; setIsAnimating(true);
+    setHighlightIndex(0);
+    setOperationMessage('Deleting HEAD...');
+    await smoothAnimate(450, 'll-delete-lift', { index: 0 });
+    await smoothAnimate(400, 'll-delete-shrink', { index: 0 });
+    (setLinkedListData as any)((prev: DataItem[]) => prev.slice(1));
+    await delay(300);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const linkedListTraverse = async () => {
+    if (isAnimating) return; setIsAnimating(true);
+    const data = getLinkedListData();
+    for (let i = 0; i < data.length; i++) {
+      setHighlightIndex(i);
+      setOperationMessage(`Visiting: ${data[i].label}`);
+      await smoothAnimate(400, 'll-traverse', { index: i });
+    }
+    setOperationMessage(`Done! ${data.length} nodes`); await delay(700);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  // Stack operations
+  const stackPush = async () => {
+    if (isAnimating || getStackData().length >= 5) return; setIsAnimating(true);
+    const data = getStackData();
+    const labels = stackEnv === 'books' ? ['Physics', 'English', 'Art'] : stackEnv === 'plates' ? [`Plate ${data.length + 1}`] : [`Box ${String.fromCharCode(65 + data.length)}`];
+    const colors = stackEnv === 'books' ? ['#9b59b6', '#e74c3c', '#1abc9c'] : ['#7f8c8d'];
+    const newItem = { id: Date.now(), label: labels[Math.floor(Math.random() * labels.length)], color: colors[Math.floor(Math.random() * colors.length)] };
+    setOperationMessage(`Pushing "${newItem.label}"...`);
+    (setStackData as any)((prev: DataItem[]) => [...prev, newItem]);
+    setHighlightIndex(data.length);
+    await smoothAnimate(450, 'stack-push-drop', { index: data.length });
+    await smoothAnimate(350, 'stack-push-settle', { index: data.length });
+    setOperationMessage('Pushed!'); await delay(600);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const stackPop = async () => {
+    if (isAnimating || getStackData().length <= 1) return; setIsAnimating(true);
+    const data = getStackData(), topItem = data[data.length - 1];
+    setHighlightIndex(data.length - 1);
+    setOperationMessage(`Popping "${topItem.label}"...`);
+    await smoothAnimate(400, 'stack-pop-lift', { index: data.length - 1 });
+    await smoothAnimate(400, 'stack-pop-fly', { index: data.length - 1 });
+    (setStackData as any)((prev: DataItem[]) => prev.slice(0, -1));
+    await delay(300);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const stackPeek = async () => {
+    if (isAnimating || getStackData().length === 0) return; setIsAnimating(true);
+    const data = getStackData(), topItem = data[data.length - 1];
+    setHighlightIndex(data.length - 1);
+    setOperationMessage(`Peeking TOP...`);
+    setCodeDisplay(`// O(1)\nstack.peek()`);
+    await smoothAnimate(800, 'stack-peek-lift', { index: data.length - 1 });
+    setOperationMessage(`TOP: "${topItem.label}"`);
+    await smoothAnimate(2000, 'stack-peek-open', { index: data.length - 1 });
+    await delay(800);
+    await smoothAnimate(600, 'stack-peek-settle', { index: data.length - 1 });
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  // Queue operations - 3 PHASE DEQUEUE: Gate opens → Car drives & disappears → Gate closes
+  const queueEnqueue = async () => {
+    if (isAnimating || getQueueData().length >= 5) return; setIsAnimating(true);
+    const data = getQueueData();
+    const newItem: DataItem = queueEnv === 'students'
+      ? { id: Date.now(), label: `Stu ${data.length + 1}`, color: '#1abc9c', appearance: { skinTone: '#f5c6a0', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#3d2314', hairStyle: 'short', gender: 'male' } }
+      : queueEnv === 'tollgate'
+        ? { id: Date.now(), label: `NEW-${Math.floor(Math.random() * 900) + 100}`, color: '#1abc9c' }
+        : { id: Date.now(), label: `T-00${data.length + 1}`, color: '#1abc9c' };
+    setOperationMessage(`Enqueue: "${newItem.label}"...`);
+    (setQueueData as any)((prev: DataItem[]) => [...prev, newItem]);
+    setHighlightIndex(data.length);
+    await smoothAnimate(500, 'queue-enqueue-enter', { index: data.length });
+    await smoothAnimate(350, 'queue-enqueue-settle', { index: data.length });
+    setOperationMessage('Enqueued!'); await delay(600);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  // 3-PHASE DEQUEUE ANIMATION
+  const queueDequeue = async () => {
+    if (isAnimating || getQueueData().length <= 1) return; setIsAnimating(true);
+    const frontItem = getQueueData()[0];
+    setHighlightIndex(0);
+    setOperationMessage(`Dequeue: "${frontItem.label}"...`);
+    setCodeDisplay(`// O(1) FIFO\nqueue.dequeue()`);
+    
+    // PHASE 1: Gate opens (car stays still)
+    setOperationMessage('Gate opening...');
+    await smoothAnimate(1000, 'queue-dequeue-gate-open', { index: 0 });
+    
+    // PHASE 2: Car drives through and disappears
+    setOperationMessage(`${frontItem.label} passing through...`);
+    await smoothAnimate(1200, 'queue-dequeue-drive', { index: 0 });
+    
+    // Remove from queue
+    (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
+    
+    // PHASE 3: Gate closes
+    setOperationMessage('Gate closing...');
+    await smoothAnimate(800, 'queue-dequeue-gate-close', { index: -1 });
+    
+    await delay(200);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const queueFront = async () => {
+    if (isAnimating || getQueueData().length === 0) return; setIsAnimating(true);
+    const frontItem = getQueueData()[0];
+    setHighlightIndex(0);
+    setOperationMessage(`FRONT: "${frontItem.label}"`);
+    await smoothAnimate(1000, 'queue-front-peek', { index: 0 });
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  if (error) return (
+    <div style={{ width: '100vw', height: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+      <div style={{ fontSize: 80 }}>📷</div>
+      <h2>Camera Access Needed</h2>
+      <button onClick={() => window.location.reload()} style={{ marginTop: 30, padding: '15px 40px', background: '#667eea', border: 'none', borderRadius: 30, color: 'white' }}>🔄 Try Again</button>
+    </div>
+  );
+
+  if (isLoading) return (
+    <div style={{ width: '100vw', height: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+      <div style={{ width: 70, height: 70, border: '4px solid rgba(255,255,255,0.2)', borderTopColor: '#667eea', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+      <h2 style={{ marginTop: 25 }}>📊 Data Structure AR</h2>
+      <p>{loadingText}</p>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+
+  const envTabs = currentStructure === 'array'
+    ? [{ id: 'grocery', icon: '🛒', label: 'Shelf' }, { id: 'classroom', icon: '🧑‍🎓', label: 'Class' }, { id: 'todo', icon: '📝', label: 'Tasks' }]
+    : currentStructure === 'linkedlist'
+      ? [{ id: 'train', icon: '🚂', label: 'Train' }, { id: 'people', icon: '🚪', label: 'Queue' }, { id: 'domino', icon: '🁡', label: 'Domino' }]
+      : currentStructure === 'stack'
+        ? [{ id: 'books', icon: '📚', label: 'Books' }, { id: 'plates', icon: '🍗', label: 'Food' }, { id: 'boxes', icon: '📦', label: 'Boxes' }]
+        : [{ id: 'tollgate', icon: '🛣️', label: 'Toll' }, { id: 'tickets', icon: '🎫', label: 'Tickets' }, { id: 'students', icon: '🏫', label: 'School' }];
+
+  return (
+    <div id="ar-overlay" style={{ position: 'fixed', inset: 0, background: '#000', overflow: 'hidden' }}
+      onClick={appMode === 'surface' && !surfacePlaced ? handleSurfaceTap : undefined}
+      onTouchStart={appMode === 'surface' && surfacePlaced ? handleDragStart : undefined}
+      onTouchMove={appMode === 'surface' && isDraggingSurface ? handleDragMove : undefined}
+      onTouchEnd={appMode === 'surface' ? handleDragEnd : undefined}
+      onMouseDown={appMode === 'surface' && surfacePlaced ? handleDragStart : undefined}
+      onMouseMove={appMode === 'surface' && isDraggingSurface ? handleDragMove : undefined}
+      onMouseUp={appMode === 'surface' ? handleDragEnd : undefined}>
+
+      {!webxrActive && <video ref={videoRef} playsInline muted autoPlay style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+      <div ref={xrContainerRef} style={{ position: 'fixed', inset: 0, zIndex: webxrActive ? 1 : -1, pointerEvents: 'none' }} />
+
+      {!webxrActive && showVisualization && activePosition && (
+        <Visualization3D position={activePosition} data={currentData} highlightIndex={highlightIndex} highlightIndex2={highlightIndex2}
+          structure={currentStructure} environment={currentEnvId} zoomLevel={zoomLevel} setZoomLevel={setZoomLevel}
+          isSurfaceMode={appMode === 'surface'} animPhase={animPhase} animData={animData} animProgress={animProgress} />
+      )}
+
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: 10, zIndex: 100 }}>
+        {!webxrActive && <button onClick={switchCamera} style={{ position: 'absolute', top: 10, right: 10, width: 50, height: 50, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 24, zIndex: 200 }}>🔄</button>}
+
+        <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', display: 'flex', background: 'rgba(0,0,0,0.8)', borderRadius: 25, padding: 3, border: '1px solid rgba(255,255,255,0.2)', zIndex: 200 }}>
+          <button onClick={() => switchToMode('person')} style={{ padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20, background: appMode === 'person' ? '#667eea' : 'transparent', color: 'white', opacity: appMode === 'person' ? 1 : 0.5 }}>🧑 Person</button>
+          <button onClick={() => switchToMode('surface')} style={{ padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20, background: appMode === 'surface' ? '#00b894' : 'transparent', color: 'white', opacity: appMode === 'surface' ? 1 : 0.5 }}>📱 Surface</button>
+          <button onClick={() => switchToMode('webxr')} style={{ padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20, background: appMode === 'webxr' ? '#e17055' : 'transparent', color: 'white', opacity: appMode === 'webxr' ? 1 : webxrSupported ? 0.5 : 0.25 }}>🌐 AR{!webxrSupported && ' ✗'}</button>
+        </div>
+
+        {showControls && (
+          <div style={{ position: 'absolute', top: 50, left: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button onPointerDown={zoomIn} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#667eea', color: 'white', fontSize: 28, fontWeight: 'bold' }}>+</button>
+            <div style={{ width: 50, height: 50, borderRadius: '50%', background: '#000', border: '3px solid #0f0', color: '#0f0', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{Math.round(zoomLevel * 100)}%</div>
+            <button onPointerDown={zoomOut} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#f5576c', color: 'white', fontSize: 32, fontWeight: 'bold' }}>−</button>
+            <button onPointerDown={resetZoom} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#4facfe', color: 'white', fontSize: 20 }}>⟲</button>
+          </div>
+        )}
+
+        <div style={{ position: 'absolute', top: 48, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 4, background: 'rgba(0,0,0,0.8)', padding: 4, borderRadius: 25 }}>
+          {(['array', 'linkedlist', 'stack', 'queue'] as DataStructure[]).map(s => (
+            <button key={s} onClick={() => { if (!isAnimating) { setCurrentStructure(s); if (appMode === 'surface') { setSurfacePlaced(false); setSurfacePosition(null); } } }}
+              style={{ padding: '8px 12px', fontSize: 11, border: 'none', borderRadius: 20, background: currentStructure === s ? '#667eea' : 'transparent', color: 'white', opacity: currentStructure === s ? 1 : 0.6 }}>
+              {{ array: '📊', linkedlist: '🔗', stack: '📚', queue: '🚗' }[s]}{currentStructure === s && ' ' + { array: 'Array', linkedlist: 'List', stack: 'Stack', queue: 'Queue' }[s]}
+            </button>
+          ))}
+        </div>
+
+        {showControls && (
+          <div style={{ position: 'absolute', top: 90, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 4, background: 'rgba(0,0,0,0.7)', padding: 4, borderRadius: 20 }}>
+            {envTabs.map(e => (
+              <button key={e.id} onClick={() => !isAnimating && (setCurrentEnv as any)(e.id)}
+                style={{ padding: '6px 12px', fontSize: 11, border: 'none', borderRadius: 15, background: currentEnvId === e.id ? '#00b894' : 'transparent', color: 'white', opacity: currentEnvId === e.id ? 1 : 0.6 }}>
+                {e.icon} {e.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {operationMessage && <div style={{ position: 'absolute', top: 128, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.9)', color: '#0f0', padding: '10px 20px', borderRadius: 15, fontSize: 14, border: '1px solid #0f0', whiteSpace: 'nowrap' }}>⚡ {operationMessage}</div>}
+        {codeDisplay && <div style={{ position: 'absolute', top: 168, left: '50%', transform: 'translateX(-50%)', background: '#1e1e1e', color: '#0f0', padding: '10px 15px', borderRadius: 10, fontSize: 10, fontFamily: 'monospace', whiteSpace: 'pre-wrap', border: '1px solid #444' }}>{codeDisplay}</div>}
+        {webxrActive && <button onClick={stopWebXR} style={{ position: 'absolute', top: 10, right: 10, padding: '10px 18px', background: '#e74c3c', color: 'white', border: 'none', borderRadius: 20, fontSize: 13, fontWeight: 'bold', zIndex: 300 }}>✕ Exit AR</button>}
+      </div>
+
+      {showControls && (
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '20px 10px 30px', background: 'linear-gradient(to top, rgba(0,0,0,0.95), transparent)', zIndex: 100 }}>
+          {(appMode === 'surface' && surfacePlaced) && (
+            <div style={{ textAlign: 'center', marginBottom: 10 }}>
+              <button onClick={resetSurfacePlacement} style={{ padding: '8px 20px', fontSize: 12, fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, background: 'rgba(255,255,255,0.1)', color: 'white' }}>📍 Reposition</button>
+            </div>
+          )}
+          {(appMode === 'webxr' && webxrPlaced) && (
+            <div style={{ textAlign: 'center', marginBottom: 10 }}>
+              <button onClick={resetWebXRPlacement} style={{ padding: '8px 20px', fontSize: 12, fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, background: 'rgba(255,255,255,0.1)', color: 'white' }}>📍 Reposition</button>
+            </div>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {currentStructure === 'array' && (<>
+              <OpBtn onClick={arrayAccess} disabled={isAnimating} color="#f39c12" label="📍 Access" />
+              <OpBtn onClick={arrayInsert} disabled={isAnimating || getArrayData().length >= 6} color="#2ecc71" label="➕ Insert" />
+              <OpBtn onClick={arrayDelete} disabled={isAnimating || getArrayData().length <= 2} color="#e74c3c" label="➖ Delete" />
+              <OpBtn onClick={arraySwap} disabled={isAnimating} color="#9b59b6" label="🔀 Swap" />
+            </>)}
+            {currentStructure === 'linkedlist' && (<>
+              <OpBtn onClick={linkedListInsertHead} disabled={isAnimating || getLinkedListData().length >= 5} color="#2ecc71" label="⬅️ +Head" />
+              <OpBtn onClick={linkedListInsertTail} disabled={isAnimating || getLinkedListData().length >= 5} color="#3498db" label="➡️ +Tail" />
+              <OpBtn onClick={linkedListDeleteHead} disabled={isAnimating || getLinkedListData().length <= 2} color="#e74c3c" label="🗑️ -Head" />
+              <OpBtn onClick={linkedListTraverse} disabled={isAnimating} color="#9b59b6" label="🔍 Traverse" />
+            </>)}
+            {currentStructure === 'stack' && (<>
+              <OpBtn onClick={stackPush} disabled={isAnimating || getStackData().length >= 5} color="#2ecc71" label="⬆️ Push" />
+              <OpBtn onClick={stackPop} disabled={isAnimating || getStackData().length <= 1} color="#e74c3c" label="⬇️ Pop" />
+              <OpBtn onClick={stackPeek} disabled={isAnimating} color="#f39c12" label="👁️ Peek" />
+            </>)}
+            {currentStructure === 'queue' && (<>
+              <OpBtn onClick={queueEnqueue} disabled={isAnimating || getQueueData().length >= 5} color="#2ecc71" label="➕ Enqueue" />
+              <OpBtn onClick={queueDequeue} disabled={isAnimating || getQueueData().length <= 1} color="#e74c3c" label="➖ Dequeue" />
+              <OpBtn onClick={queueFront} disabled={isAnimating} color="#f39c12" label="👁️ Front" />
+            </>)}
+          </div>
+          <div style={{ textAlign: 'center', marginTop: 10, color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>
+            Size: {currentData.length}
+          </div>
+        </div>
+      )}
+
+      {appMode === 'person' && !detectedPerson && !webxrActive && (
+        <div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}>
+          <div style={{ fontSize: 40 }}>🧑</div><div style={{ marginTop: 8 }}>Point camera at a person</div>
+        </div>
+      )}
+      {appMode === 'surface' && !surfacePlaced && !webxrActive && (
+        <div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}>
+          <div style={{ fontSize: 40, animation: 'tapBounce 1.5s ease infinite' }}>👆</div><div style={{ marginTop: 8, fontWeight: 'bold' }}>Tap to Place</div>
+          <style>{`@keyframes tapBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }`}</style>
+        </div>
+      )}
+      {appMode === 'webxr' && webxrActive && !webxrPlaced && (
+        <div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}>
+          <div style={{ fontSize: 40, animation: 'xrPulse 2s ease infinite' }}>🌐</div>
+          <div style={{ marginTop: 8, fontWeight: 'bold', color: '#00ff00' }}>Scanning...</div>
+          <style>{`@keyframes xrPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }`}</style>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OpBtn({ onClick, disabled, color, label }: { onClick: () => void; disabled: boolean; color: string; label: string }) {
+  return (
+    <button onClick={onClick} disabled={disabled} style={{
+      padding: '12px 18px', fontSize: 13, fontWeight: 'bold', border: 'none', borderRadius: 25,
+      background: disabled ? '#555' : color, color: 'white', opacity: disabled ? 0.5 : 1,
+      cursor: disabled ? 'not-allowed' : 'pointer',
+    }}>{label}</button>
+  );
+}
+
+function Visualization3D({ position, data, highlightIndex, highlightIndex2, structure, environment, zoomLevel, setZoomLevel, isSurfaceMode, animPhase, animData, animProgress }: {
+  position: Position; data: DataItem[]; highlightIndex: number | null; highlightIndex2: number | null;
+  structure: DataStructure; environment: string; zoomLevel: number; setZoomLevel: (z: number) => void;
+  isSurfaceMode: boolean; animPhase: string; animData: Record<string, any>; animProgress: number;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const groupRef = useRef<THREE.Group | null>(null);
+  const rotationRef = useRef({ x: 0.15, y: 0 });
+  const zoomRef = useRef(zoomLevel);
+  useEffect(() => { zoomRef.current = zoomLevel; }, [zoomLevel]);
+
+  const renderWidth = window.innerWidth;
+  const renderHeight = window.innerHeight;
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, renderWidth / renderHeight, 0.1, 1000);
+    camera.position.set(0, structure === 'stack' ? 1.2 : 0.5, structure === 'stack' ? 5 : 4.5);
+    camera.lookAt(0, 0, 0);
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setClearColor(0x000000, 0);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(renderWidth, renderHeight);
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(5, 10, 7); dirLight.castShadow = true; scene.add(dirLight);
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.3);
+    backLight.position.set(-5, 5, -5); scene.add(backLight);
+
+    const group = new THREE.Group(); groupRef.current = group; scene.add(group);
+
+    let isDragging = false, lastX = 0, lastY = 0, pinchDist: number | null = null, pinchZoom = 1;
+    const getDist = (t: TouchList): number | null => { if (t.length < 2) return null; const dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY; return Math.sqrt(dx * dx + dy * dy); };
+    const onTS = (e: TouchEvent) => { e.preventDefault(); if (e.touches.length === 2) { pinchDist = getDist(e.touches); pinchZoom = zoomRef.current; } else if (e.touches.length === 1) { isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; } };
+    const onTM = (e: TouchEvent) => { e.preventDefault(); if (e.touches.length === 2 && pinchDist !== null) { const d = getDist(e.touches); if (d) setZoomLevel(Math.max(0.3, Math.min(3, pinchZoom * (d / pinchDist)))); } else if (e.touches.length === 1 && isDragging) { rotationRef.current.y += (e.touches[0].clientX - lastX) * 0.01; rotationRef.current.x += (e.touches[0].clientY - lastY) * 0.008; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; } };
+    const onTE = (e: TouchEvent) => { e.preventDefault(); if (e.touches.length < 2) pinchDist = null; if (e.touches.length === 0) isDragging = false; };
+    const onMD = (e: MouseEvent) => { isDragging = true; lastX = e.clientX; lastY = e.clientY; };
+    const onMM = (e: MouseEvent) => { if (!isDragging) return; rotationRef.current.y += (e.clientX - lastX) * 0.01; rotationRef.current.x += (e.clientY - lastY) * 0.008; lastX = e.clientX; lastY = e.clientY; };
+    const onMU = () => { isDragging = false; };
+    const onWH = (e: WheelEvent) => { e.preventDefault(); setZoomLevel(Math.max(0.3, Math.min(3, zoomRef.current + (e.deltaY > 0 ? -0.15 : 0.15)))); };
+
+    container.addEventListener('touchstart', onTS, { passive: false });
+    container.addEventListener('touchmove', onTM, { passive: false });
+    container.addEventListener('touchend', onTE, { passive: false });
+    container.addEventListener('mousedown', onMD);
+    container.addEventListener('mousemove', onMM);
+    container.addEventListener('mouseup', onMU);
+    container.addEventListener('mouseleave', onMU);
+    container.addEventListener('wheel', onWH, { passive: false });
+
+    let animationId: number;
+    const animate = () => {
+      if (groupRef.current) {
+        groupRef.current.rotation.x = rotationRef.current.x;
+        groupRef.current.rotation.y = rotationRef.current.y;
+        groupRef.current.scale.setScalar(zoomRef.current);
+      }
+      renderer.render(scene, camera);
+      animationId = requestAnimationFrame(animate);
+    };
+    animate();
+
+    return () => {
+      cancelAnimationFrame(animationId);
+      container.removeEventListener('touchstart', onTS);
+      container.removeEventListener('touchmove', onTM);
+      container.removeEventListener('touchend', onTE);
+      container.removeEventListener('mousedown', onMD);
+      container.removeEventListener('mousemove', onMM);
+      container.removeEventListener('mouseup', onMU);
+      container.removeEventListener('mouseleave', onMU);
+      container.removeEventListener('wheel', onWH);
+      renderer.dispose();
+      if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
+    };
+  }, [structure, renderWidth, renderHeight]);
+
+  useEffect(() => {
+    if (!groupRef.current) return;
+    buildSceneContent(groupRef.current, data, highlightIndex, highlightIndex2, structure, environment, animPhase, animData, animProgress);
+  }, [data, highlightIndex, highlightIndex2, structure, environment, animPhase, animData, animProgress]);
+
+  return <div ref={containerRef} style={{ position: 'absolute', left: 0, top: 0, width: '100vw', height: '100vh', zIndex: 50, touchAction: 'none', pointerEvents: 'auto', overflow: 'visible' }} />;
+}
+
+// ==================== END OF PART 3 ====================
