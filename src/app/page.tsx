@@ -1353,12 +1353,13 @@ function createPlate(label: string, isHighlighted: boolean): THREE.Group {
   return plate;
 }
 
-// ==================== CARDBOARD BOX (FIXED - Aligned, Not Floating) ====================
+// ==================== CARDBOARD BOX (FIXED - All flaps aligned, sits on ground) ====================
 
 function createCardboardBox(label: string, color: string, isHighlighted: boolean, openAmount: number = 0): THREE.Group {
   const box = new THREE.Group();
   const boxW = 0.48, boxH = 0.34, boxD = 0.38;
   const wallThickness = 0.015;
+  const flapThickness = 0.015;
 
   const cardboardMat = new THREE.MeshStandardMaterial({
     color,
@@ -1368,33 +1369,39 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   });
   const innerMat = new THREE.MeshStandardMaterial({ color: '#c4a574', roughness: 0.9 });
   const flapMat = new THREE.MeshStandardMaterial({ color, roughness: 0.85, side: THREE.DoubleSide });
+  const cornerMat = new THREE.MeshStandardMaterial({ color: '#8b6914', roughness: 0.8 });
 
-  // Box center Y offset - so bottom sits at Y=0
-  const centerY = boxH / 2;
+  // Box sits on ground: bottom at Y = 0
+  const wallHeight = boxH - wallThickness;
+  const topY = boxH;
 
-  // Bottom
+  // === BOTTOM ===
   const bottom = new THREE.Mesh(new THREE.BoxGeometry(boxW, wallThickness, boxD), cardboardMat);
   bottom.position.y = wallThickness / 2;
   box.add(bottom);
 
-  // Walls
-  const leftWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, boxH, boxD), cardboardMat);
-  leftWall.position.set(-boxW / 2 + wallThickness / 2, centerY, 0);
+  // === WALLS ===
+  // Left wall
+  const leftWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, boxD), cardboardMat);
+  leftWall.position.set(-boxW / 2 + wallThickness / 2, wallThickness + wallHeight / 2, 0);
   box.add(leftWall);
 
-  const rightWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, boxH, boxD), cardboardMat);
-  rightWall.position.set(boxW / 2 - wallThickness / 2, centerY, 0);
+  // Right wall
+  const rightWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, boxD), cardboardMat);
+  rightWall.position.set(boxW / 2 - wallThickness / 2, wallThickness + wallHeight / 2, 0);
   box.add(rightWall);
 
-  const backWall = new THREE.Mesh(new THREE.BoxGeometry(boxW - wallThickness * 2, boxH, wallThickness), cardboardMat);
-  backWall.position.set(0, centerY, -boxD / 2 + wallThickness / 2);
-  box.add(backWall);
-
-  const frontWall = new THREE.Mesh(new THREE.BoxGeometry(boxW - wallThickness * 2, boxH, wallThickness), cardboardMat);
-  frontWall.position.set(0, centerY, boxD / 2 - wallThickness / 2);
+  // Front wall
+  const frontWall = new THREE.Mesh(new THREE.BoxGeometry(boxW - wallThickness * 2, wallHeight, wallThickness), cardboardMat);
+  frontWall.position.set(0, wallThickness + wallHeight / 2, boxD / 2 - wallThickness / 2);
   box.add(frontWall);
 
-  // Inner floor
+  // Back wall
+  const backWall = new THREE.Mesh(new THREE.BoxGeometry(boxW - wallThickness * 2, wallHeight, wallThickness), cardboardMat);
+  backWall.position.set(0, wallThickness + wallHeight / 2, -boxD / 2 + wallThickness / 2);
+  box.add(backWall);
+
+  // === INNER FLOOR ===
   const innerFloor = new THREE.Mesh(
     new THREE.BoxGeometry(boxW - wallThickness * 2, 0.005, boxD - wallThickness * 2),
     innerMat
@@ -1402,118 +1409,86 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   innerFloor.position.y = wallThickness + 0.003;
   box.add(innerFloor);
 
-  // Corner reinforcements
-  const cornerMat = new THREE.MeshStandardMaterial({ color: '#8b6914', roughness: 0.8 });
+  // === CORNER REINFORCEMENTS ===
   [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(([sx, sz]) => {
-    const corner = new THREE.Mesh(new THREE.BoxGeometry(0.03, boxH, 0.03), cornerMat);
-    corner.position.set(sx * (boxW / 2 - 0.015), centerY, sz * (boxD / 2 - 0.015));
+    const corner = new THREE.Mesh(new THREE.BoxGeometry(0.025, wallHeight, 0.025), cornerMat);
+    corner.position.set(sx * (boxW / 2 - 0.0125), wallThickness + wallHeight / 2, sz * (boxD / 2 - 0.0125));
     box.add(corner);
   });
 
+  // === FLAPS ===
   // Easing for smooth animation
   const easedOpen = openAmount < 0.5
     ? 2 * openAmount * openAmount
     : 1 - Math.pow(-2 * openAmount + 2, 2) / 2;
 
-  // Top of box where flaps attach
-  const topY = boxH;
+  // Flap sizes - sized to cover the top opening
+  const sideFlapWidth = (boxW / 2) - wallThickness; // Each side flap covers half width
+  const sideFlapDepth = boxD - wallThickness * 2;
 
-  // === SIDE FLAPS - These fold INWARD to cover the top ===
-  // Length = half box width so they meet in the middle when closed
-  const sideFlapLength = boxW / 2 - wallThickness;
-  const sideFlapDepth = boxD - wallThickness * 6;
+  const fbFlapDepth = (boxD / 2) - wallThickness; // Each fb flap covers half depth
+  const fbFlapWidth = boxW - wallThickness * 2;
 
-  // Angles: closed = 90° inward, open = slightly outward
-  const closedAngle = Math.PI / 2;
-  const openAngle = 0.25;
+  // Open angle (how much flaps tilt outward when open)
+  const openAngle = Math.PI / 2 + 0.4;
 
-  // Left flap: closed = -90° (folds toward +X), open = +angle
-  const leftAngle = -closedAngle + (openAngle + closedAngle) * easedOpen;
-  // Right flap: closed = +90° (folds toward -X), open = -angle  
-  const rightAngle = closedAngle - (openAngle + closedAngle) * easedOpen;
-
-  // LEFT SIDE FLAP
-  const leftFlapPivot = new THREE.Group();
-  leftFlapPivot.position.set(-boxW / 2 + wallThickness, topY, 0);
+  // === LEFT FLAP ===
+  const leftPivot = new THREE.Group();
+  leftPivot.position.set(-boxW / 2 + wallThickness, topY, 0);
   const leftFlap = new THREE.Mesh(
-    new THREE.BoxGeometry(wallThickness, sideFlapLength, sideFlapDepth),
+    new THREE.BoxGeometry(sideFlapWidth, flapThickness, sideFlapDepth),
     flapMat
   );
-  leftFlap.position.set(wallThickness / 2, sideFlapLength / 2, 0);
-  leftFlapPivot.add(leftFlap);
-  leftFlapPivot.rotation.z = leftAngle;
-  box.add(leftFlapPivot);
+  // Position flap so it extends from pivot toward center (+X direction)
+  leftFlap.position.set(sideFlapWidth / 2, flapThickness / 2, 0);
+  leftPivot.add(leftFlap);
+  // When closed (0): flap lays flat. When open: rotates outward (-Z rotation)
+  leftPivot.rotation.z = -easedOpen * openAngle;
+  box.add(leftPivot);
 
-  // RIGHT SIDE FLAP
-  const rightFlapPivot = new THREE.Group();
-  rightFlapPivot.position.set(boxW / 2 - wallThickness, topY, 0);
+  // === RIGHT FLAP ===
+  const rightPivot = new THREE.Group();
+  rightPivot.position.set(boxW / 2 - wallThickness, topY, 0);
   const rightFlap = new THREE.Mesh(
-    new THREE.BoxGeometry(wallThickness, sideFlapLength, sideFlapDepth),
+    new THREE.BoxGeometry(sideFlapWidth, flapThickness, sideFlapDepth),
     flapMat
   );
-  rightFlap.position.set(-wallThickness / 2, sideFlapLength / 2, 0);
-  rightFlapPivot.add(rightFlap);
-  rightFlapPivot.rotation.z = rightAngle;
-  box.add(rightFlapPivot);
+  // Position flap so it extends from pivot toward center (-X direction)
+  rightFlap.position.set(-sideFlapWidth / 2, flapThickness / 2, 0);
+  rightPivot.add(rightFlap);
+  // When closed (0): flap lays flat. When open: rotates outward (+Z rotation)
+  rightPivot.rotation.z = easedOpen * openAngle;
+  box.add(rightPivot);
 
-  // === FRONT/BACK FLAPS - Fold on top of side flaps ===
-  const fbFlapLength = boxD / 2 - wallThickness;
-  const fbFlapWidth = boxW - wallThickness * 4;
-
-  // Front flap: closed = +90° (folds backward toward -Z), open = -angle
-  const frontAngle = closedAngle - (openAngle + closedAngle) * easedOpen;
-  // Back flap: closed = -90° (folds forward toward +Z), open = +angle
-  const backAngle = -closedAngle + (openAngle + closedAngle) * easedOpen;
-
-  // FRONT FLAP
-  const frontFlapPivot = new THREE.Group();
-  frontFlapPivot.position.set(0, topY, boxD / 2 - wallThickness);
+  // === FRONT FLAP ===
+  const frontPivot = new THREE.Group();
+  frontPivot.position.set(0, topY, boxD / 2 - wallThickness);
   const frontFlap = new THREE.Mesh(
-    new THREE.BoxGeometry(fbFlapWidth, fbFlapLength, wallThickness),
+    new THREE.BoxGeometry(fbFlapWidth, flapThickness, fbFlapDepth),
     flapMat
   );
-  frontFlap.position.set(0, fbFlapLength / 2, -wallThickness / 2);
-  frontFlapPivot.add(frontFlap);
-  frontFlapPivot.rotation.x = frontAngle;
-  box.add(frontFlapPivot);
+  // Position flap so it extends from pivot toward center (-Z direction)
+  frontFlap.position.set(0, flapThickness / 2, -fbFlapDepth / 2);
+  frontPivot.add(frontFlap);
+  // When closed (0): flap lays flat. When open: rotates outward (+X rotation)
+  frontPivot.rotation.x = easedOpen * openAngle;
+  box.add(frontPivot);
 
-  // BACK FLAP
-  const backFlapPivot = new THREE.Group();
-  backFlapPivot.position.set(0, topY, -boxD / 2 + wallThickness);
+  // === BACK FLAP ===
+  const backPivot = new THREE.Group();
+  backPivot.position.set(0, topY, -boxD / 2 + wallThickness);
   const backFlap = new THREE.Mesh(
-    new THREE.BoxGeometry(fbFlapWidth, fbFlapLength, wallThickness),
+    new THREE.BoxGeometry(fbFlapWidth, flapThickness, fbFlapDepth),
     flapMat
   );
-  backFlap.position.set(0, fbFlapLength / 2, wallThickness / 2);
-  backFlapPivot.add(backFlap);
-  backFlapPivot.rotation.x = backAngle;
-  box.add(backFlapPivot);
+  // Position flap so it extends from pivot toward center (+Z direction)
+  backFlap.position.set(0, flapThickness / 2, fbFlapDepth / 2);
+  backPivot.add(backFlap);
+  // When closed (0): flap lays flat. When open: rotates outward (-X rotation)
+  backPivot.rotation.x = -easedOpen * openAngle;
+  box.add(backPivot);
 
-  // === TAPE - Sits on top of closed flaps ===
-  if (openAmount < 0.2) {
-    const tapeOpacity = 1 - (openAmount / 0.2);
-    const tapeMat = new THREE.MeshStandardMaterial({
-      color: '#d4a574',
-      transparent: true,
-      opacity: 0.8 * tapeOpacity,
-      roughness: 0.3
-    });
-
-    // Tape sits on top of flaps (topY + flap thickness when closed)
-    const tapeY = topY + sideFlapLength + 0.003;
-
-    // Center tape (along depth)
-    const tape1 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.006, boxD * 0.5), tapeMat);
-    tape1.position.set(0, tapeY, 0);
-    box.add(tape1);
-
-    // Cross tape (along width)
-    const tape2 = new THREE.Mesh(new THREE.BoxGeometry(boxW * 0.4, 0.006, 0.05), tapeMat);
-    tape2.position.set(0, tapeY, 0);
-    box.add(tape2);
-  }
-
-  // === LABEL on front ===
+  // === LABEL ON FRONT ===
   const labelCanvas = document.createElement('canvas');
   labelCanvas.width = 180;
   labelCanvas.height = 120;
@@ -1539,19 +1514,19 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
 
   const labelTex = new THREE.CanvasTexture(labelCanvas);
   const labelMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.32, 0.22),
+    new THREE.PlaneGeometry(0.28, 0.18),
     new THREE.MeshBasicMaterial({ map: labelTex })
   );
-  labelMesh.position.set(0, centerY, boxD / 2 + 0.001);
+  labelMesh.position.set(0, boxH / 2, boxD / 2 + 0.001);
   box.add(labelMesh);
 
-  // Highlight glow
+  // === HIGHLIGHT GLOW ===
   if (isHighlighted && openAmount < 0.1) {
     const glow = new THREE.Mesh(
-      new THREE.BoxGeometry(boxW + 0.06, boxH + 0.1, boxD + 0.06),
+      new THREE.BoxGeometry(boxW + 0.04, boxH + 0.04, boxD + 0.04),
       new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 })
     );
-    glow.position.y = centerY;
+    glow.position.y = boxH / 2;
     box.add(glow);
   }
 
