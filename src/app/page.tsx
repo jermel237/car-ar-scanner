@@ -45,7 +45,8 @@ interface DataItem {
 
 function createTextSprite(text: string, color: string, fontSize: number = 20): THREE.Sprite {
   const canvas = document.createElement('canvas');
-  canvas.width = 256; canvas.height = 64;
+  canvas.width = 256;
+  canvas.height = 64;
   const ctx = canvas.getContext('2d')!;
   ctx.fillStyle = color;
   ctx.font = `bold ${fontSize}px Arial`;
@@ -60,22 +61,22 @@ function createTextSprite(text: string, color: string, fontSize: number = 20): T
 function create3DArrow(fromX: number, toX: number, yHeight: number, isHighlighted: boolean): THREE.Group {
   const arrow = new THREE.Group();
   const color = isHighlighted ? 0xffff00 : 0x00ff00;
-  
+
   const shaftRadius = 0.025;
   const headRadius = 0.06;
   const headLength = 0.1;
-  
+
   const gap = 0.32;
   const startX = fromX + gap;
   const endX = toX - gap;
   const shaftLen = endX - startX - headLength;
-  
+
   if (shaftLen <= 0) return arrow;
-  
+
   const shaftGeo = new THREE.CylinderGeometry(shaftRadius, shaftRadius, shaftLen, 8);
-  const shaftMat = new THREE.MeshStandardMaterial({ 
-    color, 
-    metalness: 0.5, 
+  const shaftMat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.5,
     roughness: 0.3,
     emissive: color,
     emissiveIntensity: 0.15
@@ -84,11 +85,11 @@ function create3DArrow(fromX: number, toX: number, yHeight: number, isHighlighte
   shaft.rotation.z = Math.PI / 2;
   shaft.position.set(startX + shaftLen / 2, yHeight, 0);
   arrow.add(shaft);
-  
+
   const headGeo = new THREE.ConeGeometry(headRadius, headLength, 8);
-  const headMat = new THREE.MeshStandardMaterial({ 
-    color, 
-    metalness: 0.5, 
+  const headMat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.5,
     roughness: 0.3,
     emissive: color,
     emissiveIntensity: 0.2
@@ -97,7 +98,7 @@ function create3DArrow(fromX: number, toX: number, yHeight: number, isHighlighte
   head.rotation.z = -Math.PI / 2;
   head.position.set(endX - headLength / 2, yHeight, 0);
   arrow.add(head);
-  
+
   const ringGeo = new THREE.TorusGeometry(headRadius * 0.6, 0.008, 6, 12);
   const ringMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.4 });
   const ring = new THREE.Mesh(ringGeo, ringMat);
@@ -315,14 +316,14 @@ function createGroceryBox(color: string, label: string, isHighlighted: boolean):
 function createHuman3D(appearance: HumanAppearance, name: string, isHighlighted: boolean, isSeated: boolean = false, walkPhase: number = 0): THREE.Group {
   const human = new THREE.Group();
 
-  const skinMat = new THREE.MeshStandardMaterial({ 
-    color: appearance.skinTone, 
+  const skinMat = new THREE.MeshStandardMaterial({
+    color: appearance.skinTone,
     roughness: 0.7,
     emissive: isHighlighted ? '#ffff00' : '#000',
     emissiveIntensity: isHighlighted ? 0.15 : 0,
   });
-  const shirtMat = new THREE.MeshStandardMaterial({ 
-    color: appearance.shirtColor, 
+  const shirtMat = new THREE.MeshStandardMaterial({
+    color: appearance.shirtColor,
     roughness: 0.6,
     emissive: isHighlighted ? '#ffff00' : '#000',
     emissiveIntensity: isHighlighted ? 0.15 : 0,
@@ -335,7 +336,7 @@ function createHuman3D(appearance: HumanAppearance, name: string, isHighlighted:
 
   const scale = 0.12;
   const groundY = 0;
-  
+
   const shoeHeight = 0.18 * scale;
   const lowerLegHeight = 0.7 * scale;
   const upperLegHeight = 0.75 * scale;
@@ -345,7 +346,7 @@ function createHuman3D(appearance: HumanAppearance, name: string, isHighlighted:
 
   if (isSeated) {
     const seatHeight = groundY + 0.02;
-    
+
     [-1, 1].forEach((side) => {
       const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.32 * scale, shoeHeight, 0.42 * scale), shoeMat);
       shoe.position.set(side * 0.22 * scale, groundY + shoeHeight / 2, 0.4 * scale);
@@ -439,15 +440,20 @@ function createHuman3D(appearance: HumanAppearance, name: string, isHighlighted:
 
     const labelY = headY + headHeight / 2 + 0.1;
     const labelCanvas = document.createElement('canvas');
-    labelCanvas.width = 200; labelCanvas.height = 48;
+    labelCanvas.width = 200;
+    labelCanvas.height = 48;
     const lctx = labelCanvas.getContext('2d')!;
     if (isHighlighted) {
       lctx.fillStyle = '#00ff00';
-      lctx.beginPath(); lctx.roundRect(0, 0, 200, 48, 12); lctx.fill();
+      lctx.beginPath();
+      lctx.roundRect(0, 0, 200, 48, 12);
+      lctx.fill();
       lctx.fillStyle = '#000';
     } else {
       lctx.fillStyle = 'rgba(0,0,0,0.85)';
-      lctx.beginPath(); lctx.roundRect(0, 0, 200, 48, 12); lctx.fill();
+      lctx.beginPath();
+      lctx.roundRect(0, 0, 200, 48, 12);
+      lctx.fill();
       lctx.fillStyle = '#ffffff';
     }
     lctx.font = 'bold 24px Arial';
@@ -591,15 +597,20 @@ function createHuman3D(appearance: HumanAppearance, name: string, isHighlighted:
     }
 
     const labelCanvas = document.createElement('canvas');
-    labelCanvas.width = 200; labelCanvas.height = 48;
+    labelCanvas.width = 200;
+    labelCanvas.height = 48;
     const lctx = labelCanvas.getContext('2d')!;
     if (isHighlighted) {
       lctx.fillStyle = '#00ff00';
-      lctx.beginPath(); lctx.roundRect(0, 0, 200, 48, 12); lctx.fill();
+      lctx.beginPath();
+      lctx.roundRect(0, 0, 200, 48, 12);
+      lctx.fill();
       lctx.fillStyle = '#000';
     } else {
       lctx.fillStyle = 'rgba(0,0,0,0.85)';
-      lctx.beginPath(); lctx.roundRect(0, 0, 200, 48, 12); lctx.fill();
+      lctx.beginPath();
+      lctx.roundRect(0, 0, 200, 48, 12);
+      lctx.fill();
       lctx.fillStyle = '#ffffff';
     }
     lctx.font = 'bold 24px Arial';
@@ -627,7 +638,7 @@ function createHuman3D(appearance: HumanAppearance, name: string, isHighlighted:
 
 function createBook(label: string, color: string, isHighlighted: boolean, isOpen: boolean = false, openAmount: number = 0): THREE.Group {
   const book = new THREE.Group();
-  
+
   const bookWidth = 0.55;
   const bookHeight = 0.07;
   const bookDepth = 0.38;
@@ -675,7 +686,8 @@ function createBook(label: string, color: string, isHighlighted: boolean, isOpen
   });
 
   const spineCanvas = document.createElement('canvas');
-  spineCanvas.width = 140; spineCanvas.height = 30;
+  spineCanvas.width = 140;
+  spineCanvas.height = 30;
   const sctx = spineCanvas.getContext('2d')!;
   sctx.fillStyle = '#ffd700';
   sctx.font = 'bold 16px serif';
@@ -699,7 +711,8 @@ function createBook(label: string, color: string, isHighlighted: boolean, isOpen
   frontCoverGroup.add(frontCover);
 
   const coverCanvas = document.createElement('canvas');
-  coverCanvas.width = 180; coverCanvas.height = 140;
+  coverCanvas.width = 180;
+  coverCanvas.height = 140;
   const cctx = coverCanvas.getContext('2d')!;
   cctx.strokeStyle = '#ffd700';
   cctx.lineWidth = 4;
@@ -746,7 +759,7 @@ function createBook(label: string, color: string, isHighlighted: boolean, isOpen
   return book;
 }
 
-// ==================== TRAIN CAR (Engine faces forward) ====================
+// ==================== TRAIN CAR ====================
 
 function createTrainCar(isEngine: boolean, color: string, label: string, isHighlighted: boolean): THREE.Group {
   const train = new THREE.Group();
@@ -791,13 +804,13 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
     wheel.rotation.x = Math.PI / 2;
     wheel.position.set(wx, wy, wz);
     train.add(wheel);
-    
+
     const hubGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.025, 12);
     const hub = new THREE.Mesh(hubGeo, hubMat);
     hub.rotation.x = Math.PI / 2;
     hub.position.set(wx, wy, wz + (wz > 0 ? 0.005 : -0.005));
     train.add(hub);
-    
+
     for (let i = 0; i < 6; i++) {
       const spokeGeo = new THREE.BoxGeometry(0.008, 0.05, 0.005);
       const spoke = new THREE.Mesh(spokeGeo, spokeMat);
@@ -827,14 +840,14 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
     boiler.rotation.z = Math.PI / 2;
     boiler.position.set(-0.15, 0.16, 0);
     train.add(boiler);
-    
+
     const frontPlateGeo = new THREE.CylinderGeometry(0.13, 0.13, 0.02, 12);
     const frontPlateMat = new THREE.MeshStandardMaterial({ color: '#222', metalness: 0.7 });
     const frontPlate = new THREE.Mesh(frontPlateGeo, frontPlateMat);
     frontPlate.rotation.z = Math.PI / 2;
     frontPlate.position.set(-0.36, 0.16, 0);
     train.add(frontPlate);
-    
+
     const bandMat = new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.8 });
     [0.05, -0.1, -0.25].forEach(x => {
       const bandGeo = new THREE.TorusGeometry(0.125, 0.015, 8, 16);
@@ -851,7 +864,7 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
     headlightHousing.rotation.z = Math.PI / 2;
     headlightHousing.position.set(-0.4, 0.28, 0);
     train.add(headlightHousing);
-    
+
     const headlightLens = new THREE.Mesh(
       new THREE.CircleGeometry(0.035, 12),
       new THREE.MeshBasicMaterial({ color: '#ffffaa' })
@@ -866,14 +879,14 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
     );
     chimneyBase.position.set(-0.08, 0.32, 0);
     train.add(chimneyBase);
-    
+
     const chimneyTop = new THREE.Mesh(
       new THREE.CylinderGeometry(0.07, 0.05, 0.12, 12),
       new THREE.MeshStandardMaterial({ color: '#1a1a1a', metalness: 0.6 })
     );
     chimneyTop.position.set(-0.08, 0.44, 0);
     train.add(chimneyTop);
-    
+
     const chimneyRim = new THREE.Mesh(
       new THREE.TorusGeometry(0.07, 0.012, 8, 16),
       new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.8 })
@@ -903,7 +916,7 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
     );
     steamDome.position.set(0.05, 0.28, 0);
     train.add(steamDome);
-    
+
     const sandDome = new THREE.Mesh(
       new THREE.CylinderGeometry(0.04, 0.04, 0.06, 12),
       new THREE.MeshStandardMaterial({ color: '#8b4513', metalness: 0.3 })
@@ -915,7 +928,7 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
     const catcherBase = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.28), catcherMat);
     catcherBase.position.set(-0.4, 0, 0);
     train.add(catcherBase);
-    
+
     for (let i = -3; i <= 3; i++) {
       const bar = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.015, 0.015), catcherMat);
       bar.position.set(-0.43, -0.02, i * 0.035);
@@ -931,14 +944,14 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
     const cabRoof = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.03, 0.36), roofMat);
     cabRoof.position.set(0.26, 0.38, 0);
     train.add(cabRoof);
-    
+
     const cabWinMat = new THREE.MeshStandardMaterial({ color: '#87ceeb', metalness: 0.4 });
     [-0.151, 0.151].forEach(z => {
       const cabWin = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.1, 0.1), cabWinMat);
       cabWin.position.set(0.26, 0.28, z);
       train.add(cabWin);
     });
-    
+
     const rearWin = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.01), cabWinMat);
     rearWin.position.set(0.26, 0.28, 0.165);
     train.add(rearWin);
@@ -951,7 +964,7 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
     bell.rotation.x = Math.PI;
     bell.position.set(0.08, 0.36, 0);
     train.add(bell);
-    
+
     const bellMount = new THREE.Mesh(
       new THREE.BoxGeometry(0.02, 0.04, 0.02),
       new THREE.MeshStandardMaterial({ color: '#333' })
@@ -965,7 +978,7 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
       piston.rotation.z = Math.PI / 2;
       piston.position.set(-0.25, 0.02, z);
       train.add(piston);
-      
+
       const rod = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.015, 0.015), pistonMat);
       rod.position.set(-0.12, -0.02, z);
       train.add(rod);
@@ -981,10 +994,13 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
   });
 
   const canvas = document.createElement('canvas');
-  canvas.width = 160; canvas.height = 48;
+  canvas.width = 160;
+  canvas.height = 48;
   const ctx = canvas.getContext('2d')!;
   ctx.fillStyle = isHighlighted ? 'rgba(255,255,0,0.9)' : 'rgba(0,0,0,0.75)';
-  ctx.beginPath(); ctx.roundRect(0, 0, 160, 48, 10); ctx.fill();
+  ctx.beginPath();
+  ctx.roundRect(0, 0, 160, 48, 10);
+  ctx.fill();
   ctx.fillStyle = isHighlighted ? '#000' : '#fff';
   ctx.font = 'bold 24px Arial';
   ctx.textAlign = 'center';
@@ -1015,7 +1031,6 @@ function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
   const toll = new THREE.Group();
   const groundY = 0;
 
-  // Booth structure (same size)
   const boothMat = new THREE.MeshStandardMaterial({ color: '#2c3e50', roughness: 0.6, metalness: 0.3 });
   const booth = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.65, 0.35), boothMat);
   booth.position.set(0, groundY + 0.325, -0.55);
@@ -1037,7 +1052,8 @@ function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
   toll.add(trim);
 
   const signCanvas = document.createElement('canvas');
-  signCanvas.width = 120; signCanvas.height = 50;
+  signCanvas.width = 120;
+  signCanvas.height = 50;
   const sctx = signCanvas.getContext('2d')!;
   sctx.fillStyle = '#006400';
   sctx.fillRect(0, 0, 120, 50);
@@ -1053,24 +1069,23 @@ function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
   signMesh.position.set(0, groundY + 0.58, -0.36);
   toll.add(signMesh);
 
-  // Gate POST - 50% LOWER (height from 0.6 to 0.3, positioned lower)
+  // Gate POST - 50% LOWER
   const postMat = new THREE.MeshStandardMaterial({ color: '#f39c12', roughness: 0.5, metalness: 0.3 });
   const gatePost = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.3, 0.1), postMat);
   gatePost.position.set(0, groundY + 0.15, -0.32);
   toll.add(gatePost);
 
-  // Gate pivot - LOWERED to match shorter post
+  // Gate pivot - LOWERED
   const gatePivot = new THREE.Group();
   gatePivot.position.set(0, groundY + 0.28, -0.32);
 
-  // ARM - LONGER (0.8 length for long barrier)
+  // ARM - LONGER
   const armLength = 0.8;
   const gateArmMat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.5 });
   const gateArm = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, armLength), gateArmMat);
   gateArm.position.set(0, 0, armLength / 2);
   gatePivot.add(gateArm);
 
-  // Stripes on arm (more stripes for longer arm)
   const stripeMat = new THREE.MeshStandardMaterial({ color: '#ffffff' });
   for (let i = 0; i < 7; i++) {
     const stripeBox = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.065, 0.04), stripeMat);
@@ -1078,7 +1093,6 @@ function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
     gatePivot.add(stripeBox);
   }
 
-  // End cap
   const endCap = new THREE.Mesh(
     new THREE.BoxGeometry(0.08, 0.08, 0.08),
     new THREE.MeshStandardMaterial({ color: '#c0392b', metalness: 0.5 })
@@ -1086,7 +1100,6 @@ function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
   endCap.position.set(0, 0, armLength);
   gatePivot.add(endCap);
 
-  // Reflector
   const reflector = new THREE.Mesh(
     new THREE.BoxGeometry(0.05, 0.05, 0.02),
     new THREE.MeshBasicMaterial({ color: '#ff0000' })
@@ -1094,15 +1107,13 @@ function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
   reflector.position.set(0, 0, armLength + 0.04);
   gatePivot.add(reflector);
 
-  // Gate animation - smooth easing
-  const easedOpen = gateOpenAmount < 0.5 
-    ? 2 * gateOpenAmount * gateOpenAmount 
+  const easedOpen = gateOpenAmount < 0.5
+    ? 2 * gateOpenAmount * gateOpenAmount
     : 1 - Math.pow(-2 * gateOpenAmount + 2, 2) / 2;
   gatePivot.rotation.x = -easedOpen * Math.PI * 0.45;
 
   toll.add(gatePivot);
 
-  // Terminal
   const terminalMat = new THREE.MeshStandardMaterial({ color: '#333', roughness: 0.4 });
   const terminal = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.25, 0.06), terminalMat);
   terminal.position.set(0, groundY + 0.125, -0.38);
@@ -1115,7 +1126,6 @@ function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
   screen.position.set(0, groundY + 0.2, -0.345);
   toll.add(screen);
 
-  // Traffic lights
   const lightHousing = new THREE.Mesh(
     new THREE.BoxGeometry(0.1, 0.14, 0.06),
     new THREE.MeshStandardMaterial({ color: '#222' })
@@ -1137,7 +1147,6 @@ function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
   redLight.position.set(0, groundY + 0.75, -0.515);
   toll.add(redLight);
 
-  // Speed bumps
   const bumpMat = new THREE.MeshStandardMaterial({ color: '#f1c40f' });
   [-0.25, 0.25].forEach(x => {
     const bump = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.015, 0.5), bumpMat);
@@ -1148,7 +1157,203 @@ function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
   return toll;
 }
 
-// ==================== CARDBOARD BOX (FULLY CLOSED by default, opens during peek) ====================
+// ==================== CAR ====================
+
+function createCar(color: string, label: string, isHighlighted: boolean): THREE.Group {
+  const car = new THREE.Group();
+
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color,
+    metalness: 0.7,
+    roughness: 0.3,
+    emissive: isHighlighted ? '#ffff00' : '#000',
+    emissiveIntensity: isHighlighted ? 0.3 : 0,
+  });
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.14, 0.26), bodyMat);
+  body.position.y = 0.1;
+  car.add(body);
+
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(0.53, 0.04, 0.27), bodyMat);
+  panel.position.y = 0.04;
+  car.add(panel);
+
+  const hood = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 0.24), bodyMat);
+  hood.position.set(-0.18, 0.19, 0);
+  car.add(hood);
+
+  const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.035, 0.24), bodyMat);
+  trunk.position.set(0.22, 0.185, 0);
+  car.add(trunk);
+
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.12, 0.23), bodyMat);
+  cabin.position.set(0.02, 0.23, 0);
+  car.add(cabin);
+
+  const roofMesh = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.018, 0.22), bodyMat);
+  roofMesh.position.set(0.02, 0.3, 0);
+  car.add(roofMesh);
+
+  const glassMat = new THREE.MeshStandardMaterial({ color: '#a8d8ea', metalness: 0.6, roughness: 0.05, transparent: true, opacity: 0.75 });
+
+  const windshield = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.1, 0.21), glassMat);
+  windshield.position.set(-0.1, 0.24, 0);
+  car.add(windshield);
+
+  const rearWindow = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.1, 0.21), glassMat);
+  rearWindow.position.set(0.14, 0.24, 0);
+  car.add(rearWindow);
+
+  [-0.131, 0.131].forEach(z => {
+    const sw = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.01), glassMat);
+    sw.position.set(0.02, 0.24, z);
+    car.add(sw);
+  });
+
+  const tireMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.9 });
+  const rimMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.9, roughness: 0.1 });
+
+  [[-0.16, 0.045, 0.135], [0.16, 0.045, 0.135], [-0.16, 0.045, -0.135], [0.16, 0.045, -0.135]].forEach(([wx, wy, wz]) => {
+    const tire = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.025), tireMat);
+    tire.position.set(wx, wy, wz);
+    car.add(tire);
+    const rim = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.028), rimMat);
+    rim.position.set(wx, wy, wz);
+    car.add(rim);
+  });
+
+  const headlightMat = new THREE.MeshBasicMaterial({ color: '#ffffee' });
+  [-0.09, 0.09].forEach(z => {
+    const hl = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.035, 0.055), headlightMat);
+    hl.position.set(-0.275, 0.1, z);
+    car.add(hl);
+  });
+
+  const tailMat = new THREE.MeshBasicMaterial({ color: '#ff2222' });
+  [-0.085, 0.085].forEach(z => {
+    const tl = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.03, 0.045), tailMat);
+    tl.position.set(0.275, 0.1, z);
+    car.add(tl);
+  });
+
+  const grille = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.05, 0.12), new THREE.MeshStandardMaterial({ color: '#222', metalness: 0.8 }));
+  grille.position.set(-0.28, 0.08, 0);
+  car.add(grille);
+
+  const plateCanvas = document.createElement('canvas');
+  plateCanvas.width = 96;
+  plateCanvas.height = 36;
+  const pctx = plateCanvas.getContext('2d')!;
+  pctx.fillStyle = '#fff';
+  pctx.fillRect(0, 0, 96, 36);
+  pctx.strokeStyle = '#2c3e50';
+  pctx.lineWidth = 2;
+  pctx.strokeRect(2, 2, 92, 32);
+  pctx.fillStyle = '#2c3e50';
+  pctx.font = 'bold 14px Arial';
+  pctx.textAlign = 'center';
+  pctx.fillText(label, 48, 24);
+  const plateTex = new THREE.CanvasTexture(plateCanvas);
+
+  const frontPlate = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.045), new THREE.MeshBasicMaterial({ map: plateTex }));
+  frontPlate.position.set(-0.281, 0.04, 0);
+  frontPlate.rotation.y = -Math.PI / 2;
+  car.add(frontPlate);
+
+  const rearPlate = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.045), new THREE.MeshBasicMaterial({ map: plateTex }));
+  rearPlate.position.set(0.281, 0.04, 0);
+  rearPlate.rotation.y = Math.PI / 2;
+  car.add(rearPlate);
+
+  if (isHighlighted) {
+    const glow = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.32, 0.32), new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 }));
+    glow.position.y = 0.15;
+    car.add(glow);
+  }
+
+  return car;
+}
+
+// ==================== PLATE ====================
+
+function createPlate(label: string, isHighlighted: boolean): THREE.Group {
+  const plate = new THREE.Group();
+
+  const plateMat = new THREE.MeshStandardMaterial({
+    color: '#f5f5f0',
+    roughness: 0.25,
+    metalness: 0.1,
+    emissive: isHighlighted ? '#ffff00' : '#000',
+    emissiveIntensity: isHighlighted ? 0.2 : 0
+  });
+  const plateBase = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.025, 0.38), plateMat);
+  plate.add(plateBase);
+
+  const rimMat = new THREE.MeshStandardMaterial({ color: '#e8e8e0', roughness: 0.3, metalness: 0.15 });
+  const rim = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.02, 0.4), rimMat);
+  rim.position.y = 0.012;
+  plate.add(rim);
+
+  const innerPlate = new THREE.Mesh(
+    new THREE.BoxGeometry(0.42, 0.008, 0.32),
+    new THREE.MeshStandardMaterial({ color: '#fafafa', roughness: 0.3 })
+  );
+  innerPlate.position.y = 0.018;
+  plate.add(innerPlate);
+
+  const decorRing = new THREE.Mesh(
+    new THREE.BoxGeometry(0.46, 0.003, 0.35),
+    new THREE.MeshStandardMaterial({ color: '#c9a227', metalness: 0.6 })
+  );
+  decorRing.position.y = 0.022;
+  plate.add(decorRing);
+
+  const riceMat = new THREE.MeshStandardMaterial({ color: '#fffef5', roughness: 0.9 });
+  const riceBase = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.04, 0.12), riceMat);
+  riceBase.position.set(-0.12, 0.04, 0);
+  plate.add(riceBase);
+
+  const riceTop = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.025, 0.08), riceMat);
+  riceTop.position.set(-0.12, 0.065, 0);
+  plate.add(riceTop);
+
+  const chickenMat = new THREE.MeshStandardMaterial({ color: '#d4a054', roughness: 0.65 });
+  const crispyMat = new THREE.MeshStandardMaterial({ color: '#c4792a', roughness: 0.5 });
+
+  const drumstick = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.055, 0.055), chickenMat);
+  drumstick.position.set(0.06, 0.05, -0.02);
+  drumstick.rotation.z = 0.15;
+  plate.add(drumstick);
+
+  const drumCoat = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.04, 0.04), crispyMat);
+  drumCoat.position.set(0.05, 0.055, -0.02);
+  plate.add(drumCoat);
+
+  const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.045, 0.07), chickenMat);
+  thigh.position.set(0.08, 0.045, 0.06);
+  plate.add(thigh);
+
+  const lettuceMat = new THREE.MeshStandardMaterial({ color: '#228b22', roughness: 0.8 });
+  const lettuce = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.008, 0.06), lettuceMat);
+  lettuce.position.set(-0.02, 0.025, 0.1);
+  plate.add(lettuce);
+
+  const tomatoMat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.6 });
+  const tomato = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.012, 0.04), tomatoMat);
+  tomato.position.set(0.04, 0.03, 0.12);
+  plate.add(tomato);
+
+  if (isHighlighted) {
+    plate.add(new THREE.Mesh(
+      new THREE.BoxGeometry(0.54, 0.06, 0.42),
+      new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.15 })
+    ));
+  }
+
+  return plate;
+}
+
+// ==================== CARDBOARD BOX (FULLY CLOSED, opens during peek) ====================
 
 function createCardboardBox(label: string, color: string, isHighlighted: boolean, openAmount: number = 0): THREE.Group {
   const box = new THREE.Group();
@@ -1156,11 +1361,11 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   const wallThickness = 0.015;
   const flapHeight = 0.12;
 
-  const cardboardMat = new THREE.MeshStandardMaterial({ 
-    color, 
-    roughness: 0.85, 
-    emissive: isHighlighted ? '#ffff00' : '#000', 
-    emissiveIntensity: isHighlighted ? 0.3 : 0 
+  const cardboardMat = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.85,
+    emissive: isHighlighted ? '#ffff00' : '#000',
+    emissiveIntensity: isHighlighted ? 0.3 : 0
   });
   const innerMat = new THREE.MeshStandardMaterial({ color: '#c4a574', roughness: 0.9 });
 
@@ -1202,28 +1407,23 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
     box.add(corner);
   });
 
-  // Smooth easing for flap animation
-  const easedOpen = openAmount < 0.5 
-    ? 2 * openAmount * openAmount 
+  // Smooth easing
+  const easedOpen = openAmount < 0.5
+    ? 2 * openAmount * openAmount
     : 1 - Math.pow(-2 * openAmount + 2, 2) / 2;
 
   const flapMat = new THREE.MeshStandardMaterial({ color, roughness: 0.85, side: THREE.DoubleSide });
 
-  // CLOSED = flaps folded INWARD (covering top) = -90 degrees
-  // OPEN = flaps standing up = 0 degrees or slightly outward
-  const closedAngle = -Math.PI / 2;  // 90 degrees inward (flat on top)
-  const openAngle = 0.3;              // slightly outward when open
-  
-  // Front/back flap angles
+  // CLOSED = -90 degrees (flat on top), OPEN = slightly outward
+  const closedAngle = -Math.PI / 2;
+  const openAngle = 0.3;
   const frontFlapAngle = closedAngle + (openAngle - closedAngle) * easedOpen;
-  const backFlapAngle = closedAngle + (openAngle - closedAngle) * easedOpen;
-  
-  // Side flaps - fold inward when closed
-  const sideClosedAngle = Math.PI / 2;  // 90 degrees inward
-  const sideOpenAngle = -0.3;           // slightly outward when open
+
+  const sideClosedAngle = Math.PI / 2;
+  const sideOpenAngle = -0.3;
   const sideFlapAngle = sideClosedAngle + (sideOpenAngle - sideClosedAngle) * easedOpen;
 
-  // FRONT FLAP - pivots from top of front wall, folds backward to cover top
+  // FRONT FLAP
   const frontFlapPivot = new THREE.Group();
   frontFlapPivot.position.set(0, boxH / 2, boxD / 2 - wallThickness);
   const frontFlap = new THREE.Mesh(new THREE.BoxGeometry(boxW - 0.04, flapHeight, wallThickness), flapMat);
@@ -1232,16 +1432,16 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   frontFlapPivot.rotation.x = frontFlapAngle;
   box.add(frontFlapPivot);
 
-  // BACK FLAP - pivots from top of back wall, folds forward to cover top
+  // BACK FLAP
   const backFlapPivot = new THREE.Group();
   backFlapPivot.position.set(0, boxH / 2, -boxD / 2 + wallThickness);
   const backFlap = new THREE.Mesh(new THREE.BoxGeometry(boxW - 0.04, flapHeight, wallThickness), flapMat);
   backFlap.position.set(0, flapHeight / 2, 0);
   backFlapPivot.add(backFlap);
-  backFlapPivot.rotation.x = -backFlapAngle; // opposite direction
+  backFlapPivot.rotation.x = -frontFlapAngle;
   box.add(backFlapPivot);
 
-  // LEFT FLAP - pivots from top of left wall, folds inward
+  // LEFT FLAP
   const leftFlapPivot = new THREE.Group();
   leftFlapPivot.position.set(-boxW / 2 + wallThickness, boxH / 2, 0);
   const leftFlap = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, boxW / 2 - 0.02, boxD - 0.06), flapMat);
@@ -1250,34 +1450,31 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   leftFlapPivot.rotation.z = sideFlapAngle;
   box.add(leftFlapPivot);
 
-  // RIGHT FLAP - pivots from top of right wall, folds inward
+  // RIGHT FLAP
   const rightFlapPivot = new THREE.Group();
   rightFlapPivot.position.set(boxW / 2 - wallThickness, boxH / 2, 0);
   const rightFlap = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, boxW / 2 - 0.02, boxD - 0.06), flapMat);
   rightFlap.position.set(0, (boxW / 2 - 0.02) / 2, 0);
   rightFlapPivot.add(rightFlap);
-  rightFlapPivot.rotation.z = -sideFlapAngle; // opposite direction
+  rightFlapPivot.rotation.z = -sideFlapAngle;
   box.add(rightFlapPivot);
 
-  // Tape on top (only visible when closed)
+  // Tape (visible when closed)
   if (openAmount < 0.2) {
     const tapeOpacity = 1 - (openAmount / 0.2);
     const tapeMat = new THREE.MeshStandardMaterial({ color: '#d4a574', transparent: true, opacity: 0.8 * tapeOpacity, roughness: 0.3 });
-    
-    // Tape across the center seam (where front and back flaps meet)
     const tape = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.005, boxD * 0.6), tapeMat);
     tape.position.y = boxH / 2 + flapHeight - 0.01;
     box.add(tape);
-    
-    // Cross tape
     const tape2 = new THREE.Mesh(new THREE.BoxGeometry(boxW * 0.5, 0.005, 0.06), tapeMat);
     tape2.position.y = boxH / 2 + flapHeight - 0.01;
     box.add(tape2);
   }
 
-  // Label on front
+  // Label
   const labelCanvas = document.createElement('canvas');
-  labelCanvas.width = 180; labelCanvas.height = 120;
+  labelCanvas.width = 180;
+  labelCanvas.height = 120;
   const lctx = labelCanvas.getContext('2d')!;
   lctx.fillStyle = '#ffffff';
   lctx.fillRect(0, 0, 180, 120);
@@ -1290,8 +1487,6 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   lctx.fillStyle = '#2c3e50';
   lctx.font = 'bold 28px Arial';
   lctx.fillText(label, 90, 68);
-  
-  // Handle with care symbol
   lctx.strokeStyle = '#e74c3c';
   lctx.lineWidth = 2;
   lctx.beginPath();
@@ -1299,7 +1494,7 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   lctx.lineTo(90, 100);
   lctx.lineTo(105, 85);
   lctx.stroke();
-  
+
   const labelTex = new THREE.CanvasTexture(labelCanvas);
   const labelMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.32, 0.22), new THREE.MeshBasicMaterial({ map: labelTex }));
   labelMesh.position.set(0, 0, boxD / 2 + 0.001);
@@ -1307,7 +1502,7 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
 
   if (isHighlighted && openAmount < 0.1) {
     box.add(new THREE.Mesh(
-      new THREE.BoxGeometry(boxW + 0.06, boxH + 0.2, boxD + 0.06), 
+      new THREE.BoxGeometry(boxW + 0.06, boxH + 0.2, boxD + 0.06),
       new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 })
     ));
   }
@@ -1315,19 +1510,19 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   return box;
 }
 
-// ==================== DOMINO WITH DOTS ====================
+// ==================== DOMINO ====================
 
 function createDomino(value: string, isHighlighted: boolean): THREE.Group {
   const domino = new THREE.Group();
 
-  const tileMat = new THREE.MeshStandardMaterial({ 
-    color: isHighlighted ? '#1abc9c' : '#f8f8f0', 
-    roughness: 0.25, 
+  const tileMat = new THREE.MeshStandardMaterial({
+    color: isHighlighted ? '#1abc9c' : '#f8f8f0',
+    roughness: 0.25,
     metalness: 0.1,
-    emissive: isHighlighted ? '#1abc9c' : '#000', 
-    emissiveIntensity: isHighlighted ? 0.25 : 0 
+    emissive: isHighlighted ? '#1abc9c' : '#000',
+    emissiveIntensity: isHighlighted ? 0.25 : 0
   });
-  
+
   const tileBody = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.44, 0.07), tileMat);
   domino.add(tileBody);
 
@@ -1383,7 +1578,7 @@ function createDomino(value: string, isHighlighted: boolean): THREE.Group {
 
   if (isHighlighted) {
     domino.add(new THREE.Mesh(
-      new THREE.BoxGeometry(0.26, 0.48, 0.04), 
+      new THREE.BoxGeometry(0.26, 0.48, 0.04),
       new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.2 })
     ));
   }
@@ -1391,16 +1586,16 @@ function createDomino(value: string, isHighlighted: boolean): THREE.Group {
   return domino;
 }
 
-// ==================== CLIPBOARD WITH PEN ====================
+// ==================== CLIPBOARD ====================
 
 function createClipboard(label: string, color: string, isHighlighted: boolean): THREE.Group {
   const clipboard = new THREE.Group();
 
-  const boardMat = new THREE.MeshStandardMaterial({ 
-    color: '#6d4c2a', 
-    roughness: 0.65, 
-    emissive: isHighlighted ? '#ffff00' : '#000', 
-    emissiveIntensity: isHighlighted ? 0.25 : 0 
+  const boardMat = new THREE.MeshStandardMaterial({
+    color: '#6d4c2a',
+    roughness: 0.65,
+    emissive: isHighlighted ? '#ffff00' : '#000',
+    emissiveIntensity: isHighlighted ? 0.25 : 0
   });
   const board = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.5, 0.025), boardMat);
   clipboard.add(board);
@@ -1414,18 +1609,19 @@ function createClipboard(label: string, color: string, isHighlighted: boolean): 
   const clipBase = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 0.04), clipMat);
   clipBase.position.set(0, 0.26, 0.02);
   clipboard.add(clipBase);
-  
+
   const clipArm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.015, 0.06), clipMat);
   clipArm.position.set(0, 0.28, 0.04);
   clipboard.add(clipArm);
 
   const paperCanvas = document.createElement('canvas');
-  paperCanvas.width = 190; paperCanvas.height = 280;
+  paperCanvas.width = 190;
+  paperCanvas.height = 280;
   const pctx = paperCanvas.getContext('2d')!;
-  
+
   pctx.fillStyle = '#fefef6';
   pctx.fillRect(0, 0, 190, 280);
-  
+
   pctx.fillStyle = color;
   pctx.fillRect(0, 0, 190, 40);
   pctx.fillStyle = '#fff';
@@ -1453,11 +1649,11 @@ function createClipboard(label: string, color: string, isHighlighted: boolean): 
   pctx.textAlign = 'left';
   items.forEach((item, i) => {
     const y = 55 + i * 28;
-    
+
     pctx.strokeStyle = '#333';
     pctx.lineWidth = 2;
     pctx.strokeRect(22, y - 12, 14, 14);
-    
+
     if (item.checked) {
       pctx.strokeStyle = '#27ae60';
       pctx.lineWidth = 3;
@@ -1467,10 +1663,10 @@ function createClipboard(label: string, color: string, isHighlighted: boolean): 
       pctx.lineTo(34, y - 10);
       pctx.stroke();
     }
-    
+
     pctx.fillStyle = item.checked ? '#999' : '#333';
     pctx.fillText(item.text, 44, y);
-    
+
     if (item.checked) {
       pctx.strokeStyle = '#999';
       pctx.lineWidth = 1;
@@ -1493,26 +1689,26 @@ function createClipboard(label: string, color: string, isHighlighted: boolean): 
   clipboard.add(paper);
 
   const penGroup = new THREE.Group();
-  
+
   const penBodyMat = new THREE.MeshStandardMaterial({ color: '#1a237e', metalness: 0.3, roughness: 0.5 });
   const penBody = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 12), penBodyMat);
   penGroup.add(penBody);
-  
+
   const gripMat = new THREE.MeshStandardMaterial({ color: '#333', roughness: 0.8 });
   const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.05, 12), gripMat);
   grip.position.y = -0.06;
   penGroup.add(grip);
-  
+
   const tipMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.9, roughness: 0.1 });
   const tip = new THREE.Mesh(new THREE.ConeGeometry(0.01, 0.03, 12), tipMat);
   tip.position.y = -0.125;
   tip.rotation.z = Math.PI;
   penGroup.add(tip);
-  
+
   const clipPen = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.06, 0.004), tipMat);
   clipPen.position.set(0.014, 0.06, 0);
   penGroup.add(clipPen);
-  
+
   const capTop = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 8), penBodyMat);
   capTop.position.y = 0.11;
   penGroup.add(capTop);
@@ -1523,7 +1719,7 @@ function createClipboard(label: string, color: string, isHighlighted: boolean): 
 
   if (isHighlighted) {
     clipboard.add(new THREE.Mesh(
-      new THREE.BoxGeometry(0.42, 0.54, 0.04), 
+      new THREE.BoxGeometry(0.42, 0.54, 0.04),
       new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 })
     ));
   }
@@ -1536,11 +1732,11 @@ function createClipboard(label: string, color: string, isHighlighted: boolean): 
 function createTicket(label: string, color: string, isHighlighted: boolean): THREE.Group {
   const ticket = new THREE.Group();
 
-  const ticketMat = new THREE.MeshStandardMaterial({ 
-    color, 
-    roughness: 0.4, 
-    emissive: isHighlighted ? '#ffff00' : '#000', 
-    emissiveIntensity: isHighlighted ? 0.3 : 0 
+  const ticketMat = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.4,
+    emissive: isHighlighted ? '#ffff00' : '#000',
+    emissiveIntensity: isHighlighted ? 0.3 : 0
   });
   const ticketBody = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.22, 0.012), ticketMat);
   ticket.add(ticketBody);
@@ -1572,12 +1768,13 @@ function createTicket(label: string, color: string, isHighlighted: boolean): THR
   ticket.add(stubLine);
 
   const frontCanvas = document.createElement('canvas');
-  frontCanvas.width = 240; frontCanvas.height = 130;
+  frontCanvas.width = 240;
+  frontCanvas.height = 130;
   const fctx = frontCanvas.getContext('2d')!;
-  
+
   fctx.fillStyle = 'rgba(0,0,0,0.4)';
   fctx.fillRect(0, 0, 240, 32);
-  
+
   fctx.strokeStyle = '#ffd700';
   fctx.lineWidth = 2;
   fctx.beginPath();
@@ -1593,14 +1790,14 @@ function createTicket(label: string, color: string, isHighlighted: boolean): THR
   fctx.font = 'bold 14px Arial';
   fctx.textAlign = 'center';
   fctx.fillText('★ ADMIT ONE ★', 120, 22);
-  
+
   fctx.font = 'bold 38px Arial';
   fctx.fillText(label, 120, 72);
-  
+
   fctx.font = '10px Arial';
   fctx.fillStyle = 'rgba(255,255,255,0.8)';
   fctx.fillText('VALID FOR ONE ENTRY', 120, 88);
-  
+
   fctx.font = 'bold 10px monospace';
   fctx.fillStyle = 'rgba(255,255,255,0.6)';
   fctx.fillText('NO. ' + Math.floor(Math.random() * 90000 + 10000), 120, 120);
@@ -1615,7 +1812,7 @@ function createTicket(label: string, color: string, isHighlighted: boolean): THR
 
   if (isHighlighted) {
     ticket.add(new THREE.Mesh(
-      new THREE.BoxGeometry(0.44, 0.26, 0.03), 
+      new THREE.BoxGeometry(0.44, 0.26, 0.03),
       new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.15 })
     ));
   }
@@ -1649,7 +1846,7 @@ function createSchoolBuilding(): THREE.Group {
     const door = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.55, 0.18), doorMat);
     door.position.set(0.02, groundY + 0.275, offsetZ);
     school.add(door);
-    
+
     const handleMat = new THREE.MeshStandardMaterial({ color: '#c9a227', metalness: 0.8 });
     const handle = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.04, 0.015), handleMat);
     handle.position.set(0.03, groundY + 0.28, offsetZ + (offsetZ > 0 ? -0.05 : 0.05));
@@ -1684,14 +1881,15 @@ function createSchoolBuilding(): THREE.Group {
   school.add(towerRoof);
 
   const clockCanvas = document.createElement('canvas');
-  clockCanvas.width = 64; clockCanvas.height = 64;
+  clockCanvas.width = 64;
+  clockCanvas.height = 64;
   const cctx = clockCanvas.getContext('2d')!;
   cctx.fillStyle = '#f5f5f5';
-  cctx.beginPath(); 
-  cctx.arc(32, 32, 28, 0, Math.PI * 2); 
+  cctx.beginPath();
+  cctx.arc(32, 32, 28, 0, Math.PI * 2);
   cctx.fill();
-  cctx.strokeStyle = '#333'; 
-  cctx.lineWidth = 2; 
+  cctx.strokeStyle = '#333';
+  cctx.lineWidth = 2;
   cctx.stroke();
   cctx.fillStyle = '#333';
   cctx.font = 'bold 8px Arial';
@@ -1702,16 +1900,16 @@ function createSchoolBuilding(): THREE.Group {
   cctx.fillText('9', 10, 35);
   cctx.strokeStyle = '#333';
   cctx.lineWidth = 2;
-  cctx.beginPath(); 
-  cctx.moveTo(32, 32); 
-  cctx.lineTo(32, 14); 
+  cctx.beginPath();
+  cctx.moveTo(32, 32);
+  cctx.lineTo(32, 14);
   cctx.stroke();
   cctx.lineWidth = 1.5;
-  cctx.beginPath(); 
-  cctx.moveTo(32, 32); 
-  cctx.lineTo(46, 28); 
+  cctx.beginPath();
+  cctx.moveTo(32, 32);
+  cctx.lineTo(46, 28);
   cctx.stroke();
-  
+
   const clockTex = new THREE.CanvasTexture(clockCanvas);
   const clockFace = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.18), new THREE.MeshBasicMaterial({ map: clockTex }));
   clockFace.position.set(-0.34, groundY + 1.42, 0);
@@ -1720,7 +1918,7 @@ function createSchoolBuilding(): THREE.Group {
 
   const stepMat = new THREE.MeshStandardMaterial({ color: '#808080', roughness: 0.7 });
   const stepWidth = 0.6;
-  
+
   [0.22, 0.12, 0.02].forEach((x, i) => {
     const step = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.05, stepWidth), stepMat);
     step.position.set(x, groundY + 0.025 + i * 0.05, 0);
@@ -1732,7 +1930,7 @@ function createSchoolBuilding(): THREE.Group {
     const post1 = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.25, 0.03), railMat);
     post1.position.set(0.22, groundY + 0.15, z);
     school.add(post1);
-    
+
     const post2 = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.35, 0.03), railMat);
     post2.position.set(0.02, groundY + 0.3, z);
     school.add(post2);
@@ -1748,14 +1946,15 @@ function createSchoolBuilding(): THREE.Group {
     const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.55, 0.08), pillarMat);
     pillar.position.set(0.02, groundY + 0.425, z);
     school.add(pillar);
-    
+
     const cap = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.03, 0.1), pillarMat);
     cap.position.set(0.02, groundY + 0.715, z);
     school.add(cap);
   });
 
   const signCanvas = document.createElement('canvas');
-  signCanvas.width = 80; signCanvas.height = 280;
+  signCanvas.width = 80;
+  signCanvas.height = 280;
   const schCtx = signCanvas.getContext('2d')!;
   schCtx.fillStyle = '#1a5276';
   schCtx.fillRect(0, 0, 80, 280);
@@ -1914,7 +2113,6 @@ function applyItemAnimation(
     } else if (animPhase === 'stack-peek-settle' && isTarget) {
       obj.position.y += 0.08 * (1 - p);
     }
-    // Note: stack-peek-open is handled in buildSceneContent for box opening
   }
 
   if (structure === 'queue') {
@@ -2090,14 +2288,13 @@ function buildSceneContent(
   } else if (structure === 'linkedlist') {
     if (environment === 'train') {
       const arrowY = 0.14;
-      
-      // REVERSED: Engine at the END (right side), passenger cars at START (left side)
+
+      // REVERSED: Engine at the END (right side)
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
-        // Reverse position: item 0 goes to rightmost, last item goes to leftmost
         const reversedIndex = data.length - 1 - i;
         const posX = startX + reversedIndex * spacing;
-        
+
         const trainCar = createTrainCar(i === 0, item.color, item.label, isHl);
         trainCar.position.set(posX, isHl ? 0.1 : 0, 0);
         trainCar.scale.setScalar(0.82);
@@ -2105,37 +2302,33 @@ function buildSceneContent(
         group.add(trainCar);
       });
 
-      // Arrows between cars (in reversed visual order)
+      // Arrows between cars
       for (let i = 0; i < data.length - 1; i++) {
-        const fromReversedIdx = data.length - 1 - i;
-        const toReversedIdx = data.length - 2 - i;
-        const fromX = startX + fromReversedIdx * spacing;
-        const toX = startX + toReversedIdx * spacing;
-        
-        // Arrow points from left to right (toward Engine which is now on the right)
         const arrow = create3DArrow(
-          startX + (data.length - 2 - i) * spacing,
-          startX + (data.length - 1 - i) * spacing,
+          startX + i * spacing,
+          startX + (i + 1) * spacing,
           arrowY,
           false
         );
         group.add(arrow);
       }
 
-      // NULL after the Engine (which is now at the rightmost position)
+      // NULL after Engine (rightmost)
       const nullSprite = createTextSprite('NULL', '#ff0000', 22);
       nullSprite.position.set(startX + (data.length - 1) * spacing + spacing * 0.7, 0.14, 0);
       nullSprite.scale.set(0.32, 0.22, 1);
       group.add(nullSprite);
 
-      // Arrow pointing to NULL
-      const lastArrow = create3DArrow(
-        startX + (data.length - 1) * spacing,
-        startX + (data.length - 1) * spacing + spacing * 0.7,
-        arrowY,
-        false
-      );
-      group.add(lastArrow);
+      // Arrow to NULL
+      if (data.length > 0) {
+        const lastArrow = create3DArrow(
+          startX + (data.length - 1) * spacing,
+          startX + (data.length - 1) * spacing + spacing * 0.7,
+          arrowY,
+          false
+        );
+        group.add(lastArrow);
+      }
 
       // Rails
       const railMat = new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.7 });
@@ -2177,8 +2370,8 @@ function buildSceneContent(
 
         if (i < data.length - 1) {
           const arrow = create3DArrow(
-            startX + i * spacing, 
-            startX + (i + 1) * spacing, 
+            startX + i * spacing,
+            startX + (i + 1) * spacing,
             arrowY,
             false
           );
@@ -2192,7 +2385,6 @@ function buildSceneContent(
       nullSprite.scale.set(0.28, 0.18, 1);
       group.add(nullSprite);
 
-      // Arrow to NULL
       if (data.length > 0) {
         const lastArrow = create3DArrow(
           startX + (data.length - 1) * spacing,
@@ -2224,8 +2416,8 @@ function buildSceneContent(
 
         if (i < data.length - 1) {
           const arrow = create3DArrow(
-            startX + i * spacing, 
-            startX + (i + 1) * spacing, 
+            startX + i * spacing,
+            startX + (i + 1) * spacing,
             arrowY,
             false
           );
@@ -2239,7 +2431,6 @@ function buildSceneContent(
       nullSprite.scale.set(0.28, 0.18, 1);
       group.add(nullSprite);
 
-      // Arrow to NULL
       if (data.length > 0) {
         const lastArrow = create3DArrow(
           startX + (data.length - 1) * spacing,
@@ -2269,7 +2460,7 @@ function buildSceneContent(
         const isTop = i === data.length - 1;
         const isPeeking = isTop && (animPhase === 'stack-peek-open');
         const openAmount = isPeeking ? (animProgress || 0) : 0;
-        
+
         const book = createBook(item.label, item.color, isHl, isPeeking, openAmount);
         book.position.set(isHl && !isPeeking ? 0.18 : 0, baseY + i * stackSpacing, 0);
         book.rotation.y = (i % 2 === 0) ? 0 : 0.04;
@@ -2325,19 +2516,19 @@ function buildSceneContent(
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const isTop = i === data.length - 1;
-        
+
         // Calculate open amount for peek animation - ONLY for top box
         let openAmount = 0;
         if (isTop) {
           if (animPhase === 'stack-peek-lift') {
-            openAmount = 0; // Still closed during lift
+            openAmount = 0;
           } else if (animPhase === 'stack-peek-open') {
-            openAmount = animProgress || 0; // Smoothly open
+            openAmount = animProgress || 0;
           } else if (animPhase === 'stack-peek-settle') {
-            openAmount = 1 - (animProgress || 0); // Smoothly close
+            openAmount = 1 - (animProgress || 0);
           }
         }
-        
+
         const cardboardBox = createCardboardBox(item.label, item.color, isHl, openAmount);
         cardboardBox.position.set(isHl && openAmount === 0 ? 0.18 : 0, boxBaseY + i * boxSpacing, 0);
         cardboardBox.rotation.y = (i % 2 === 0) ? 0 : 0.05;
@@ -2456,7 +2647,7 @@ function buildSceneContent(
         if (item.appearance) {
           const isWalking = (animPhase === 'queue-dequeue-drive') && isHl;
           const walkPhase = isWalking ? (animProgress || 0) * Math.PI * 6 : 0;
-          
+
           const human = createHuman3D(item.appearance, item.label, isHl, false, walkPhase);
           human.position.set(startX + i * spacing + 0.6, groundY, 0);
           human.scale.setScalar(0.55);
@@ -2624,7 +2815,7 @@ export default function Home() {
   ]);
 
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-  
+
   const smoothAnimate = (duration: number, phase: string, data: Record<string, any>) => {
     return new Promise<void>(resolve => {
       const startTime = Date.now();
@@ -2703,7 +2894,7 @@ export default function Home() {
       } catch (err: any) { setError(err.message); setIsLoading(false); }
     };
     init();
-    return () => { 
+    return () => {
       if (stream) stream.getTracks().forEach(track => track.stop());
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
@@ -3076,18 +3267,18 @@ export default function Home() {
     const frontItem = getQueueData()[0];
     setOperationMessage(`Dequeue: "${frontItem.label}"...`);
     setCodeDisplay(`// O(1) FIFO\nqueue.dequeue()`);
-    
+
     setOperationMessage('Gate opening...');
     await smoothAnimate(1000, 'queue-dequeue-gate-open', { index: 0 });
-    
+
     setOperationMessage(`${frontItem.label} passing through...`);
     await smoothAnimate(1200, 'queue-dequeue-drive', { index: 0 });
-    
+
     (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
-    
+
     setOperationMessage('Gate closing...');
     await smoothAnimate(800, 'queue-dequeue-gate-close', { index: -1 });
-    
+
     await delay(200);
     setAnimPhase(''); setAnimData({});
     setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
