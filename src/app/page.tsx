@@ -1009,7 +1009,7 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
   return train;
 }
 
-// ==================== TOLL BOOTH (Same size, barrier 50% lower) ====================
+// ==================== TOLL BOOTH (ARM LONGER, POST 50% LOWER) ====================
 
 function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
   const toll = new THREE.Group();
@@ -1053,28 +1053,28 @@ function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
   signMesh.position.set(0, groundY + 0.58, -0.36);
   toll.add(signMesh);
 
-  // Gate post (same size)
+  // Gate POST - 50% LOWER (height from 0.6 to 0.3, positioned lower)
   const postMat = new THREE.MeshStandardMaterial({ color: '#f39c12', roughness: 0.5, metalness: 0.3 });
-  const gatePost = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.6, 0.1), postMat);
-  gatePost.position.set(0, groundY + 0.3, -0.32);
+  const gatePost = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.3, 0.1), postMat);
+  gatePost.position.set(0, groundY + 0.15, -0.32);
   toll.add(gatePost);
 
-  // Gate pivot and arm - ARM is 50% SHORTER (pababain)
+  // Gate pivot - LOWERED to match shorter post
   const gatePivot = new THREE.Group();
-  gatePivot.position.set(0, groundY + 0.55, -0.32);
+  gatePivot.position.set(0, groundY + 0.28, -0.32);
 
-  // ARM length reduced from 0.7 to 0.35 (50% shorter)
-  const armLength = 0.35;
+  // ARM - LONGER (0.8 length for long barrier)
+  const armLength = 0.8;
   const gateArmMat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.5 });
   const gateArm = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, armLength), gateArmMat);
   gateArm.position.set(0, 0, armLength / 2);
   gatePivot.add(gateArm);
 
-  // Stripes on arm (fewer due to shorter arm)
+  // Stripes on arm (more stripes for longer arm)
   const stripeMat = new THREE.MeshStandardMaterial({ color: '#ffffff' });
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 7; i++) {
     const stripeBox = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.065, 0.04), stripeMat);
-    stripeBox.position.set(0, 0, 0.06 + i * 0.1);
+    stripeBox.position.set(0, 0, 0.08 + i * 0.1);
     gatePivot.add(stripeBox);
   }
 
@@ -1105,14 +1105,14 @@ function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
   // Terminal
   const terminalMat = new THREE.MeshStandardMaterial({ color: '#333', roughness: 0.4 });
   const terminal = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.25, 0.06), terminalMat);
-  terminal.position.set(0, groundY + 0.3, -0.38);
+  terminal.position.set(0, groundY + 0.125, -0.38);
   toll.add(terminal);
 
   const screen = new THREE.Mesh(
     new THREE.BoxGeometry(0.05, 0.05, 0.005),
     new THREE.MeshBasicMaterial({ color: gateOpenAmount > 0.5 ? '#00ff00' : '#ffff00' })
   );
-  screen.position.set(0, groundY + 0.38, -0.345);
+  screen.position.set(0, groundY + 0.2, -0.345);
   toll.add(screen);
 
   // Traffic lights
@@ -1148,207 +1148,13 @@ function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
   return toll;
 }
 
-// ==================== CAR ====================
-
-function createCar(color: string, label: string, isHighlighted: boolean): THREE.Group {
-  const car = new THREE.Group();
-
-  const bodyMat = new THREE.MeshStandardMaterial({
-    color,
-    metalness: 0.7,
-    roughness: 0.3,
-    emissive: isHighlighted ? '#ffff00' : '#000',
-    emissiveIntensity: isHighlighted ? 0.3 : 0,
-  });
-
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.14, 0.26), bodyMat);
-  body.position.y = 0.1;
-  car.add(body);
-
-  const panel = new THREE.Mesh(new THREE.BoxGeometry(0.53, 0.04, 0.27), bodyMat);
-  panel.position.y = 0.04;
-  car.add(panel);
-
-  const hood = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 0.24), bodyMat);
-  hood.position.set(-0.18, 0.19, 0);
-  car.add(hood);
-
-  const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.035, 0.24), bodyMat);
-  trunk.position.set(0.22, 0.185, 0);
-  car.add(trunk);
-
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.12, 0.23), bodyMat);
-  cabin.position.set(0.02, 0.23, 0);
-  car.add(cabin);
-
-  const roofMesh = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.018, 0.22), bodyMat);
-  roofMesh.position.set(0.02, 0.3, 0);
-  car.add(roofMesh);
-
-  const glassMat = new THREE.MeshStandardMaterial({ color: '#a8d8ea', metalness: 0.6, roughness: 0.05, transparent: true, opacity: 0.75 });
-
-  const windshield = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.1, 0.21), glassMat);
-  windshield.position.set(-0.1, 0.24, 0);
-  car.add(windshield);
-
-  const rearWindow = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.1, 0.21), glassMat);
-  rearWindow.position.set(0.14, 0.24, 0);
-  car.add(rearWindow);
-
-  [-0.131, 0.131].forEach(z => {
-    const sw = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.01), glassMat);
-    sw.position.set(0.02, 0.24, z);
-    car.add(sw);
-  });
-
-  const tireMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.9 });
-  const rimMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.9, roughness: 0.1 });
-
-  [[-0.16, 0.045, 0.135], [0.16, 0.045, 0.135], [-0.16, 0.045, -0.135], [0.16, 0.045, -0.135]].forEach(([wx, wy, wz]) => {
-    const tire = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.025), tireMat);
-    tire.position.set(wx, wy, wz);
-    car.add(tire);
-    const rim = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.028), rimMat);
-    rim.position.set(wx, wy, wz);
-    car.add(rim);
-  });
-
-  const headlightMat = new THREE.MeshBasicMaterial({ color: '#ffffee' });
-  [-0.09, 0.09].forEach(z => {
-    const hl = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.035, 0.055), headlightMat);
-    hl.position.set(-0.275, 0.1, z);
-    car.add(hl);
-  });
-
-  const tailMat = new THREE.MeshBasicMaterial({ color: '#ff2222' });
-  [-0.085, 0.085].forEach(z => {
-    const tl = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.03, 0.045), tailMat);
-    tl.position.set(0.275, 0.1, z);
-    car.add(tl);
-  });
-
-  const grille = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.05, 0.12), new THREE.MeshStandardMaterial({ color: '#222', metalness: 0.8 }));
-  grille.position.set(-0.28, 0.08, 0);
-  car.add(grille);
-
-  const plateCanvas = document.createElement('canvas');
-  plateCanvas.width = 96; plateCanvas.height = 36;
-  const pctx = plateCanvas.getContext('2d')!;
-  pctx.fillStyle = '#fff';
-  pctx.fillRect(0, 0, 96, 36);
-  pctx.strokeStyle = '#2c3e50';
-  pctx.lineWidth = 2;
-  pctx.strokeRect(2, 2, 92, 32);
-  pctx.fillStyle = '#2c3e50';
-  pctx.font = 'bold 14px Arial';
-  pctx.textAlign = 'center';
-  pctx.fillText(label, 48, 24);
-  const plateTex = new THREE.CanvasTexture(plateCanvas);
-  
-  const frontPlate = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.045), new THREE.MeshBasicMaterial({ map: plateTex }));
-  frontPlate.position.set(-0.281, 0.04, 0);
-  frontPlate.rotation.y = -Math.PI / 2;
-  car.add(frontPlate);
-
-  const rearPlate = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.045), new THREE.MeshBasicMaterial({ map: plateTex }));
-  rearPlate.position.set(0.281, 0.04, 0);
-  rearPlate.rotation.y = Math.PI / 2;
-  car.add(rearPlate);
-
-  if (isHighlighted) {
-    const glow = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.32, 0.32), new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 }));
-    glow.position.y = 0.15;
-    car.add(glow);
-  }
-
-  return car;
-}
-
-// ==================== PLATE ====================
-
-function createPlate(label: string, isHighlighted: boolean): THREE.Group {
-  const plate = new THREE.Group();
-
-  const plateMat = new THREE.MeshStandardMaterial({ 
-    color: '#f5f5f0', 
-    roughness: 0.25, 
-    metalness: 0.1, 
-    emissive: isHighlighted ? '#ffff00' : '#000', 
-    emissiveIntensity: isHighlighted ? 0.2 : 0 
-  });
-  const plateBase = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.025, 0.38), plateMat);
-  plate.add(plateBase);
-
-  const rimMat = new THREE.MeshStandardMaterial({ color: '#e8e8e0', roughness: 0.3, metalness: 0.15 });
-  const rim = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.02, 0.4), rimMat);
-  rim.position.y = 0.012;
-  plate.add(rim);
-
-  const innerPlate = new THREE.Mesh(
-    new THREE.BoxGeometry(0.42, 0.008, 0.32),
-    new THREE.MeshStandardMaterial({ color: '#fafafa', roughness: 0.3 })
-  );
-  innerPlate.position.y = 0.018;
-  plate.add(innerPlate);
-
-  const decorRing = new THREE.Mesh(
-    new THREE.BoxGeometry(0.46, 0.003, 0.35),
-    new THREE.MeshStandardMaterial({ color: '#c9a227', metalness: 0.6 })
-  );
-  decorRing.position.y = 0.022;
-  plate.add(decorRing);
-
-  const riceMat = new THREE.MeshStandardMaterial({ color: '#fffef5', roughness: 0.9 });
-  const riceBase = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.04, 0.12), riceMat);
-  riceBase.position.set(-0.12, 0.04, 0);
-  plate.add(riceBase);
-  
-  const riceTop = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.025, 0.08), riceMat);
-  riceTop.position.set(-0.12, 0.065, 0);
-  plate.add(riceTop);
-
-  const chickenMat = new THREE.MeshStandardMaterial({ color: '#d4a054', roughness: 0.65 });
-  const crispyMat = new THREE.MeshStandardMaterial({ color: '#c4792a', roughness: 0.5 });
-
-  const drumstick = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.055, 0.055), chickenMat);
-  drumstick.position.set(0.06, 0.05, -0.02);
-  drumstick.rotation.z = 0.15;
-  plate.add(drumstick);
-
-  const drumCoat = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.04, 0.04), crispyMat);
-  drumCoat.position.set(0.05, 0.055, -0.02);
-  plate.add(drumCoat);
-
-  const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.045, 0.07), chickenMat);
-  thigh.position.set(0.08, 0.045, 0.06);
-  plate.add(thigh);
-
-  const lettuceMat = new THREE.MeshStandardMaterial({ color: '#228b22', roughness: 0.8 });
-  const lettuce = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.008, 0.06), lettuceMat);
-  lettuce.position.set(-0.02, 0.025, 0.1);
-  plate.add(lettuce);
-
-  const tomatoMat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.6 });
-  const tomato = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.012, 0.04), tomatoMat);
-  tomato.position.set(0.04, 0.03, 0.12);
-  plate.add(tomato);
-
-  if (isHighlighted) {
-    plate.add(new THREE.Mesh(
-      new THREE.BoxGeometry(0.54, 0.06, 0.42), 
-      new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.15 })
-    ));
-  }
-
-  return plate;
-}
-
-// ==================== CARDBOARD BOX (FIXED - Closed by default, opens smoothly during peek) ====================
+// ==================== CARDBOARD BOX (FULLY CLOSED by default, opens during peek) ====================
 
 function createCardboardBox(label: string, color: string, isHighlighted: boolean, openAmount: number = 0): THREE.Group {
   const box = new THREE.Group();
   const boxW = 0.48, boxH = 0.34, boxD = 0.38;
   const wallThickness = 0.015;
+  const flapHeight = 0.12;
 
   const cardboardMat = new THREE.MeshStandardMaterial({ 
     color, 
@@ -1380,7 +1186,7 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   frontWall.position.z = boxD / 2 - wallThickness / 2;
   box.add(frontWall);
 
-  // Inner floor (visible when open)
+  // Inner floor
   const innerFloor = new THREE.Mesh(
     new THREE.BoxGeometry(boxW - wallThickness * 2, 0.005, boxD - wallThickness * 2),
     innerMat
@@ -1401,56 +1207,72 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
     ? 2 * openAmount * openAmount 
     : 1 - Math.pow(-2 * openAmount + 2, 2) / 2;
 
-  // Front/Back flap angle (opens outward)
-  const frontBackAngle = -easedOpen * 1.4; // Opens up to ~80 degrees
-  // Side flap angle (opens outward)
-  const sideAngle = easedOpen * 1.2; // Opens up to ~70 degrees
-
   const flapMat = new THREE.MeshStandardMaterial({ color, roughness: 0.85, side: THREE.DoubleSide });
 
-  // Front flap - pivots from top of front wall
+  // CLOSED = flaps folded INWARD (covering top) = -90 degrees
+  // OPEN = flaps standing up = 0 degrees or slightly outward
+  const closedAngle = -Math.PI / 2;  // 90 degrees inward (flat on top)
+  const openAngle = 0.3;              // slightly outward when open
+  
+  // Front/back flap angles
+  const frontFlapAngle = closedAngle + (openAngle - closedAngle) * easedOpen;
+  const backFlapAngle = closedAngle + (openAngle - closedAngle) * easedOpen;
+  
+  // Side flaps - fold inward when closed
+  const sideClosedAngle = Math.PI / 2;  // 90 degrees inward
+  const sideOpenAngle = -0.3;           // slightly outward when open
+  const sideFlapAngle = sideClosedAngle + (sideOpenAngle - sideClosedAngle) * easedOpen;
+
+  // FRONT FLAP - pivots from top of front wall, folds backward to cover top
   const frontFlapPivot = new THREE.Group();
   frontFlapPivot.position.set(0, boxH / 2, boxD / 2 - wallThickness);
-  const frontFlap = new THREE.Mesh(new THREE.BoxGeometry(boxW - 0.02, 0.14, wallThickness), flapMat);
-  frontFlap.position.set(0, 0.07, wallThickness / 2);
+  const frontFlap = new THREE.Mesh(new THREE.BoxGeometry(boxW - 0.04, flapHeight, wallThickness), flapMat);
+  frontFlap.position.set(0, flapHeight / 2, 0);
   frontFlapPivot.add(frontFlap);
-  frontFlapPivot.rotation.x = frontBackAngle;
+  frontFlapPivot.rotation.x = frontFlapAngle;
   box.add(frontFlapPivot);
 
-  // Back flap - pivots from top of back wall
+  // BACK FLAP - pivots from top of back wall, folds forward to cover top
   const backFlapPivot = new THREE.Group();
   backFlapPivot.position.set(0, boxH / 2, -boxD / 2 + wallThickness);
-  const backFlap = new THREE.Mesh(new THREE.BoxGeometry(boxW - 0.02, 0.14, wallThickness), flapMat);
-  backFlap.position.set(0, 0.07, -wallThickness / 2);
+  const backFlap = new THREE.Mesh(new THREE.BoxGeometry(boxW - 0.04, flapHeight, wallThickness), flapMat);
+  backFlap.position.set(0, flapHeight / 2, 0);
   backFlapPivot.add(backFlap);
-  backFlapPivot.rotation.x = -frontBackAngle;
+  backFlapPivot.rotation.x = -backFlapAngle; // opposite direction
   box.add(backFlapPivot);
 
-  // Left flap - pivots from top of left wall
+  // LEFT FLAP - pivots from top of left wall, folds inward
   const leftFlapPivot = new THREE.Group();
   leftFlapPivot.position.set(-boxW / 2 + wallThickness, boxH / 2, 0);
-  const leftFlap = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, 0.1, boxD - 0.04), flapMat);
-  leftFlap.position.set(-wallThickness / 2, 0.05, 0);
+  const leftFlap = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, boxW / 2 - 0.02, boxD - 0.06), flapMat);
+  leftFlap.position.set(0, (boxW / 2 - 0.02) / 2, 0);
   leftFlapPivot.add(leftFlap);
-  leftFlapPivot.rotation.z = sideAngle;
+  leftFlapPivot.rotation.z = sideFlapAngle;
   box.add(leftFlapPivot);
 
-  // Right flap - pivots from top of right wall
+  // RIGHT FLAP - pivots from top of right wall, folds inward
   const rightFlapPivot = new THREE.Group();
   rightFlapPivot.position.set(boxW / 2 - wallThickness, boxH / 2, 0);
-  const rightFlap = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, 0.1, boxD - 0.04), flapMat);
-  rightFlap.position.set(wallThickness / 2, 0.05, 0);
+  const rightFlap = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, boxW / 2 - 0.02, boxD - 0.06), flapMat);
+  rightFlap.position.set(0, (boxW / 2 - 0.02) / 2, 0);
   rightFlapPivot.add(rightFlap);
-  rightFlapPivot.rotation.z = -sideAngle;
+  rightFlapPivot.rotation.z = -sideFlapAngle; // opposite direction
   box.add(rightFlapPivot);
 
-  // Tape (only visible when closed)
-  if (openAmount < 0.3) {
-    const tapeOpacity = 1 - (openAmount / 0.3);
-    const tapeMat = new THREE.MeshStandardMaterial({ color: '#d4a574', transparent: true, opacity: 0.7 * tapeOpacity, roughness: 0.3 });
-    const tape = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.008, boxD + 0.01), tapeMat);
-    tape.position.y = boxH / 2 + 0.004;
+  // Tape on top (only visible when closed)
+  if (openAmount < 0.2) {
+    const tapeOpacity = 1 - (openAmount / 0.2);
+    const tapeMat = new THREE.MeshStandardMaterial({ color: '#d4a574', transparent: true, opacity: 0.8 * tapeOpacity, roughness: 0.3 });
+    
+    // Tape across the center seam (where front and back flaps meet)
+    const tape = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.005, boxD * 0.6), tapeMat);
+    tape.position.y = boxH / 2 + flapHeight - 0.01;
     box.add(tape);
+    
+    // Cross tape
+    const tape2 = new THREE.Mesh(new THREE.BoxGeometry(boxW * 0.5, 0.005, 0.06), tapeMat);
+    tape2.position.y = boxH / 2 + flapHeight - 0.01;
+    box.add(tape2);
   }
 
   // Label on front
@@ -1485,7 +1307,7 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
 
   if (isHighlighted && openAmount < 0.1) {
     box.add(new THREE.Mesh(
-      new THREE.BoxGeometry(boxW + 0.06, boxH + 0.06, boxD + 0.06), 
+      new THREE.BoxGeometry(boxW + 0.06, boxH + 0.2, boxD + 0.06), 
       new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 })
     ));
   }
