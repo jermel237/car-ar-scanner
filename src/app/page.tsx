@@ -2758,118 +2758,120 @@ function buildSceneContent(
       const ticketDispenserGroup = createTicketDispenser(data, highlightIndex, animPhase || '', animProgress || 0);
       group.add(ticketDispenserGroup);
 
-} else if (environment === 'students') {
-  // School building on the left
-  const schoolBuilding = createSchoolBuilding();
-  schoolBuilding.position.set(startX - 0.8, groundY, 0);
-  schoolBuilding.scale.setScalar(0.5);
-  group.add(schoolBuilding);
+    } else if (environment === 'students') {
+      // School building on the left
+      const schoolBuilding = createSchoolBuilding();
+      schoolBuilding.position.set(startX - 0.8, groundY, 0);
+      schoolBuilding.scale.setScalar(0.5);
+      group.add(schoolBuilding);
 
-  data.forEach((item, i) => {
-    const isHl = highlightIndex === i;
-    const isFront = i === 0;
-    
-    if (item.appearance) {
-      // Calculate walk phase for animation - legs and arms moving
-      let walkPhase = 0;
-      let extraX = 0;
-      let studentScale = 0.55;
-      let rotationY = -Math.PI / 2; // Face toward school (left)
-      let isWalking = false;
-      
-      if (isFront) {
-        if (animPhase === 'queue-dequeue-walk') {
-          // Walking toward school - animate legs and arms
-          isWalking = true;
-          const progress = animProgress || 0;
-          walkPhase = progress * Math.PI * 10; // Fast leg/arm movement (multiple steps)
-          extraX = -progress * 1.5; // Walk toward school
-        } else if (animPhase === 'queue-dequeue-enter') {
-          // Entering school door - still walking but shrinking
-          isWalking = true;
-          const progress = animProgress || 0;
-          walkPhase = Math.PI * 10 + progress * Math.PI * 4; // Continue walking
-          extraX = -1.5 - progress * 0.5; // Continue into school
-          studentScale = 0.55 * Math.max(0.05, 1 - progress * 0.95); // Shrink as entering
+      data.forEach((item, i) => {
+        const isHl = highlightIndex === i;
+        const isFront = i === 0;
+        
+        if (item.appearance) {
+          // Calculate walk phase for animation - legs and arms moving
+          let walkPhase = 0;
+          let extraX = 0;
+          let studentScale = 0.55;
+          let rotationY = -Math.PI / 2; // Face toward school (left)
+          let isWalking = false;
+          
+          if (isFront) {
+            if (animPhase === 'queue-dequeue-walk') {
+              // Walking toward school - animate legs and arms
+              isWalking = true;
+              const progress = animProgress || 0;
+              walkPhase = progress * Math.PI * 10; // Fast leg/arm movement (multiple steps)
+              extraX = -progress * 1.5; // Walk toward school
+            } else if (animPhase === 'queue-dequeue-enter') {
+              // Entering school door - still walking but shrinking
+              isWalking = true;
+              const progress = animProgress || 0;
+              walkPhase = Math.PI * 10 + progress * Math.PI * 4; // Continue walking
+              extraX = -1.5 - progress * 0.5; // Continue into school
+              studentScale = 0.55 * Math.max(0.05, 1 - progress * 0.95); // Shrink as entering
+            }
+          }
+
+          // Create human with walking animation
+          const human = createHuman3D(
+            item.appearance, 
+            item.label, 
+            isHl, 
+            false, // NOT seated - standing in queue
+            isWalking ? walkPhase : 0 // Pass walk phase for leg/arm animation
+          );
+          
+          // Position student
+          const studentX = startX + i * spacing + 0.8 + extraX;
+          human.position.set(studentX, groundY, 0);
+          human.scale.setScalar(studentScale);
+          human.rotation.y = rotationY;
+          
+          // Apply standard queue animations for non-walking states
+          if (!isWalking) {
+            applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue', animProgress);
+          }
+          
+          group.add(human);
         }
+      });
+
+      // Front label
+      if (data.length > 0) {
+        const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
+        frontSprite.position.set(startX + 0.8, groundY - 0.2, 0);
+        frontSprite.scale.set(0.26, 0.09, 1);
+        group.add(frontSprite);
+
+        // Rear label
+        const rearSprite = createTextSprite('REAR', '#ff6600', 16);
+        rearSprite.position.set(startX + (data.length - 1) * spacing + 0.8, groundY - 0.2, 0);
+        rearSprite.scale.set(0.26, 0.09, 1);
+        group.add(rearSprite);
       }
 
-      // Create human with walking animation
-      const human = createHuman3D(
-        item.appearance, 
-        item.label, 
-        isHl, 
-        false, // NOT seated - standing in queue
-        isWalking ? walkPhase : 0 // Pass walk phase for leg/arm animation
+      // Pathway from queue to school
+      const pathway = new THREE.Mesh(
+        new THREE.PlaneGeometry(data.length * spacing + 2.8, 0.5),
+        new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
       );
-      
-      // Position student
-      const studentX = startX + i * spacing + 0.8 + extraX;
-      human.position.set(studentX, groundY, 0);
-      human.scale.setScalar(studentScale);
-      human.rotation.y = rotationY;
-      
-      // Apply standard queue animations for non-walking states
-      if (!isWalking) {
-        applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue', animProgress);
-      }
-      
-      group.add(human);
+      pathway.rotation.x = -Math.PI / 2;
+      pathway.position.set(0.2, groundY - 0.01, 0);
+      group.add(pathway);
+
+      // Grass on sides of pathway
+      const grassMat = new THREE.MeshStandardMaterial({ color: '#228b22', side: THREE.DoubleSide });
+      [-0.38, 0.38].forEach(z => {
+        const grass = new THREE.Mesh(
+          new THREE.PlaneGeometry(data.length * spacing + 2.8, 0.35), 
+          grassMat
+        );
+        grass.rotation.x = -Math.PI / 2;
+        grass.position.set(0.2, groundY - 0.015, z);
+        group.add(grass);
+      });
+
+      // Direction arrow showing queue flow
+      const arrowCanvas = document.createElement('canvas');
+      arrowCanvas.width = 100;
+      arrowCanvas.height = 40;
+      const actx = arrowCanvas.getContext('2d')!;
+      actx.fillStyle = '#3498db';
+      actx.font = 'bold 24px Arial';
+      actx.textAlign = 'center';
+      actx.fillText('← ENTER', 50, 28);
+      const arrowTex = new THREE.CanvasTexture(arrowCanvas);
+      const arrowSign = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.35, 0.12),
+        new THREE.MeshBasicMaterial({ map: arrowTex, transparent: true })
+      );
+      arrowSign.position.set(startX + 0.2, groundY + 0.35, 0);
+      arrowSign.rotation.x = -0.3;
+      group.add(arrowSign);
     }
-  });
-
-  // Front label
-  if (data.length > 0) {
-    const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
-    frontSprite.position.set(startX + 0.8, groundY - 0.2, 0);
-    frontSprite.scale.set(0.26, 0.09, 1);
-    group.add(frontSprite);
-
-    // Rear label
-    const rearSprite = createTextSprite('REAR', '#ff6600', 16);
-    rearSprite.position.set(startX + (data.length - 1) * spacing + 0.8, groundY - 0.2, 0);
-    rearSprite.scale.set(0.26, 0.09, 1);
-    group.add(rearSprite);
   }
-
-  // Pathway from queue to school
-  const pathway = new THREE.Mesh(
-    new THREE.PlaneGeometry(data.length * spacing + 2.8, 0.5),
-    new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
-  );
-  pathway.rotation.x = -Math.PI / 2;
-  pathway.position.set(0.2, groundY - 0.01, 0);
-  group.add(pathway);
-
-  // Grass on sides of pathway
-  const grassMat = new THREE.MeshStandardMaterial({ color: '#228b22', side: THREE.DoubleSide });
-  [-0.38, 0.38].forEach(z => {
-    const grass = new THREE.Mesh(
-      new THREE.PlaneGeometry(data.length * spacing + 2.8, 0.35), 
-      grassMat
-    );
-    grass.rotation.x = -Math.PI / 2;
-    grass.position.set(0.2, groundY - 0.015, z);
-    group.add(grass);
-  });
-
-  // Direction arrow showing queue flow
-  const arrowCanvas = document.createElement('canvas');
-  arrowCanvas.width = 100;
-  arrowCanvas.height = 40;
-  const actx = arrowCanvas.getContext('2d')!;
-  actx.fillStyle = '#3498db';
-  actx.font = 'bold 24px Arial';
-  actx.textAlign = 'center';
-  actx.fillText('← ENTER', 50, 28);
-  const arrowTex = new THREE.CanvasTexture(arrowCanvas);
-  const arrowSign = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.35, 0.12),
-    new THREE.MeshBasicMaterial({ map: arrowTex, transparent: true })
-  );
-  arrowSign.position.set(startX + 0.2, groundY + 0.35, 0);
-  arrowSign.rotation.x = -0.3;
-  group.add(arrowSign);
 }
       });
 
