@@ -1349,9 +1349,7 @@ function createPlate(label: string, isHighlighted: boolean): THREE.Group {
   return plate;
 }
 
-// ==================== CARDBOARD BOX (LEFT/RIGHT DOORS) ====================
-
-// ==================== CARDBOARD BOX (TOP OPENING - TWO FLAPS) ====================
+// ==================== CARDBOARD BOX (TOP OPENING FLAPS) ====================
 
 function createCardboardBox(label: string, color: string, isHighlighted: boolean, openAmount: number = 0): THREE.Group {
   const box = new THREE.Group();
@@ -1375,27 +1373,25 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   bottom.position.y = wallThickness / 2;
   box.add(bottom);
 
-  // === FOUR WALLS ===
-  const wallHeight = boxH - wallThickness;
-
+  // === WALLS ===
   // Front wall
-  const frontWall = new THREE.Mesh(new THREE.BoxGeometry(boxW, wallHeight, wallThickness), cardboardMat);
-  frontWall.position.set(0, wallThickness + wallHeight / 2, boxD / 2 - wallThickness / 2);
+  const frontWall = new THREE.Mesh(new THREE.BoxGeometry(boxW, boxH - wallThickness, wallThickness), cardboardMat);
+  frontWall.position.set(0, wallThickness + (boxH - wallThickness) / 2, boxD / 2 - wallThickness / 2);
   box.add(frontWall);
 
   // Back wall
-  const backWall = new THREE.Mesh(new THREE.BoxGeometry(boxW, wallHeight, wallThickness), cardboardMat);
-  backWall.position.set(0, wallThickness + wallHeight / 2, -boxD / 2 + wallThickness / 2);
+  const backWall = new THREE.Mesh(new THREE.BoxGeometry(boxW, boxH - wallThickness, wallThickness), cardboardMat);
+  backWall.position.set(0, wallThickness + (boxH - wallThickness) / 2, -boxD / 2 + wallThickness / 2);
   box.add(backWall);
 
   // Left wall
-  const leftWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, boxD - wallThickness * 2), cardboardMat);
-  leftWall.position.set(-boxW / 2 + wallThickness / 2, wallThickness + wallHeight / 2, 0);
+  const leftWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, boxH - wallThickness, boxD - wallThickness * 2), cardboardMat);
+  leftWall.position.set(-boxW / 2 + wallThickness / 2, wallThickness + (boxH - wallThickness) / 2, 0);
   box.add(leftWall);
 
   // Right wall
-  const rightWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, boxD - wallThickness * 2), cardboardMat);
-  rightWall.position.set(boxW / 2 - wallThickness / 2, wallThickness + wallHeight / 2, 0);
+  const rightWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, boxH - wallThickness, boxD - wallThickness * 2), cardboardMat);
+  rightWall.position.set(boxW / 2 - wallThickness / 2, wallThickness + (boxH - wallThickness) / 2, 0);
   box.add(rightWall);
 
   // === INNER FLOOR ===
@@ -1408,15 +1404,15 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
 
   // === CORNER REINFORCEMENTS ===
   [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(([sx, sz]) => {
-    const corner = new THREE.Mesh(new THREE.BoxGeometry(0.025, wallHeight, 0.025), cornerMat);
-    corner.position.set(sx * (boxW / 2 - 0.0125), wallThickness + wallHeight / 2, sz * (boxD / 2 - 0.0125));
+    const corner = new THREE.Mesh(new THREE.BoxGeometry(0.025, boxH - wallThickness, 0.025), cornerMat);
+    corner.position.set(sx * (boxW / 2 - 0.0125), wallThickness + (boxH - wallThickness) / 2, sz * (boxD / 2 - 0.0125));
     box.add(corner);
   });
 
-  // === TOP FLAPS - Two flaps opening from top ===
-  const topY = wallThickness + wallHeight;
-  const flapDepth = (boxD - wallThickness * 2) / 2;
+  // === TOP FLAPS (Opening from center outward) ===
+  const flapHeight = boxD / 2 - wallThickness;
   const flapWidth = boxW - wallThickness * 2;
+  const topY = boxH;
 
   const easedOpen = openAmount < 0.5
     ? 2 * openAmount * openAmount
@@ -1424,116 +1420,151 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
 
   const openAngle = Math.PI * 0.55; // How far flaps open
 
-  // === FRONT FLAP (hinged at front edge, opens backward) ===
+  // === FRONT FLAP (hinged at front edge, opens outward toward front) ===
   const frontFlapPivot = new THREE.Group();
-  frontFlapPivot.position.set(0, topY, boxD / 2 - wallThickness - 0.001);
+  frontFlapPivot.position.set(0, topY, boxD / 2 - wallThickness);
 
   const frontFlap = new THREE.Mesh(
-    new THREE.BoxGeometry(flapWidth, flapThickness, flapDepth),
+    new THREE.BoxGeometry(flapWidth, flapThickness, flapHeight),
     flapMat
   );
-  frontFlap.position.set(0, flapThickness / 2, -flapDepth / 2);
+  frontFlap.position.set(0, 0, -flapHeight / 2);
   frontFlapPivot.add(frontFlap);
 
-  // Flap fold line decoration
-  const frontFoldLine = new THREE.Mesh(
-    new THREE.BoxGeometry(flapWidth - 0.02, 0.003, 0.008),
-    new THREE.MeshStandardMaterial({ color: '#8b6914' })
-  );
-  frontFoldLine.position.set(0, flapThickness + 0.001, -0.005);
+  // Flap fold line
+  const foldLineMat = new THREE.MeshBasicMaterial({ color: '#a0855b' });
+  const frontFoldLine = new THREE.Mesh(new THREE.BoxGeometry(flapWidth - 0.02, 0.003, 0.003), foldLineMat);
+  frontFoldLine.position.set(0, flapThickness / 2 + 0.001, -0.01);
   frontFlapPivot.add(frontFoldLine);
 
-  // Front flap opens backward (negative X rotation)
-  frontFlapPivot.rotation.x = -easedOpen * openAngle;
+  frontFlapPivot.rotation.x = easedOpen * openAngle;
   box.add(frontFlapPivot);
 
-  // === BACK FLAP (hinged at back edge, opens forward) ===
+  // === BACK FLAP (hinged at back edge, opens outward toward back) ===
   const backFlapPivot = new THREE.Group();
-  backFlapPivot.position.set(0, topY, -boxD / 2 + wallThickness + 0.001);
+  backFlapPivot.position.set(0, topY, -boxD / 2 + wallThickness);
 
   const backFlap = new THREE.Mesh(
-    new THREE.BoxGeometry(flapWidth, flapThickness, flapDepth),
+    new THREE.BoxGeometry(flapWidth, flapThickness, flapHeight),
     flapMat
   );
-  backFlap.position.set(0, flapThickness / 2, flapDepth / 2);
+  backFlap.position.set(0, 0, flapHeight / 2);
   backFlapPivot.add(backFlap);
 
-  // Flap fold line decoration
-  const backFoldLine = new THREE.Mesh(
-    new THREE.BoxGeometry(flapWidth - 0.02, 0.003, 0.008),
-    new THREE.MeshStandardMaterial({ color: '#8b6914' })
-  );
-  backFoldLine.position.set(0, flapThickness + 0.001, 0.005);
+  const backFoldLine = new THREE.Mesh(new THREE.BoxGeometry(flapWidth - 0.02, 0.003, 0.003), foldLineMat);
+  backFoldLine.position.set(0, flapThickness / 2 + 0.001, 0.01);
   backFlapPivot.add(backFoldLine);
 
-  // Back flap opens forward (positive X rotation)
-  backFlapPivot.rotation.x = easedOpen * openAngle;
+  backFlapPivot.rotation.x = -easedOpen * openAngle;
   box.add(backFlapPivot);
 
-  // === TAPE ON TOP (when closed) ===
-  if (openAmount < 0.1) {
+  // === SIDE FLAPS (smaller, hinged at sides) ===
+  const sideFlapDepth = boxW / 2 - wallThickness;
+  const sideFlapWidth = boxD - wallThickness * 2 - flapHeight * 2;
+
+  // Left side flap
+  const leftFlapPivot = new THREE.Group();
+  leftFlapPivot.position.set(-boxW / 2 + wallThickness, topY, 0);
+
+  const leftFlap = new THREE.Mesh(
+    new THREE.BoxGeometry(sideFlapDepth, flapThickness, Math.max(0.05, sideFlapWidth)),
+    flapMat
+  );
+  leftFlap.position.set(sideFlapDepth / 2, 0, 0);
+  leftFlapPivot.add(leftFlap);
+
+  leftFlapPivot.rotation.z = -easedOpen * openAngle;
+  box.add(leftFlapPivot);
+
+  // Right side flap
+  const rightFlapPivot = new THREE.Group();
+  rightFlapPivot.position.set(boxW / 2 - wallThickness, topY, 0);
+
+  const rightFlap = new THREE.Mesh(
+    new THREE.BoxGeometry(sideFlapDepth, flapThickness, Math.max(0.05, sideFlapWidth)),
+    flapMat
+  );
+  rightFlap.position.set(-sideFlapDepth / 2, 0, 0);
+  rightFlapPivot.add(rightFlap);
+
+  rightFlapPivot.rotation.z = easedOpen * openAngle;
+  box.add(rightFlapPivot);
+
+  // === TAPE (visible when closed) ===
+  if (openAmount < 0.3) {
     const tape = new THREE.Mesh(
-      new THREE.BoxGeometry(0.08, 0.004, boxD - 0.04),
+      new THREE.BoxGeometry(0.08, 0.005, boxD * 0.7),
       tapeMat
     );
-    tape.position.set(0, topY + flapThickness + 0.002, 0);
+    tape.position.set(0, topY + 0.003, 0);
     box.add(tape);
+
+    // Cross tape
+    const crossTape = new THREE.Mesh(
+      new THREE.BoxGeometry(boxW * 0.5, 0.005, 0.04),
+      tapeMat
+    );
+    crossTape.position.set(0, topY + 0.004, 0);
+    box.add(crossTape);
   }
 
-  // === MAIN LABEL ON FRONT ===
+  // === MAIN LABEL ON SIDE ===
   const labelCanvas = document.createElement('canvas');
   labelCanvas.width = 180;
-  labelCanvas.height = 140;
+  labelCanvas.height = 120;
   const labelCtx = labelCanvas.getContext('2d')!;
   labelCtx.fillStyle = '#ffffff';
-  labelCtx.fillRect(0, 0, 180, 140);
+  labelCtx.fillRect(0, 0, 180, 120);
   labelCtx.fillStyle = '#e74c3c';
-  labelCtx.fillRect(6, 6, 168, 32);
+  labelCtx.fillRect(6, 6, 168, 28);
   labelCtx.fillStyle = '#fff';
-  labelCtx.font = 'bold 18px Arial';
+  labelCtx.font = 'bold 16px Arial';
   labelCtx.textAlign = 'center';
-  labelCtx.fillText('FRAGILE', 90, 30);
+  labelCtx.fillText('FRAGILE', 90, 26);
   labelCtx.fillStyle = '#2c3e50';
-  labelCtx.font = 'bold 32px Arial';
-  labelCtx.fillText(label, 90, 80);
-  
-  // Up arrow
+  labelCtx.font = 'bold 28px Arial';
+  labelCtx.fillText(label, 90, 68);
   labelCtx.strokeStyle = '#e74c3c';
-  labelCtx.lineWidth = 3;
+  labelCtx.lineWidth = 2;
   labelCtx.beginPath();
-  labelCtx.moveTo(75, 120);
+  labelCtx.moveTo(75, 85);
   labelCtx.lineTo(90, 100);
-  labelCtx.lineTo(105, 120);
-  labelCtx.stroke();
-  labelCtx.beginPath();
-  labelCtx.moveTo(90, 100);
-  labelCtx.lineTo(90, 130);
+  labelCtx.lineTo(105, 85);
   labelCtx.stroke();
 
   const labelTex = new THREE.CanvasTexture(labelCanvas);
   const labelMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.28, 0.22),
+    new THREE.PlaneGeometry(0.22, 0.15),
     new THREE.MeshBasicMaterial({ map: labelTex })
   );
-  labelMesh.position.set(0, wallThickness + wallHeight / 2, boxD / 2 + 0.001);
+  labelMesh.position.set(0, boxH / 2 + wallThickness, boxD / 2 + 0.001);
   box.add(labelMesh);
 
-  // === "OPEN" indicator when flaps are opening ===
-  if (openAmount > 0.1) {
-    const openCanvas = document.createElement('canvas');
-    openCanvas.width = 120;
-    openCanvas.height = 40;
-    const octx = openCanvas.getContext('2d')!;
-    octx.fillStyle = '#27ae60';
-    octx.font = 'bold 22px Arial';
-    octx.textAlign = 'center';
-    octx.fillText('📦 OPEN', 60, 28);
-    const openTex = new THREE.CanvasTexture(openCanvas);
-    const openSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: openTex, transparent: true }));
-    openSprite.position.set(0, topY + 0.18, 0);
-    openSprite.scale.set(0.28, 0.1, 1);
-    box.add(openSprite);
-  }
+  // === "THIS WAY UP" arrow on side ===
+  const arrowCanvas = document.createElement('canvas');
+  arrowCanvas.width = 64;
+  arrowCanvas.height = 80;
+  const actx = arrowCanvas.getContext('2d')!;
+  actx.fillStyle = '#2c3e50';
+  actx.beginPath();
+  actx.moveTo(32, 5);
+  actx.lineTo(55, 35);
+  actx.lineTo(42, 35);
+  actx.lineTo(42, 75);
+  actx.lineTo(22, 75);
+  actx.lineTo(22, 35);
+  actx.lineTo(9, 35);
+  actx.closePath();
+  actx.fill();
+
+  const arrowTex = new THREE.CanvasTexture(arrowCanvas);
+  const arrowMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.06, 0.08),
+    new THREE.MeshBasicMaterial({ map: arrowTex, transparent: true })
+  );
+  arrowMesh.position.set(boxW / 2 + 0.001, boxH / 2 + wallThickness, 0);
+  arrowMesh.rotation.y = Math.PI / 2;
+  box.add(arrowMesh);
 
   // === HIGHLIGHT GLOW ===
   if (isHighlighted && openAmount < 0.1) {
@@ -1765,55 +1796,55 @@ function createClipboard(label: string, color: string, isHighlighted: boolean): 
   return clipboard;
 }
 
-// ==================== TICKET DISPENSER (ARCADE STYLE - FACING RIGHT) ====================
+// ==================== TICKET DISPENSER (FACING RIGHT, FLAT TICKETS) ====================
 
 function createTicketDispenser(tickets: DataItem[], highlightIndex: number | null, animPhase: string, animProgress: number): THREE.Group {
   const dispenser = new THREE.Group();
   const groundY = 0;
 
-  // === MAIN MACHINE BODY - Facing Right ===
+  // === MAIN MACHINE BODY (rotated to face right) ===
   const machineMat = new THREE.MeshStandardMaterial({ color: '#c0392b', roughness: 0.4, metalness: 0.3 });
   const machineBody = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.9, 0.5), machineMat);
-  machineBody.position.set(-1.0, groundY + 0.45, 0);
+  machineBody.position.set(0, groundY + 0.45, -0.6);
   dispenser.add(machineBody);
 
   // === MACHINE TOP ===
   const topMat = new THREE.MeshStandardMaterial({ color: '#922b21', roughness: 0.5 });
   const machineTop = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.06, 0.55), topMat);
-  machineTop.position.set(-1.0, groundY + 0.93, 0);
+  machineTop.position.set(0, groundY + 0.93, -0.6);
   dispenser.add(machineTop);
 
   // === DECORATIVE TRIM ===
   const trimMat = new THREE.MeshStandardMaterial({ color: '#f1c40f', metalness: 0.7, roughness: 0.3 });
   const topTrim = new THREE.Mesh(new THREE.BoxGeometry(0.37, 0.03, 0.52), trimMat);
-  topTrim.position.set(-1.0, groundY + 0.91, 0);
+  topTrim.position.set(0, groundY + 0.91, -0.6);
   dispenser.add(topTrim);
 
   const bottomTrim = new THREE.Mesh(new THREE.BoxGeometry(0.37, 0.03, 0.52), trimMat);
-  bottomTrim.position.set(-1.0, groundY + 0.03, 0);
+  bottomTrim.position.set(0, groundY + 0.03, -0.6);
   dispenser.add(bottomTrim);
 
-  // === TICKET SLOT - On the right side of machine ===
+  // === TICKET SLOT (on the right side of machine) ===
   const slotFrame = new THREE.Mesh(
-    new THREE.BoxGeometry(0.06, 0.08, 0.3),
+    new THREE.BoxGeometry(0.08, 0.08, 0.3),
     new THREE.MeshStandardMaterial({ color: '#2c3e50', metalness: 0.5 })
   );
-  slotFrame.position.set(-0.8, groundY + 0.35, 0);
+  slotFrame.position.set(0.18, groundY + 0.35, -0.6);
   dispenser.add(slotFrame);
 
   const slotHole = new THREE.Mesh(
-    new THREE.BoxGeometry(0.08, 0.04, 0.24),
+    new THREE.BoxGeometry(0.1, 0.04, 0.24),
     new THREE.MeshStandardMaterial({ color: '#1a1a1a' })
   );
-  slotHole.position.set(-0.78, groundY + 0.35, 0);
+  slotHole.position.set(0.2, groundY + 0.35, -0.6);
   dispenser.add(slotHole);
 
-  // === DISPLAY SCREEN - On front of machine ===
+  // === DISPLAY SCREEN (on front) ===
   const screenFrame = new THREE.Mesh(
     new THREE.BoxGeometry(0.03, 0.22, 0.34),
     new THREE.MeshStandardMaterial({ color: '#1a1a1a' })
   );
-  screenFrame.position.set(-0.81, groundY + 0.62, 0);
+  screenFrame.position.set(0.175, groundY + 0.62, -0.6);
   dispenser.add(screenFrame);
 
   const screenCanvas = document.createElement('canvas');
@@ -1832,10 +1863,10 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   sctx.fillText('IN QUEUE', 85, 95);
   const screenTex = new THREE.CanvasTexture(screenCanvas);
   const screen = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.18, 0.3),
+    new THREE.PlaneGeometry(0.3, 0.18),
     new THREE.MeshBasicMaterial({ map: screenTex })
   );
-  screen.position.set(-0.79, groundY + 0.62, 0);
+  screen.position.set(0.19, groundY + 0.62, -0.6);
   screen.rotation.y = Math.PI / 2;
   dispenser.add(screen);
 
@@ -1846,7 +1877,7 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
       new THREE.SphereGeometry(0.018, 8, 8),
       new THREE.MeshBasicMaterial({ color: lc })
     );
-    light.position.set(-0.81, groundY + 0.82, (i - 1.5) * 0.08);
+    light.position.set(0.18, groundY + 0.82, -0.6 + (i - 1.5) * 0.08);
     dispenser.add(light);
   });
 
@@ -1869,17 +1900,20 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
     new THREE.PlaneGeometry(0.44, 0.14),
     new THREE.MeshBasicMaterial({ map: signTex })
   );
-  sign.position.set(-1.0, groundY + 1.02, 0);
+  sign.position.set(0, groundY + 1.02, -0.35);
   dispenser.add(sign);
 
-  // === FLAT HORIZONTAL TICKETS - Attached to dispenser, extending right ===
+  // === FLAT TICKETS (laying horizontally, attached to dispenser, extending to the right) ===
   const ticketWidth = 0.18;
-  const ticketDepth = 0.12;
-  const ticketThickness = 0.005;
+  const ticketHeight = 0.1;
+  const ticketThickness = 0.008;
   const ticketGap = 0.01;
   const totalTicketLength = ticketWidth + ticketGap;
 
-  const ticketStartX = -0.72; // Start right next to the slot
+  // Tickets start from the slot and go to the right
+  const ticketStartX = 0.28;
+  const ticketY = groundY + 0.35;
+  const ticketZ = -0.6;
 
   tickets.forEach((ticket, i) => {
     const isHl = highlightIndex === i;
@@ -1888,69 +1922,67 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
     const ticketGroup = new THREE.Group();
 
     let ticketX = ticketStartX + i * totalTicketLength;
-    let ticketY = groundY + 0.35;
-    let ticketZ = 0;
     let ticketScale = 1;
+    let ticketOpacity = 1;
 
     // Animation for dequeue - ticket gets pulled into machine
     if (animPhase === 'queue-dequeue-drive' && isFront) {
       const progress = animProgress || 0;
       ticketX = ticketStartX - progress * 0.3;
-      ticketScale = 1 - progress * 0.9;
+      ticketScale = 1 - progress * 0.8;
+      ticketOpacity = 1 - progress;
     }
+
+    if (ticketScale <= 0.01) return;
 
     ticketGroup.scale.setScalar(ticketScale);
 
-    // Ticket body - FLAT HORIZONTAL (width on X, thickness on Y, depth on Z)
+    // Ticket body (flat, laying down)
     const ticketMat = new THREE.MeshStandardMaterial({
       color: ticket.color,
       roughness: 0.35,
       emissive: isHl ? '#ffff00' : '#000',
-      emissiveIntensity: isHl ? 0.3 : 0
+      emissiveIntensity: isHl ? 0.3 : 0,
+      transparent: ticketOpacity < 1,
+      opacity: ticketOpacity
     });
-    const ticketBody = new THREE.Mesh(
-      new THREE.BoxGeometry(ticketWidth, ticketThickness, ticketDepth),
-      ticketMat
-    );
+    const ticketBody = new THREE.Mesh(new THREE.BoxGeometry(ticketWidth, ticketThickness, ticketHeight), ticketMat);
     ticketGroup.add(ticketBody);
 
-    // Perforation marks (connection to next ticket) - on the right edge
+    // Perforation marks (connection to next ticket)
     if (i < tickets.length - 1) {
       const perfMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
-      for (let p = -4; p <= 4; p++) {
-        const perf = new THREE.Mesh(
-          new THREE.BoxGeometry(0.006, ticketThickness + 0.002, 0.005),
-          perfMat
-        );
-        perf.position.set(ticketWidth / 2 + 0.004, 0, p * 0.012);
+      for (let p = -3; p <= 3; p++) {
+        const perf = new THREE.Mesh(new THREE.BoxGeometry(0.008, ticketThickness + 0.002, 0.005), perfMat);
+        perf.position.set(ticketWidth / 2 + 0.003, 0, p * 0.012);
         ticketGroup.add(perf);
       }
     }
 
-    // Ticket label - on top of flat ticket
+    // Ticket label (on top of flat ticket)
     const ticketCanvas = document.createElement('canvas');
-    ticketCanvas.width = 100;
-    ticketCanvas.height = 70;
+    ticketCanvas.width = 90;
+    ticketCanvas.height = 50;
     const tctx = ticketCanvas.getContext('2d')!;
     tctx.fillStyle = 'rgba(0,0,0,0.35)';
-    tctx.fillRect(0, 0, 100, 20);
+    tctx.fillRect(0, 0, 90, 15);
     tctx.fillStyle = '#fff';
-    tctx.font = 'bold 11px Arial';
+    tctx.font = 'bold 10px Arial';
     tctx.textAlign = 'center';
-    tctx.fillText('★ TICKET ★', 50, 14);
-    tctx.font = 'bold 20px Arial';
-    tctx.fillText(ticket.label, 50, 50);
+    tctx.fillText('★ TICKET ★', 45, 11);
+    tctx.font = 'bold 18px Arial';
+    tctx.fillText(ticket.label, 45, 38);
     const ticketLabelTex = new THREE.CanvasTexture(ticketCanvas);
     const ticketLabel = new THREE.Mesh(
-      new THREE.PlaneGeometry(ticketWidth - 0.01, ticketDepth - 0.01),
+      new THREE.PlaneGeometry(ticketWidth - 0.01, ticketHeight - 0.01),
       new THREE.MeshBasicMaterial({ map: ticketLabelTex, transparent: true })
     );
     ticketLabel.position.y = ticketThickness / 2 + 0.001;
     ticketLabel.rotation.x = -Math.PI / 2;
     ticketGroup.add(ticketLabel);
 
-    // Star decoration for front ticket
-    if (isFront) {
+    // Star for front ticket
+    if (isFront && ticketOpacity > 0.5) {
       const starCanvas = document.createElement('canvas');
       starCanvas.width = 32;
       starCanvas.height = 32;
@@ -1963,7 +1995,7 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
         new THREE.PlaneGeometry(0.03, 0.03),
         new THREE.MeshBasicMaterial({ map: starTex, transparent: true })
       );
-      star.position.set(-ticketWidth / 2 + 0.02, ticketThickness / 2 + 0.002, -ticketDepth / 2 + 0.02);
+      star.position.set(-ticketWidth / 2 + 0.02, ticketThickness / 2 + 0.002, -ticketHeight / 2 + 0.02);
       star.rotation.x = -Math.PI / 2;
       ticketGroup.add(star);
     }
@@ -1971,7 +2003,7 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
     // Highlight glow
     if (isHl) {
       const glow = new THREE.Mesh(
-        new THREE.BoxGeometry(ticketWidth + 0.015, ticketThickness + 0.015, ticketDepth + 0.015),
+        new THREE.BoxGeometry(ticketWidth + 0.015, ticketThickness + 0.01, ticketHeight + 0.015),
         new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.22 })
       );
       ticketGroup.add(glow);
@@ -1983,24 +2015,39 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
 
   // === FRONT/REAR LABELS ===
   if (tickets.length > 0) {
-    const frontSprite = createTextSprite('FRONT', '#00ff00', 18);
-    frontSprite.position.set(ticketStartX, groundY + 0.2, 0);
-    frontSprite.scale.set(0.26, 0.09, 1);
+    const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
+    frontSprite.position.set(ticketStartX, groundY + 0.2, ticketZ);
+    frontSprite.scale.set(0.22, 0.08, 1);
     dispenser.add(frontSprite);
 
-    const rearSprite = createTextSprite('REAR', '#ff6600', 18);
-    rearSprite.position.set(ticketStartX + (tickets.length - 1) * totalTicketLength, groundY + 0.2, 0);
-    rearSprite.scale.set(0.26, 0.09, 1);
+    const rearSprite = createTextSprite('REAR', '#ff6600', 16);
+    rearSprite.position.set(ticketStartX + (tickets.length - 1) * totalTicketLength, groundY + 0.2, ticketZ);
+    rearSprite.scale.set(0.22, 0.08, 1);
     dispenser.add(rearSprite);
   }
 
   // === COUNTER/TABLE ===
+  const counterWidth = Math.max(1.2, tickets.length * totalTicketLength + 0.6);
   const counter = new THREE.Mesh(
-    new THREE.BoxGeometry(tickets.length * totalTicketLength + 1.2, 0.04, 0.55),
+    new THREE.BoxGeometry(counterWidth, 0.04, 0.7),
     new THREE.MeshStandardMaterial({ color: '#34495e', metalness: 0.3 })
   );
-  counter.position.set(-0.3, groundY - 0.02, 0);
+  counter.position.set(counterWidth / 2 - 0.3, groundY - 0.02, -0.6);
   dispenser.add(counter);
+
+  // === TICKET GUIDE RAIL ===
+  const railMat = new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.6 });
+  const railLength = Math.max(0.5, tickets.length * totalTicketLength + 0.2);
+  
+  // Top rail
+  const topRail = new THREE.Mesh(new THREE.BoxGeometry(railLength, 0.015, 0.015), railMat);
+  topRail.position.set(ticketStartX + railLength / 2 - 0.1, ticketY + 0.02, ticketZ - ticketHeight / 2 - 0.015);
+  dispenser.add(topRail);
+  
+  // Bottom rail
+  const bottomRail = new THREE.Mesh(new THREE.BoxGeometry(railLength, 0.015, 0.015), railMat);
+  bottomRail.position.set(ticketStartX + railLength / 2 - 0.1, ticketY + 0.02, ticketZ + ticketHeight / 2 + 0.015);
+  dispenser.add(bottomRail);
 
   return dispenser;
 }
@@ -2191,6 +2238,7 @@ function createSchoolBuilding(): THREE.Group {
 
   return school;
 }
+
 // ==================== ANIMATION HELPER ====================
 
 function applyItemAnimation(
@@ -2309,13 +2357,6 @@ function applyItemAnimation(
     } else if (animPhase === 'queue-enqueue-settle' && isTarget) {
       obj.position.x += 0.2 * (1 - p);
       obj.scale.setScalar(1 + 0.05 * (1 - p));
-    } else if (animPhase === 'queue-dequeue-walk' && isTarget) {
-      // Student walks toward school
-      obj.position.x -= 1.5 * p;
-    } else if (animPhase === 'queue-dequeue-enter' && isTarget) {
-      // Student enters school (shrinks and moves forward)
-      obj.position.x -= 1.5 + 0.5 * p;
-      obj.scale.setScalar(Math.max(0.01, 1 - p));
     } else if (animPhase === 'queue-dequeue-drive' && isTarget) {
       obj.position.x -= 2.5 * p;
     } else if (animPhase === 'queue-front-peek' && isTarget) {
@@ -2409,7 +2450,6 @@ function buildSceneContent(
         const isHl = highlightIndex === i || highlightIndex2 === i;
         const posX = startX + i * spacing;
 
-        // Always create chair and desk
         const chair = createChair(0);
         chair.position.set(posX * scale, floorY + 0.25, -0.05 * scale);
         chair.scale.setScalar(scale);
@@ -2420,7 +2460,6 @@ function buildSceneContent(
         desk.scale.setScalar(scale);
         group.add(desk);
 
-        // Create human with appearance (use default if not provided)
         const appearance = item.appearance || {
           skinTone: '#f5c6a0',
           shirtColor: item.color,
@@ -2645,56 +2684,108 @@ function buildSceneContent(
       group.add(table);
     }
 
-} else if (environment === 'boxes') {
-  const boxHeight = 0.34; // Match the boxH in createCardboardBox
-  const boxSpacing = 0.02; // Small gap between boxes
-  const baseY = 0; // Start from ground level
+  // ==================== STACK ====================
+  } else if (structure === 'stack') {
+    if (environment === 'books') {
+      const stackSpacing = 0.11;
+      const baseY = -data.length * stackSpacing / 2;
 
-  data.forEach((item, i) => {
-    const isHl = highlightIndex === i;
-    const isTop = i === data.length - 1;
+      data.forEach((item, i) => {
+        const isHl = highlightIndex === i;
+        const isTop = i === data.length - 1;
+        const isPeeking = isTop && (animPhase === 'stack-peek-open');
+        const openAmount = isPeeking ? (animProgress || 0) : 0;
 
-    let openAmount = 0;
-    if (isTop) {
-      if (animPhase === 'stack-peek-lift') {
-        openAmount = 0;
-      } else if (animPhase === 'stack-peek-open') {
-        openAmount = animProgress || 0;
-      } else if (animPhase === 'stack-peek-settle') {
-        openAmount = 1 - (animProgress || 0);
-      }
+        const book = createBook(item.label, item.color, isHl, isPeeking, openAmount);
+        book.position.set(isHl && !isPeeking ? 0.18 : 0, baseY + i * stackSpacing, 0);
+        book.rotation.y = (i % 2 === 0) ? 0 : 0.04;
+        applyItemAnimation(book, i, animPhase || '', animData || {}, 'stack', animProgress);
+        group.add(book);
+
+        if (isTop) {
+          const topSprite = createTextSprite('← TOP', '#ff0000', 22);
+          topSprite.position.set(0.65, baseY + i * stackSpacing, 0);
+          topSprite.scale.set(0.38, 0.14, 1);
+          group.add(topSprite);
+        }
+      });
+
+      const desk = new THREE.Mesh(
+        new THREE.BoxGeometry(1.3, 0.035, 0.65),
+        new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.7 })
+      );
+      desk.position.y = baseY - 0.08;
+      group.add(desk);
+
+    } else if (environment === 'plates') {
+      const plateSpacing = 0.05;
+      const plateBaseY = -data.length * plateSpacing / 2;
+
+      data.forEach((item, i) => {
+        const isHl = highlightIndex === i;
+        const plateItem = createPlate(item.label, isHl);
+        plateItem.position.set(isHl ? 0.12 : 0, plateBaseY + i * plateSpacing, 0);
+        plateItem.scale.setScalar(0.55);
+        applyItemAnimation(plateItem, i, animPhase || '', animData || {}, 'stack', animProgress);
+        group.add(plateItem);
+
+        if (i === data.length - 1) {
+          const topSprite = createTextSprite('← TOP', '#ff0000', 22);
+          topSprite.position.set(0.45, plateBaseY + i * plateSpacing, 0);
+          topSprite.scale.set(0.32, 0.11, 1);
+          group.add(topSprite);
+        }
+      });
+
+      const counter = new THREE.Mesh(
+        new THREE.BoxGeometry(0.9, 0.055, 0.5),
+        new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.4, roughness: 0.4 })
+      );
+      counter.position.y = plateBaseY - 0.05;
+      group.add(counter);
+
+    } else if (environment === 'boxes') {
+      const boxSpacing = 0.36;
+      const boxBaseY = 0;
+
+      data.forEach((item, i) => {
+        const isHl = highlightIndex === i;
+        const isTop = i === data.length - 1;
+
+        let openAmount = 0;
+        if (isTop) {
+          if (animPhase === 'stack-peek-lift') {
+            openAmount = 0;
+          } else if (animPhase === 'stack-peek-open') {
+            openAmount = animProgress || 0;
+          } else if (animPhase === 'stack-peek-settle') {
+            openAmount = 1 - (animProgress || 0);
+          }
+        }
+
+        const cardboardBox = createCardboardBox(item.label, item.color, isHl, openAmount);
+        // Boxes stacked on top of each other, not floating
+        cardboardBox.position.set(0, boxBaseY + i * boxSpacing, 0);
+        cardboardBox.rotation.y = (i % 2 === 0) ? 0 : 0.03;
+        cardboardBox.scale.setScalar(0.78);
+        applyItemAnimation(cardboardBox, i, animPhase || '', animData || {}, 'stack', animProgress);
+        group.add(cardboardBox);
+
+        if (isTop) {
+          const topSprite = createTextSprite('← TOP', '#ff0000', 22);
+          topSprite.position.set(0.55, boxBaseY + i * boxSpacing + 0.15, 0);
+          topSprite.scale.set(0.32, 0.11, 1);
+          group.add(topSprite);
+        }
+      });
+
+      const pallet = new THREE.Mesh(
+        new THREE.BoxGeometry(0.8, 0.055, 0.6),
+        new THREE.MeshStandardMaterial({ color: '#a0522d', roughness: 0.9 })
+      );
+      pallet.position.y = boxBaseY - 0.03;
+      group.add(pallet);
     }
-
-    const cardboardBox = createCardboardBox(item.label, item.color, isHl, openAmount);
-    
-    // Stack boxes on top of each other properly
-    const stackY = baseY + i * (boxHeight + boxSpacing);
-    cardboardBox.position.set(
-      isHl && openAmount === 0 ? 0.15 : 0, 
-      stackY, 
-      0
-    );
-    cardboardBox.rotation.y = (i % 2 === 0) ? 0 : 0.03; // Slight rotation for realism
-    cardboardBox.scale.setScalar(0.78);
-    applyItemAnimation(cardboardBox, i, animPhase || '', animData || {}, 'stack', animProgress);
-    group.add(cardboardBox);
-
-    if (isTop) {
-      const topSprite = createTextSprite('← TOP', '#ff0000', 22);
-      topSprite.position.set(0.48, stackY + boxHeight / 2, 0);
-      topSprite.scale.set(0.32, 0.11, 1);
-      group.add(topSprite);
-    }
-  });
-
-  // Pallet/floor under the boxes
-  const pallet = new THREE.Mesh(
-    new THREE.BoxGeometry(0.7, 0.055, 0.55),
-    new THREE.MeshStandardMaterial({ color: '#a0522d', roughness: 0.9 })
-  );
-  pallet.position.y = -0.03;
-  group.add(pallet);
-}
 
   // ==================== QUEUE ====================
   } else if (structure === 'queue') {
@@ -2754,14 +2845,12 @@ function buildSceneContent(
       group.add(exitSprite);
 
     } else if (environment === 'tickets') {
-      // Use ticket dispenser
       const ticketDispenserGroup = createTicketDispenser(data, highlightIndex, animPhase || '', animProgress || 0);
       group.add(ticketDispenserGroup);
 
     } else if (environment === 'students') {
-      // School building on the left
       const schoolBuilding = createSchoolBuilding();
-      schoolBuilding.position.set(startX - 0.8, groundY, 0);
+      schoolBuilding.position.set(startX - 0.5, groundY, 0);
       schoolBuilding.scale.setScalar(0.5);
       group.add(schoolBuilding);
 
@@ -2770,120 +2859,55 @@ function buildSceneContent(
         const isFront = i === 0;
         
         if (item.appearance) {
-          // Calculate walk phase for animation - legs and arms moving
+          // Calculate walk phase for walking animation
           let walkPhase = 0;
           let extraX = 0;
           let studentScale = 0.55;
-          let rotationY = -Math.PI / 2; // Face toward school (left)
-          let isWalking = false;
+          let shouldRender = true;
           
           if (isFront) {
             if (animPhase === 'queue-dequeue-walk') {
-              // Walking toward school - animate legs and arms
-              isWalking = true;
+              // Walking toward school with animated legs and arms
               const progress = animProgress || 0;
-              walkPhase = progress * Math.PI * 10; // Fast leg/arm movement (multiple steps)
-              extraX = -progress * 1.5; // Walk toward school
+              walkPhase = progress * Math.PI * 10; // Fast walk cycle
+              extraX = -progress * 1.2;
             } else if (animPhase === 'queue-dequeue-enter') {
-              // Entering school door - still walking but shrinking
-              isWalking = true;
+              // Entering school door - continue walking then shrink
               const progress = animProgress || 0;
-              walkPhase = Math.PI * 10 + progress * Math.PI * 4; // Continue walking
-              extraX = -1.5 - progress * 0.5; // Continue into school
-              studentScale = 0.55 * Math.max(0.05, 1 - progress * 0.95); // Shrink as entering
+              walkPhase = Math.PI * 10 + progress * Math.PI * 4;
+              extraX = -1.2 - progress * 0.4;
+              studentScale = 0.55 * Math.max(0.01, 1 - progress * 0.95);
+              if (progress > 0.95) shouldRender = false;
             }
           }
 
-          // Create human with walking animation
-          const human = createHuman3D(
-            item.appearance, 
-            item.label, 
-            isHl, 
-            false, // NOT seated - standing in queue
-            isWalking ? walkPhase : 0 // Pass walk phase for leg/arm animation
-          );
-          
-          // Position student
-          const studentX = startX + i * spacing + 0.8 + extraX;
-          human.position.set(studentX, groundY, 0);
-          human.scale.setScalar(studentScale);
-          human.rotation.y = rotationY;
-          
-          // Apply standard queue animations for non-walking states
-          if (!isWalking) {
-            applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue', animProgress);
+          if (shouldRender) {
+            const human = createHuman3D(item.appearance, item.label, isHl, false, walkPhase);
+            human.position.set(startX + i * spacing + 0.6 + extraX, groundY, 0);
+            human.scale.setScalar(studentScale);
+            human.rotation.y = -Math.PI / 2; // Face toward school
+            
+            // Apply other queue animations (not walking ones for front)
+            if (!(isFront && (animPhase === 'queue-dequeue-walk' || animPhase === 'queue-dequeue-enter'))) {
+              applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue', animProgress);
+            }
+            
+            group.add(human);
           }
-          
-          group.add(human);
         }
       });
 
-      // Front label
       if (data.length > 0) {
         const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
-        frontSprite.position.set(startX + 0.8, groundY - 0.2, 0);
+        frontSprite.position.set(startX + 0.6, groundY - 0.18, 0);
         frontSprite.scale.set(0.26, 0.09, 1);
         group.add(frontSprite);
 
-        // Rear label
         const rearSprite = createTextSprite('REAR', '#ff6600', 16);
-        rearSprite.position.set(startX + (data.length - 1) * spacing + 0.8, groundY - 0.2, 0);
+        rearSprite.position.set(startX + (data.length - 1) * spacing + 0.6, groundY - 0.18, 0);
         rearSprite.scale.set(0.26, 0.09, 1);
         group.add(rearSprite);
       }
-
-      // Pathway from queue to school
-      const pathway = new THREE.Mesh(
-        new THREE.PlaneGeometry(data.length * spacing + 2.8, 0.5),
-        new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
-      );
-      pathway.rotation.x = -Math.PI / 2;
-      pathway.position.set(0.2, groundY - 0.01, 0);
-      group.add(pathway);
-
-      // Grass on sides of pathway
-      const grassMat = new THREE.MeshStandardMaterial({ color: '#228b22', side: THREE.DoubleSide });
-      [-0.38, 0.38].forEach(z => {
-        const grass = new THREE.Mesh(
-          new THREE.PlaneGeometry(data.length * spacing + 2.8, 0.35), 
-          grassMat
-        );
-        grass.rotation.x = -Math.PI / 2;
-        grass.position.set(0.2, groundY - 0.015, z);
-        group.add(grass);
-      });
-
-      // Direction arrow showing queue flow
-      const arrowCanvas = document.createElement('canvas');
-      arrowCanvas.width = 100;
-      arrowCanvas.height = 40;
-      const actx = arrowCanvas.getContext('2d')!;
-      actx.fillStyle = '#3498db';
-      actx.font = 'bold 24px Arial';
-      actx.textAlign = 'center';
-      actx.fillText('← ENTER', 50, 28);
-      const arrowTex = new THREE.CanvasTexture(arrowCanvas);
-      const arrowSign = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.35, 0.12),
-        new THREE.MeshBasicMaterial({ map: arrowTex, transparent: true })
-      );
-      arrowSign.position.set(startX + 0.2, groundY + 0.35, 0);
-      arrowSign.rotation.x = -0.3;
-      group.add(arrowSign);
-    }
-  }
-}
-      });
-
-      const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
-      frontSprite.position.set(startX + 0.6, groundY - 0.18, 0);
-      frontSprite.scale.set(0.26, 0.09, 1);
-      group.add(frontSprite);
-
-      const rearSprite = createTextSprite('REAR', '#ff6600', 16);
-      rearSprite.position.set(startX + (data.length - 1) * spacing + 0.6, groundY - 0.18, 0);
-      rearSprite.scale.set(0.26, 0.09, 1);
-      group.add(rearSprite);
 
       const pathway = new THREE.Mesh(
         new THREE.PlaneGeometry(data.length * spacing + 2.5, 0.5),
@@ -3088,7 +3112,7 @@ export default function Home() {
 
   const switchCamera = async () => {
     const newFacing = cameraFacing === 'environment' ? 'user' : 'environment';
-setCameraFacing(newFacing);
+    setCameraFacing(newFacing);
     try { await startCamera(newFacing); } catch (err) { console.error(err); }
   };
 
@@ -3307,65 +3331,64 @@ setCameraFacing(newFacing);
     setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
-const arrayInsert = async () => {
-  if (isAnimating || getArrayData().length >= 6) return;
-  setIsAnimating(true);
-  const data = getArrayData();
-  const insertIndex = Math.floor(Math.random() * (data.length + 1));
-  setOperationMessage(`Inserting at [${insertIndex}]...`);
-  setCodeDisplay(`// O(n) Insert`);
-  
-  for (let i = data.length - 1; i >= insertIndex; i--) {
-    setHighlightIndex(i);
-    await delay(200);
-  }
-  
-  // Create new item with proper appearance for classroom
-  let newItem: DataItem;
-  if (arrayEnv === 'classroom') {
-    const names = ['Emma', 'Liam', 'Mia', 'Noah', 'Ava', 'Jack'];
-    const skinTones = ['#f5c6a0', '#c68642', '#8d5524'];
-    const hairColors = ['#1a1a1a', '#3d2314', '#2c1810', '#d4a574'];
-    const shirtColors = ['#1abc9c', '#9b59b6', '#e74c3c', '#3498db', '#f39c12'];
-    const genders: ('male' | 'female')[] = ['male', 'female'];
-    const hairStyles: ('short' | 'long')[] = ['short', 'long'];
-    const gender = genders[Math.floor(Math.random() * genders.length)];
+  const arrayInsert = async () => {
+    if (isAnimating || getArrayData().length >= 6) return;
+    setIsAnimating(true);
+    const data = getArrayData();
+    const insertIndex = Math.floor(Math.random() * (data.length + 1));
+    setOperationMessage(`Inserting at [${insertIndex}]...`);
+    setCodeDisplay(`// O(n) Insert`);
     
-    newItem = {
-      id: Date.now(),
-      label: names[Math.floor(Math.random() * names.length)],
-      color: shirtColors[Math.floor(Math.random() * shirtColors.length)],
-      appearance: {
-        skinTone: skinTones[Math.floor(Math.random() * skinTones.length)],
-        shirtColor: shirtColors[Math.floor(Math.random() * shirtColors.length)],
-        pantsColor: '#2c3e50',
-        hairColor: hairColors[Math.floor(Math.random() * hairColors.length)],
-        hairStyle: gender === 'female' ? 'long' : hairStyles[Math.floor(Math.random() * hairStyles.length)],
-        gender: gender
-      }
-    };
-  } else {
-    newItem = { id: Date.now(), label: 'New', color: '#1abc9c' };
-  }
-  
-  (setArrayData as any)((prev: DataItem[]) => {
-    const arr = [...prev];
-    arr.splice(insertIndex, 0, newItem);
-    return arr;
-  });
-  
-  setHighlightIndex(insertIndex);
-  await smoothAnimate(450, 'insert-drop', { index: insertIndex });
-  await smoothAnimate(350, 'insert-settle', { index: insertIndex });
-  setOperationMessage('Inserted!');
-  await delay(600);
-  setAnimPhase('');
-  setAnimData({});
-  setHighlightIndex(null);
-  setOperationMessage('');
-  setCodeDisplay('');
-  setIsAnimating(false);
-};
+    for (let i = data.length - 1; i >= insertIndex; i--) {
+      setHighlightIndex(i);
+      await delay(200);
+    }
+    
+    let newItem: DataItem;
+    if (arrayEnv === 'classroom') {
+      const names = ['Emma', 'Liam', 'Mia', 'Noah', 'Ava', 'Jack'];
+      const skinTones = ['#f5c6a0', '#c68642', '#8d5524'];
+      const hairColors = ['#1a1a1a', '#3d2314', '#2c1810', '#d4a574'];
+      const shirtColors = ['#1abc9c', '#9b59b6', '#e74c3c', '#3498db', '#f39c12'];
+      const genders: ('male' | 'female')[] = ['male', 'female'];
+      const hairStyles: ('short' | 'long')[] = ['short', 'long'];
+      const gender = genders[Math.floor(Math.random() * genders.length)];
+      
+      newItem = {
+        id: Date.now(),
+        label: names[Math.floor(Math.random() * names.length)],
+        color: shirtColors[Math.floor(Math.random() * shirtColors.length)],
+        appearance: {
+          skinTone: skinTones[Math.floor(Math.random() * skinTones.length)],
+          shirtColor: shirtColors[Math.floor(Math.random() * shirtColors.length)],
+          pantsColor: '#2c3e50',
+          hairColor: hairColors[Math.floor(Math.random() * hairColors.length)],
+          hairStyle: gender === 'female' ? 'long' : hairStyles[Math.floor(Math.random() * hairStyles.length)],
+          gender: gender
+        }
+      };
+    } else {
+      newItem = { id: Date.now(), label: 'New', color: '#1abc9c' };
+    }
+    
+    (setArrayData as any)((prev: DataItem[]) => {
+      const arr = [...prev];
+      arr.splice(insertIndex, 0, newItem);
+      return arr;
+    });
+    
+    setHighlightIndex(insertIndex);
+    await smoothAnimate(450, 'insert-drop', { index: insertIndex });
+    await smoothAnimate(350, 'insert-settle', { index: insertIndex });
+    setOperationMessage('Inserted!');
+    await delay(600);
+    setAnimPhase('');
+    setAnimData({});
+    setHighlightIndex(null);
+    setOperationMessage('');
+    setCodeDisplay('');
+    setIsAnimating(false);
+  };
 
   const arrayDelete = async () => {
     if (isAnimating || getArrayData().length <= 2) return; setIsAnimating(true);
@@ -3493,6 +3516,7 @@ const arrayInsert = async () => {
   const stackPeek = async () => {
     if (isAnimating || getStackData().length === 0) return; setIsAnimating(true);
     const data = getStackData(), topItem = data[data.length - 1];
+    setHighlightIndex(data.length - 1);
     setOperationMessage(`Peeking TOP...`);
     setCodeDisplay(`// O(1)\nstack.peek()`);
     await smoothAnimate(600, 'stack-peek-lift', { index: data.length - 1 });
@@ -3501,127 +3525,71 @@ const arrayInsert = async () => {
     await delay(800);
     await smoothAnimate(600, 'stack-peek-settle', { index: data.length - 1 });
     setAnimPhase(''); setAnimData({});
-    setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
-const queueEnqueue = async () => {
-  if (isAnimating || getQueueData().length >= 5) return; 
-  setIsAnimating(true);
-  const data = getQueueData();
-  
-  let newItem: DataItem;
-  
-  if (queueEnv === 'students') {
-    // Create new student with random appearance
-    const names = ['Sam', 'Mia', 'Leo', 'Zoe', 'Max', 'Ivy', 'Ben', 'Ava'];
-    const skinTones = ['#f5c6a0', '#c68642', '#8d5524', '#e0ac69'];
-    const shirtColors = ['#1abc9c', '#9b59b6', '#e74c3c', '#3498db', '#f39c12', '#2ecc71'];
-    const hairColors = ['#1a1a1a', '#3d2314', '#2c1810', '#d4a574', '#8b4513'];
-    const genders: ('male' | 'female')[] = ['male', 'female'];
-    const gender = genders[Math.floor(Math.random() * genders.length)];
-    
-    newItem = {
-      id: Date.now(),
-      label: names[Math.floor(Math.random() * names.length)],
-      color: shirtColors[Math.floor(Math.random() * shirtColors.length)],
-      appearance: {
-        skinTone: skinTones[Math.floor(Math.random() * skinTones.length)],
-        shirtColor: shirtColors[Math.floor(Math.random() * shirtColors.length)],
-        pantsColor: Math.random() > 0.5 ? '#2c3e50' : '#1a1a2e',
-        hairColor: hairColors[Math.floor(Math.random() * hairColors.length)],
-        hairStyle: gender === 'female' ? 'long' : (Math.random() > 0.3 ? 'short' : 'bald'),
-        gender: gender
-      }
-    };
-  } else if (queueEnv === 'tollgate') {
-    // Create new car
-    const carColors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c'];
-    newItem = { 
-      id: Date.now(), 
-      label: `${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}-${Math.floor(Math.random() * 900) + 100}`, 
-      color: carColors[Math.floor(Math.random() * carColors.length)]
-    };
-  } else {
-    // Create new ticket
-    newItem = { 
-      id: Date.now(), 
-      label: `T-${String(data.length + 1).padStart(3, '0')}`, 
-      color: ['#f39c12', '#e74c3c', '#9b59b6', '#3498db', '#2ecc71'][Math.floor(Math.random() * 5)]
-    };
-  }
+  // Queue operations
+  const queueEnqueue = async () => {
+    if (isAnimating || getQueueData().length >= 5) return; setIsAnimating(true);
+    const data = getQueueData();
+    const newItem: DataItem = queueEnv === 'students'
+      ? { id: Date.now(), label: `Stu ${data.length + 1}`, color: '#1abc9c', appearance: { skinTone: '#f5c6a0', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#3d2314', hairStyle: 'short', gender: 'male' } }
+      : queueEnv === 'tollgate'
+        ? { id: Date.now(), label: `NEW-${Math.floor(Math.random() * 900) + 100}`, color: '#1abc9c' }
+        : { id: Date.now(), label: `T-00${data.length + 1}`, color: '#1abc9c' };
+    setOperationMessage(`Enqueue: "${newItem.label}"...`);
+    (setQueueData as any)((prev: DataItem[]) => [...prev, newItem]);
+    setHighlightIndex(data.length);
+    await smoothAnimate(500, 'queue-enqueue-enter', { index: data.length });
+    await smoothAnimate(350, 'queue-enqueue-settle', { index: data.length });
+    setOperationMessage('Enqueued!'); await delay(600);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
 
-  setOperationMessage(`Enqueue: "${newItem.label}"...`);
-  (setQueueData as any)((prev: DataItem[]) => [...prev, newItem]);
-  setHighlightIndex(data.length);
-  
-  await smoothAnimate(500, 'queue-enqueue-enter', { index: data.length });
-  await smoothAnimate(350, 'queue-enqueue-settle', { index: data.length });
-  
-  setOperationMessage('Enqueued!'); 
-  await delay(500);
-  setAnimPhase(''); 
-  setAnimData({});
-  setHighlightIndex(null); 
-  setOperationMessage(''); 
-  setCodeDisplay(''); 
-  setIsAnimating(false);
-};
+  const queueDequeue = async () => {
+    if (isAnimating || getQueueData().length <= 1) return; setIsAnimating(true);
+    const frontItem = getQueueData()[0];
+    setHighlightIndex(0);
+    setOperationMessage(`Dequeue: "${frontItem.label}"...`);
+    setCodeDisplay(`// O(1) FIFO\nqueue.dequeue()`);
 
-const queueDequeue = async () => {
-  if (isAnimating || getQueueData().length <= 1) return; 
-  setIsAnimating(true);
-  const frontItem = getQueueData()[0];
-  setOperationMessage(`Dequeue: "${frontItem.label}"...`);
-  setCodeDisplay(`// O(1) FIFO\nqueue.dequeue()`);
-  setHighlightIndex(0);
+    if (queueEnv === 'tollgate') {
+      setOperationMessage('Gate opening...');
+      await smoothAnimate(1000, 'queue-dequeue-gate-open', { index: 0 });
+      setOperationMessage(`${frontItem.label} passing through...`);
+      await smoothAnimate(1200, 'queue-dequeue-drive', { index: 0 });
+      (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
+      setOperationMessage('Gate closing...');
+      await smoothAnimate(800, 'queue-dequeue-gate-close', { index: -1 });
+    } else if (queueEnv === 'students') {
+      // Student walks toward school with animated legs
+      setOperationMessage(`${frontItem.label} walking to school...`);
+      await smoothAnimate(1500, 'queue-dequeue-walk', { index: 0 });
+      setOperationMessage(`${frontItem.label} entering school...`);
+      await smoothAnimate(1000, 'queue-dequeue-enter', { index: 0 });
+      (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
+    } else {
+      // Tickets
+      setOperationMessage(`Processing ${frontItem.label}...`);
+      await smoothAnimate(1200, 'queue-dequeue-drive', { index: 0 });
+      (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
+    }
 
-  if (queueEnv === 'tollgate') {
-    // Toll gate animation - gate opens, car drives through
-    setOperationMessage('Gate opening...');
-    await smoothAnimate(800, 'queue-dequeue-gate-open', { index: 0 });
-
-    setOperationMessage(`${frontItem.label} passing through...`);
-    await smoothAnimate(1000, 'queue-dequeue-drive', { index: 0 });
-
-    (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
-
-    setOperationMessage('Gate closing...');
-    await smoothAnimate(600, 'queue-dequeue-gate-close', { index: -1 });
-
-  } else if (queueEnv === 'students') {
-    // Student walking animation - walk toward school with legs/arms moving
-    setOperationMessage(`${frontItem.label} walking to school...`);
-    await smoothAnimate(1200, 'queue-dequeue-walk', { index: 0 });
-
-    setOperationMessage(`${frontItem.label} entering school...`);
-    await smoothAnimate(800, 'queue-dequeue-enter', { index: 0 });
-
-    (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
-
-  } else if (queueEnv === 'tickets') {
-    // Ticket animation - ticket gets pulled into machine
-    setOperationMessage(`Processing ${frontItem.label}...`);
-    await smoothAnimate(1000, 'queue-dequeue-drive', { index: 0 });
-
-    (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
-  }
-
-  await delay(200);
-  setHighlightIndex(null);
-  setAnimPhase(''); 
-  setAnimData({});
-  setOperationMessage(''); 
-  setCodeDisplay(''); 
-  setIsAnimating(false);
-};
+    await delay(200);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
 
   const queueFront = async () => {
     if (isAnimating || getQueueData().length === 0) return; setIsAnimating(true);
     const frontItem = getQueueData()[0];
+    setHighlightIndex(0);
     setOperationMessage(`FRONT: "${frontItem.label}"`);
     await smoothAnimate(1000, 'queue-front-peek', { index: 0 });
+    await delay(500);
     setAnimPhase(''); setAnimData({});
-    setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
   if (error) return (
