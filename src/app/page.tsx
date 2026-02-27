@@ -1353,7 +1353,7 @@ function createPlate(label: string, isHighlighted: boolean): THREE.Group {
   return plate;
 }
 
-// ==================== CARDBOARD BOX (FIXED - All flaps aligned, sits on ground) ====================
+// ==================== CARDBOARD BOX (Only Left/Right Flaps) ====================
 
 function createCardboardBox(label: string, color: string, isHighlighted: boolean, openAmount: number = 0): THREE.Group {
   const box = new THREE.Group();
@@ -1371,7 +1371,6 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   const flapMat = new THREE.MeshStandardMaterial({ color, roughness: 0.85, side: THREE.DoubleSide });
   const cornerMat = new THREE.MeshStandardMaterial({ color: '#8b6914', roughness: 0.8 });
 
-  // Box sits on ground: bottom at Y = 0
   const wallHeight = boxH - wallThickness;
   const topY = boxH;
 
@@ -1381,22 +1380,18 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   box.add(bottom);
 
   // === WALLS ===
-  // Left wall
   const leftWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, boxD), cardboardMat);
   leftWall.position.set(-boxW / 2 + wallThickness / 2, wallThickness + wallHeight / 2, 0);
   box.add(leftWall);
 
-  // Right wall
   const rightWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, wallHeight, boxD), cardboardMat);
   rightWall.position.set(boxW / 2 - wallThickness / 2, wallThickness + wallHeight / 2, 0);
   box.add(rightWall);
 
-  // Front wall
   const frontWall = new THREE.Mesh(new THREE.BoxGeometry(boxW - wallThickness * 2, wallHeight, wallThickness), cardboardMat);
   frontWall.position.set(0, wallThickness + wallHeight / 2, boxD / 2 - wallThickness / 2);
   box.add(frontWall);
 
-  // Back wall
   const backWall = new THREE.Mesh(new THREE.BoxGeometry(boxW - wallThickness * 2, wallHeight, wallThickness), cardboardMat);
   backWall.position.set(0, wallThickness + wallHeight / 2, -boxD / 2 + wallThickness / 2);
   box.add(backWall);
@@ -1416,77 +1411,39 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
     box.add(corner);
   });
 
-  // === FLAPS ===
-  // Easing for smooth animation
+  // === ONLY LEFT AND RIGHT FLAPS ===
   const easedOpen = openAmount < 0.5
     ? 2 * openAmount * openAmount
     : 1 - Math.pow(-2 * openAmount + 2, 2) / 2;
 
-  // Flap sizes - sized to cover the top opening
-  const sideFlapWidth = (boxW / 2) - wallThickness; // Each side flap covers half width
+  // Each flap covers half the top
+  const sideFlapWidth = (boxW / 2) - wallThickness;
   const sideFlapDepth = boxD - wallThickness * 2;
+  const openAngle = Math.PI / 2 + 0.3;
 
-  const fbFlapDepth = (boxD / 2) - wallThickness; // Each fb flap covers half depth
-  const fbFlapWidth = boxW - wallThickness * 2;
-
-  // Open angle (how much flaps tilt outward when open)
-  const openAngle = Math.PI / 2 + 0.4;
-
-  // === LEFT FLAP ===
+  // === LEFT FLAP (opens toward left <--) ===
   const leftPivot = new THREE.Group();
   leftPivot.position.set(-boxW / 2 + wallThickness, topY, 0);
   const leftFlap = new THREE.Mesh(
     new THREE.BoxGeometry(sideFlapWidth, flapThickness, sideFlapDepth),
     flapMat
   );
-  // Position flap so it extends from pivot toward center (+X direction)
   leftFlap.position.set(sideFlapWidth / 2, flapThickness / 2, 0);
   leftPivot.add(leftFlap);
-  // When closed (0): flap lays flat. When open: rotates outward (-Z rotation)
   leftPivot.rotation.z = -easedOpen * openAngle;
   box.add(leftPivot);
 
-  // === RIGHT FLAP ===
+  // === RIGHT FLAP (opens toward right -->) ===
   const rightPivot = new THREE.Group();
   rightPivot.position.set(boxW / 2 - wallThickness, topY, 0);
   const rightFlap = new THREE.Mesh(
     new THREE.BoxGeometry(sideFlapWidth, flapThickness, sideFlapDepth),
     flapMat
   );
-  // Position flap so it extends from pivot toward center (-X direction)
   rightFlap.position.set(-sideFlapWidth / 2, flapThickness / 2, 0);
   rightPivot.add(rightFlap);
-  // When closed (0): flap lays flat. When open: rotates outward (+Z rotation)
   rightPivot.rotation.z = easedOpen * openAngle;
   box.add(rightPivot);
-
-  // === FRONT FLAP ===
-  const frontPivot = new THREE.Group();
-  frontPivot.position.set(0, topY, boxD / 2 - wallThickness);
-  const frontFlap = new THREE.Mesh(
-    new THREE.BoxGeometry(fbFlapWidth, flapThickness, fbFlapDepth),
-    flapMat
-  );
-  // Position flap so it extends from pivot toward center (-Z direction)
-  frontFlap.position.set(0, flapThickness / 2, -fbFlapDepth / 2);
-  frontPivot.add(frontFlap);
-  // When closed (0): flap lays flat. When open: rotates outward (+X rotation)
-  frontPivot.rotation.x = easedOpen * openAngle;
-  box.add(frontPivot);
-
-  // === BACK FLAP ===
-  const backPivot = new THREE.Group();
-  backPivot.position.set(0, topY, -boxD / 2 + wallThickness);
-  const backFlap = new THREE.Mesh(
-    new THREE.BoxGeometry(fbFlapWidth, flapThickness, fbFlapDepth),
-    flapMat
-  );
-  // Position flap so it extends from pivot toward center (+Z direction)
-  backFlap.position.set(0, flapThickness / 2, fbFlapDepth / 2);
-  backPivot.add(backFlap);
-  // When closed (0): flap lays flat. When open: rotates outward (-X rotation)
-  backPivot.rotation.x = -easedOpen * openAngle;
-  box.add(backPivot);
 
   // === LABEL ON FRONT ===
   const labelCanvas = document.createElement('canvas');
@@ -1520,7 +1477,6 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   labelMesh.position.set(0, boxH / 2, boxD / 2 + 0.001);
   box.add(labelMesh);
 
-  // === HIGHLIGHT GLOW ===
   if (isHighlighted && openAmount < 0.1) {
     const glow = new THREE.Mesh(
       new THREE.BoxGeometry(boxW + 0.04, boxH + 0.04, boxD + 0.04),
@@ -1750,9 +1706,110 @@ function createClipboard(label: string, color: string, isHighlighted: boolean): 
   return clipboard;
 }
 
-// ==================== TICKET ====================
+// ==================== TICKET DISPENSER MACHINE ====================
 
-function createTicket(label: string, color: string, isHighlighted: boolean): THREE.Group {
+function createTicketDispenser(): THREE.Group {
+  const dispenser = new THREE.Group();
+  const groundY = 0;
+
+  // Main body
+  const bodyMat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.5, metalness: 0.3 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 0.35), bodyMat);
+  body.position.set(0, groundY + 0.4, 0);
+  dispenser.add(body);
+
+  // Top dome
+  const topMat = new THREE.MeshStandardMaterial({ color: '#c0392b', roughness: 0.4, metalness: 0.4 });
+  const top = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.08, 0.37), topMat);
+  top.position.set(0, groundY + 0.84, 0);
+  dispenser.add(top);
+
+  // Base
+  const baseMat = new THREE.MeshStandardMaterial({ color: '#2c3e50', roughness: 0.6, metalness: 0.3 });
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.08, 0.4), baseMat);
+  base.position.set(0, groundY + 0.04, 0);
+  dispenser.add(base);
+
+  // Screen
+  const screenMat = new THREE.MeshStandardMaterial({ color: '#2c3e50', roughness: 0.3 });
+  const screen = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.18, 0.02), screenMat);
+  screen.position.set(0, groundY + 0.6, 0.17);
+  dispenser.add(screen);
+
+  // Screen glow
+  const screenGlow = new THREE.Mesh(
+    new THREE.BoxGeometry(0.26, 0.14, 0.01),
+    new THREE.MeshBasicMaterial({ color: '#00ff00' })
+  );
+  screenGlow.position.set(0, groundY + 0.6, 0.18);
+  dispenser.add(screenGlow);
+
+  // Ticket slot (where tickets come out)
+  const slotMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.8 });
+  const slot = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.05, 0.04), slotMat);
+  slot.position.set(0, groundY + 0.35, 0.17);
+  dispenser.add(slot);
+
+  // Slot opening
+  const slotOpening = new THREE.Mesh(
+    new THREE.BoxGeometry(0.2, 0.02, 0.02),
+    new THREE.MeshBasicMaterial({ color: '#333333' })
+  );
+  slotOpening.position.set(0, groundY + 0.35, 0.19);
+  dispenser.add(slotOpening);
+
+  // Buttons
+  const buttonColors = ['#e74c3c', '#f39c12', '#2ecc71'];
+  buttonColors.forEach((col, i) => {
+    const btn = new THREE.Mesh(
+      new THREE.BoxGeometry(0.06, 0.06, 0.02),
+      new THREE.MeshStandardMaterial({ color: col, roughness: 0.3 })
+    );
+    btn.position.set(-0.08 + i * 0.08, groundY + 0.45, 0.17);
+    dispenser.add(btn);
+  });
+
+  // Side stripes
+  const stripeMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.6 });
+  [-1, 1].forEach(side => {
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.7, 0.02), stripeMat);
+    stripe.position.set(side * 0.24, groundY + 0.4, 0.17);
+    dispenser.add(stripe);
+  });
+
+  // "TICKETS" sign
+  const signCanvas = document.createElement('canvas');
+  signCanvas.width = 160;
+  signCanvas.height = 48;
+  const sctx = signCanvas.getContext('2d')!;
+  sctx.fillStyle = '#ffd700';
+  sctx.fillRect(0, 0, 160, 48);
+  sctx.fillStyle = '#c0392b';
+  sctx.font = 'bold 24px Arial';
+  sctx.textAlign = 'center';
+  sctx.fillText('🎫 TICKETS', 80, 34);
+  const signTex = new THREE.CanvasTexture(signCanvas);
+  const sign = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.28, 0.08),
+    new THREE.MeshBasicMaterial({ map: signTex })
+  );
+  sign.position.set(0, groundY + 0.75, 0.176);
+  dispenser.add(sign);
+
+  // Coin slot
+  const coinSlot = new THREE.Mesh(
+    new THREE.BoxGeometry(0.04, 0.08, 0.02),
+    new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.7 })
+  );
+  coinSlot.position.set(0.15, groundY + 0.55, 0.17);
+  dispenser.add(coinSlot);
+
+  return dispenser;
+}
+
+// ==================== CONNECTED TICKET (for dispenser) ====================
+
+function createConnectedTicket(label: string, color: string, isHighlighted: boolean, isFirst: boolean, isLast: boolean): THREE.Group {
   const ticket = new THREE.Group();
 
   const ticketMat = new THREE.MeshStandardMaterial({
@@ -1761,88 +1818,58 @@ function createTicket(label: string, color: string, isHighlighted: boolean): THR
     emissive: isHighlighted ? '#ffff00' : '#000',
     emissiveIntensity: isHighlighted ? 0.3 : 0
   });
-  const ticketBody = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.22, 0.012), ticketMat);
+
+  // Main ticket body
+  const ticketBody = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.1, 0.008), ticketMat);
   ticket.add(ticketBody);
 
-  const borderMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.6, roughness: 0.3 });
-  [0.105, -0.105].forEach(y => {
-    const borderH = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.015, 0.014), borderMat);
-    borderH.position.y = y;
-    ticket.add(borderH);
-  });
-  [-0.195, 0.195].forEach(x => {
-    const borderV = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.22, 0.014), borderMat);
-    borderV.position.x = x;
-    ticket.add(borderV);
-  });
-
-  const perfMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.5 });
-  for (let y = -0.08; y <= 0.08; y += 0.025) {
-    const perf = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.008, 0.014), perfMat);
-    perf.position.set(-0.16, y, 0);
-    ticket.add(perf);
+  // Perforated edge (connection to next ticket)
+  if (!isLast) {
+    const perfMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.5 });
+    for (let y = -0.04; y <= 0.04; y += 0.015) {
+      const perf = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.006, 0.01), perfMat);
+      perf.position.set(0.093, y, 0);
+      ticket.add(perf);
+    }
   }
 
-  const stubLine = new THREE.Mesh(
-    new THREE.BoxGeometry(0.003, 0.2, 0.013),
-    new THREE.MeshStandardMaterial({ color: '#333333' })
+  // Ticket number
+  const canvas = document.createElement('canvas');
+  canvas.width = 100;
+  canvas.height = 60;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillRect(0, 0, 100, 60);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 28px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, 50, 40);
+  const tex = new THREE.CanvasTexture(canvas);
+  const labelMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.14, 0.08),
+    new THREE.MeshBasicMaterial({ map: tex, transparent: true })
   );
-  stubLine.position.x = -0.13;
-  ticket.add(stubLine);
+  labelMesh.position.z = 0.005;
+  ticket.add(labelMesh);
 
-  const frontCanvas = document.createElement('canvas');
-  frontCanvas.width = 240;
-  frontCanvas.height = 130;
-  const fctx = frontCanvas.getContext('2d')!;
-
-  fctx.fillStyle = 'rgba(0,0,0,0.4)';
-  fctx.fillRect(0, 0, 240, 32);
-
-  fctx.strokeStyle = '#ffd700';
-  fctx.lineWidth = 2;
-  fctx.beginPath();
-  fctx.moveTo(10, 35);
-  fctx.lineTo(230, 35);
-  fctx.stroke();
-  fctx.beginPath();
-  fctx.moveTo(10, 95);
-  fctx.lineTo(230, 95);
-  fctx.stroke();
-
-  fctx.fillStyle = '#ffffff';
-  fctx.font = 'bold 14px Arial';
-  fctx.textAlign = 'center';
-  fctx.fillText('★ ADMIT ONE ★', 120, 22);
-
-  fctx.font = 'bold 38px Arial';
-  fctx.fillText(label, 120, 72);
-
-  fctx.font = '10px Arial';
-  fctx.fillStyle = 'rgba(255,255,255,0.8)';
-  fctx.fillText('VALID FOR ONE ENTRY', 120, 88);
-
-  fctx.font = 'bold 10px monospace';
-  fctx.fillStyle = 'rgba(255,255,255,0.6)';
-  fctx.fillText('NO. ' + Math.floor(Math.random() * 90000 + 10000), 120, 120);
-
-  const frontTex = new THREE.CanvasTexture(frontCanvas);
-  const frontFace = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.38, 0.2),
-    new THREE.MeshBasicMaterial({ map: frontTex, transparent: true })
-  );
-  frontFace.position.z = 0.007;
-  ticket.add(frontFace);
+  // Star decorations
+  const starMat = new THREE.MeshBasicMaterial({ color: '#ffd700' });
+  [-0.05, 0.05].forEach(x => {
+    const star = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.015, 0.002), starMat);
+    star.position.set(x, 0.035, 0.005);
+    ticket.add(star);
+  });
 
   if (isHighlighted) {
-    ticket.add(new THREE.Mesh(
-      new THREE.BoxGeometry(0.44, 0.26, 0.03),
-      new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.15 })
-    ));
+    const glow = new THREE.Mesh(
+      new THREE.BoxGeometry(0.2, 0.12, 0.02),
+      new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.2 })
+    );
+    ticket.add(glow);
   }
 
   return ticket;
 }
-
 // ==================== SCHOOL BUILDING ====================
 
 function createSchoolBuilding(): THREE.Group {
@@ -2632,81 +2659,242 @@ function buildSceneContent(
       exitSprite.scale.set(0.32, 0.1, 1);
       group.add(exitSprite);
 
-    } else if (environment === 'tickets') {
-      data.forEach((item, i) => {
-        const isHl = highlightIndex === i;
-        const ticketObj = createTicket(item.label, item.color, isHl);
-        ticketObj.position.set(startX + i * spacing, isHl ? 0.08 : 0, 0);
-        ticketObj.scale.setScalar(0.78);
-        applyItemAnimation(ticketObj, i, animPhase || '', animData || {}, 'queue', animProgress);
-        group.add(ticketObj);
-      });
+// ==================== TICKET DISPENSER MACHINE ====================
 
-      const frontSprite = createTextSprite('FRONT', '#00ff00', 18);
-      frontSprite.position.set(startX, -0.2, 0);
-      frontSprite.scale.set(0.28, 0.1, 1);
-      group.add(frontSprite);
+function createTicketDispenser(): THREE.Group {
+  const dispenser = new THREE.Group();
+  const groundY = 0;
 
-      const rearSprite = createTextSprite('REAR', '#ff6600', 18);
-      rearSprite.position.set(startX + (data.length - 1) * spacing, -0.2, 0);
-      rearSprite.scale.set(0.28, 0.1, 1);
-      group.add(rearSprite);
+  // Main body
+  const bodyMat = new THREE.MeshStandardMaterial({ color: '#c0392b', roughness: 0.5, metalness: 0.3 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.75, 0.32), bodyMat);
+  body.position.set(0, groundY + 0.375, 0);
+  dispenser.add(body);
 
-      const counter = new THREE.Mesh(
-        new THREE.BoxGeometry(data.length * spacing + 0.55, 0.035, 0.38),
-        new THREE.MeshStandardMaterial({ color: '#2c3e50', metalness: 0.3 })
-      );
-      counter.position.y = -0.14;
-      group.add(counter);
+  // Top part
+  const topMat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.4, metalness: 0.4 });
+  const top = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.06, 0.35), topMat);
+  top.position.set(0, groundY + 0.78, 0);
+  dispenser.add(top);
 
-    } else if (environment === 'students') {
-      const schoolBuilding = createSchoolBuilding();
-      schoolBuilding.position.set(startX - 0.3, groundY, 0);
-      schoolBuilding.scale.setScalar(0.5);
-      group.add(schoolBuilding);
+  // Base
+  const baseMat = new THREE.MeshStandardMaterial({ color: '#2c3e50', roughness: 0.6, metalness: 0.3 });
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.06, 0.38), baseMat);
+  base.position.set(0, groundY + 0.03, 0);
+  dispenser.add(base);
 
-      data.forEach((item, i) => {
-        const isHl = highlightIndex === i;
-        if (item.appearance) {
-          const isWalking = (animPhase === 'queue-dequeue-drive') && isHl;
-          const walkPhase = isWalking ? (animProgress || 0) * Math.PI * 6 : 0;
+  // Screen area
+  const screenBg = new THREE.Mesh(
+    new THREE.BoxGeometry(0.28, 0.16, 0.02),
+    new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.3 })
+  );
+  screenBg.position.set(0, groundY + 0.58, 0.16);
+  dispenser.add(screenBg);
 
-          const human = createHuman3D(item.appearance, item.label, isHl, false, walkPhase);
-          human.position.set(startX + i * spacing + 0.6, groundY, 0);
-          human.scale.setScalar(0.55);
-          human.rotation.y = -Math.PI / 2;
-          applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue', animProgress);
-          group.add(human);
-        }
-      });
+  // Screen glow
+  const screenGlow = new THREE.Mesh(
+    new THREE.BoxGeometry(0.24, 0.12, 0.01),
+    new THREE.MeshBasicMaterial({ color: '#00ff00' })
+  );
+  screenGlow.position.set(0, groundY + 0.58, 0.17);
+  dispenser.add(screenGlow);
 
-      const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
-      frontSprite.position.set(startX + 0.6, groundY - 0.18, 0);
-      frontSprite.scale.set(0.26, 0.09, 1);
-      group.add(frontSprite);
+  // "TAKE TICKET" text on screen
+  const screenCanvas = document.createElement('canvas');
+  screenCanvas.width = 120;
+  screenCanvas.height = 60;
+  const sctx = screenCanvas.getContext('2d')!;
+  sctx.fillStyle = '#001100';
+  sctx.fillRect(0, 0, 120, 60);
+  sctx.fillStyle = '#00ff00';
+  sctx.font = 'bold 14px Arial';
+  sctx.textAlign = 'center';
+  sctx.fillText('TAKE', 60, 25);
+  sctx.fillText('TICKET', 60, 45);
+  const screenTex = new THREE.CanvasTexture(screenCanvas);
+  const screenText = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.2, 0.1),
+    new THREE.MeshBasicMaterial({ map: screenTex, transparent: true })
+  );
+  screenText.position.set(0, groundY + 0.58, 0.175);
+  dispenser.add(screenText);
 
-      const rearSprite = createTextSprite('REAR', '#ff6600', 16);
-      rearSprite.position.set(startX + (data.length - 1) * spacing + 0.6, groundY - 0.18, 0);
-      rearSprite.scale.set(0.26, 0.09, 1);
-      group.add(rearSprite);
+  // Ticket slot (where tickets come out)
+  const slotFrame = new THREE.Mesh(
+    new THREE.BoxGeometry(0.22, 0.06, 0.03),
+    new THREE.MeshStandardMaterial({ color: '#333333', metalness: 0.6 })
+  );
+  slotFrame.position.set(0, groundY + 0.38, 0.155);
+  dispenser.add(slotFrame);
 
-      const pathway = new THREE.Mesh(
-        new THREE.PlaneGeometry(data.length * spacing + 2.5, 0.5),
-        new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
-      );
-      pathway.rotation.x = -Math.PI / 2;
-      pathway.position.set(0.3, groundY - 0.01, 0);
-      group.add(pathway);
+  // Slot opening (dark inside)
+  const slotOpening = new THREE.Mesh(
+    new THREE.BoxGeometry(0.18, 0.025, 0.02),
+    new THREE.MeshBasicMaterial({ color: '#0a0a0a' })
+  );
+  slotOpening.position.set(0, groundY + 0.38, 0.165);
+  dispenser.add(slotOpening);
 
-      const grassMat = new THREE.MeshStandardMaterial({ color: '#228b22', side: THREE.DoubleSide });
-      [-0.35, 0.35].forEach(z => {
-        const grass = new THREE.Mesh(new THREE.PlaneGeometry(data.length * spacing + 2.5, 0.3), grassMat);
-        grass.rotation.x = -Math.PI / 2;
-        grass.position.set(0.3, groundY - 0.015, z);
-        group.add(grass);
-      });
+  // Buttons
+  const buttonMat = new THREE.MeshStandardMaterial({ color: '#27ae60', roughness: 0.3, metalness: 0.5 });
+  const button = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.025), buttonMat);
+  button.position.set(0, groundY + 0.45, 0.16);
+  dispenser.add(button);
+
+  // Button label
+  const btnCanvas = document.createElement('canvas');
+  btnCanvas.width = 40;
+  btnCanvas.height = 40;
+  const bctx = btnCanvas.getContext('2d')!;
+  bctx.fillStyle = '#ffffff';
+  bctx.font = 'bold 20px Arial';
+  bctx.textAlign = 'center';
+  bctx.fillText('▶', 20, 28);
+  const btnTex = new THREE.CanvasTexture(btnCanvas);
+  const btnLabel = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.05, 0.05),
+    new THREE.MeshBasicMaterial({ map: btnTex, transparent: true })
+  );
+  btnLabel.position.set(0, groundY + 0.45, 0.175);
+  dispenser.add(btnLabel);
+
+  // Side decorations
+  const sideMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.7 });
+  [-1, 1].forEach(side => {
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.6, 0.015), sideMat);
+    stripe.position.set(side * 0.21, groundY + 0.38, 0.15);
+    dispenser.add(stripe);
+  });
+
+  // "TICKETS" sign on top
+  const signCanvas = document.createElement('canvas');
+  signCanvas.width = 140;
+  signCanvas.height = 40;
+  const signCtx = signCanvas.getContext('2d')!;
+  signCtx.fillStyle = '#ffd700';
+  signCtx.fillRect(0, 0, 140, 40);
+  signCtx.strokeStyle = '#c0392b';
+  signCtx.lineWidth = 3;
+  signCtx.strokeRect(2, 2, 136, 36);
+  signCtx.fillStyle = '#c0392b';
+  signCtx.font = 'bold 18px Arial';
+  signCtx.textAlign = 'center';
+  signCtx.fillText('🎫 TICKETS', 70, 28);
+  const signTex = new THREE.CanvasTexture(signCanvas);
+  const sign = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.3, 0.085),
+    new THREE.MeshBasicMaterial({ map: signTex })
+  );
+  sign.position.set(0, groundY + 0.7, 0.165);
+  dispenser.add(sign);
+
+  // Coin slot
+  const coinSlot = new THREE.Mesh(
+    new THREE.BoxGeometry(0.03, 0.06, 0.015),
+    new THREE.MeshStandardMaterial({ color: '#222', metalness: 0.8 })
+  );
+  coinSlot.position.set(0.12, groundY + 0.52, 0.16);
+  dispenser.add(coinSlot);
+
+  // Coin slot label
+  const coinCanvas = document.createElement('canvas');
+  coinCanvas.width = 30;
+  coinCanvas.height = 30;
+  const cctx = coinCanvas.getContext('2d')!;
+  cctx.fillStyle = '#ffd700';
+  cctx.beginPath();
+  cctx.arc(15, 15, 12, 0, Math.PI * 2);
+  cctx.fill();
+  cctx.fillStyle = '#000';
+  cctx.font = 'bold 14px Arial';
+  cctx.textAlign = 'center';
+  cctx.fillText('$', 15, 20);
+  const coinTex = new THREE.CanvasTexture(coinCanvas);
+  const coinLabel = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.04, 0.04),
+    new THREE.MeshBasicMaterial({ map: coinTex, transparent: true })
+  );
+  coinLabel.position.set(0.12, groundY + 0.6, 0.165);
+  dispenser.add(coinLabel);
+
+  return dispenser;
+}
+
+// ==================== CONNECTED TICKET (for dispenser) ====================
+
+function createConnectedTicket(label: string, color: string, isHighlighted: boolean, isFirst: boolean, isLast: boolean): THREE.Group {
+  const ticket = new THREE.Group();
+
+  const ticketMat = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.4,
+    emissive: isHighlighted ? '#ffff00' : '#000',
+    emissiveIntensity: isHighlighted ? 0.3 : 0
+  });
+
+  // Main ticket body
+  const ticketBody = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.09, 0.006), ticketMat);
+  ticket.add(ticketBody);
+
+  // Border
+  const borderMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.5 });
+  const border = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.095, 0.004), borderMat);
+  border.position.z = -0.002;
+  ticket.add(border);
+
+  // Perforated edge (connection to next ticket) - right side
+  if (!isLast) {
+    const perfMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+    for (let y = -0.035; y <= 0.035; y += 0.012) {
+      const perf = new THREE.Mesh(new THREE.BoxGeometry(0.005, 0.005, 0.008), perfMat);
+      perf.position.set(0.083, y, 0);
+      ticket.add(perf);
     }
   }
+
+  // Ticket number/label
+  const canvas = document.createElement('canvas');
+  canvas.width = 90;
+  canvas.height = 50;
+  const ctx = canvas.getContext('2d')!;
+
+  // Background
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.fillRect(0, 0, 90, 50);
+
+  // Text
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 22px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, 45, 35);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  const labelMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.12, 0.065),
+    new THREE.MeshBasicMaterial({ map: tex, transparent: true })
+  );
+  labelMesh.position.z = 0.004;
+  ticket.add(labelMesh);
+
+  // Stars
+  const starMat = new THREE.MeshBasicMaterial({ color: '#ffd700' });
+  [-0.045, 0.045].forEach(x => {
+    const star = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, 0.002), starMat);
+    star.position.set(x, 0.032, 0.004);
+    star.rotation.z = Math.PI / 4;
+    ticket.add(star);
+  });
+
+  // Highlight glow
+  if (isHighlighted) {
+    const glow = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.11, 0.015),
+      new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.2 })
+    );
+    ticket.add(glow);
+  }
+
+  return ticket;
 }
 
 // ==================== HOME COMPONENT ====================
@@ -3112,22 +3300,65 @@ export default function Home() {
     setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
-  const arrayInsert = async () => {
-    if (isAnimating || getArrayData().length >= 6) return; setIsAnimating(true);
-    const data = getArrayData(), insertIndex = Math.floor(Math.random() * (data.length + 1));
-    setOperationMessage(`Inserting at [${insertIndex}]...`);
-    setCodeDisplay(`// O(n) Insert`);
-    for (let i = data.length - 1; i >= insertIndex; i--) { setHighlightIndex(i); await delay(200); }
-    (setArrayData as any)((prev: DataItem[]) => {
-      const arr = [...prev]; arr.splice(insertIndex, 0, { id: Date.now(), label: 'New', color: '#1abc9c' }); return arr;
-    });
-    setHighlightIndex(insertIndex);
-    await smoothAnimate(450, 'insert-drop', { index: insertIndex });
-    await smoothAnimate(350, 'insert-settle', { index: insertIndex });
-    setOperationMessage('Inserted!'); await delay(600);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
+const arrayInsert = async () => {
+  if (isAnimating || getArrayData().length >= 6) return;
+  setIsAnimating(true);
+  const data = getArrayData();
+  const insertIndex = Math.floor(Math.random() * (data.length + 1));
+  setOperationMessage(`Inserting at [${insertIndex}]...`);
+  setCodeDisplay(`// O(n) Insert`);
+  
+  for (let i = data.length - 1; i >= insertIndex; i--) {
+    setHighlightIndex(i);
+    await delay(200);
+  }
+  
+  // Create new item with proper appearance for classroom
+  let newItem: DataItem;
+  if (arrayEnv === 'classroom') {
+    const names = ['Emma', 'Liam', 'Mia', 'Noah', 'Ava', 'Jack'];
+    const skinTones = ['#f5c6a0', '#c68642', '#8d5524'];
+    const hairColors = ['#1a1a1a', '#3d2314', '#2c1810', '#d4a574'];
+    const shirtColors = ['#1abc9c', '#9b59b6', '#e74c3c', '#3498db', '#f39c12'];
+    const genders: ('male' | 'female')[] = ['male', 'female'];
+    const hairStyles: ('short' | 'long')[] = ['short', 'long'];
+    const gender = genders[Math.floor(Math.random() * genders.length)];
+    
+    newItem = {
+      id: Date.now(),
+      label: names[Math.floor(Math.random() * names.length)],
+      color: shirtColors[Math.floor(Math.random() * shirtColors.length)],
+      appearance: {
+        skinTone: skinTones[Math.floor(Math.random() * skinTones.length)],
+        shirtColor: shirtColors[Math.floor(Math.random() * shirtColors.length)],
+        pantsColor: '#2c3e50',
+        hairColor: hairColors[Math.floor(Math.random() * hairColors.length)],
+        hairStyle: gender === 'female' ? 'long' : hairStyles[Math.floor(Math.random() * hairStyles.length)],
+        gender: gender
+      }
+    };
+  } else {
+    newItem = { id: Date.now(), label: 'New', color: '#1abc9c' };
+  }
+  
+  (setArrayData as any)((prev: DataItem[]) => {
+    const arr = [...prev];
+    arr.splice(insertIndex, 0, newItem);
+    return arr;
+  });
+  
+  setHighlightIndex(insertIndex);
+  await smoothAnimate(450, 'insert-drop', { index: insertIndex });
+  await smoothAnimate(350, 'insert-settle', { index: insertIndex });
+  setOperationMessage('Inserted!');
+  await delay(600);
+  setAnimPhase('');
+  setAnimData({});
+  setHighlightIndex(null);
+  setOperationMessage('');
+  setCodeDisplay('');
+  setIsAnimating(false);
+};
 
   const arrayDelete = async () => {
     if (isAnimating || getArrayData().length <= 2) return; setIsAnimating(true);
