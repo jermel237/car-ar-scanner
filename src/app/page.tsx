@@ -3409,13 +3409,22 @@ export default function Home() {
     
     if (step.highlightIndex !== undefined) {
       setHighlightIndex(step.highlightIndex);
+    } else {
+      setHighlightIndex(null);
     }
     if (step.highlightIndex2 !== undefined) {
       setHighlightIndex2(step.highlightIndex2);
+    } else {
+      setHighlightIndex2(null);
     }
     
     if (step.animPhase && step.animDuration) {
       await smoothAnimate(step.animDuration, step.animPhase, { index: step.highlightIndex, index1: step.highlightIndex, index2: step.highlightIndex2 });
+    } else {
+      // Clear animation state when step has no animation
+      setAnimPhase('');
+      setAnimData({});
+      setAnimProgress(1);
     }
     
     if (step.action) {
