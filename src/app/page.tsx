@@ -1306,79 +1306,81 @@ function createCar(color: string, label: string, isHighlighted: boolean): THREE.
 function createPlate(label: string, color: string, isHighlighted: boolean): THREE.Group {
   const plateGroup = new THREE.Group();
   
-  const plateRadius = 0.18;
-  const plateThickness = 0.025;
+  const plateRadius = 0.2;
+  const plateThickness = 0.02;
   
-  // Main plate body
+  // Main plate body - white ceramic
   const plateMat = new THREE.MeshStandardMaterial({
-    color: '#f8f8f8',
-    roughness: 0.2,
-    metalness: 0.1,
+    color: '#ffffff',
+    roughness: 0.15,
+    metalness: 0.05,
     emissive: isHighlighted ? '#ffff00' : '#000',
     emissiveIntensity: isHighlighted ? 0.3 : 0
   });
   
+  // Plate base (slightly curved look with different sizes)
+  const plateBottom = new THREE.Mesh(
+    new THREE.CylinderGeometry(plateRadius * 0.6, plateRadius * 0.5, plateThickness * 0.3, 32),
+    plateMat
+  );
+  plateBottom.position.y = -plateThickness * 0.3;
+  plateGroup.add(plateBottom);
+  
+  // Plate main body
   const plateBody = new THREE.Mesh(
-    new THREE.CylinderGeometry(plateRadius, plateRadius - 0.01, plateThickness, 32),
+    new THREE.CylinderGeometry(plateRadius, plateRadius * 0.9, plateThickness, 32),
     plateMat
   );
   plateGroup.add(plateBody);
   
-  // Plate rim
-  const rimMat = new THREE.MeshStandardMaterial({ color: '#e0e0e0', roughness: 0.3 });
+  // Plate rim (raised edge)
+  const rimMat = new THREE.MeshStandardMaterial({ color: '#f5f5f5', roughness: 0.2 });
   const rim = new THREE.Mesh(
-    new THREE.TorusGeometry(plateRadius - 0.005, 0.008, 8, 32),
+    new THREE.TorusGeometry(plateRadius - 0.01, 0.012, 8, 32),
     rimMat
   );
   rim.rotation.x = Math.PI / 2;
   rim.position.y = plateThickness / 2;
   plateGroup.add(rim);
   
-  // Inner circle pattern
-  const innerCircle = new THREE.Mesh(
-    new THREE.RingGeometry(0.06, 0.12, 32),
+  // Inner decorative ring
+  const innerRing = new THREE.Mesh(
+    new THREE.TorusGeometry(plateRadius * 0.5, 0.004, 8, 32),
+    new THREE.MeshStandardMaterial({ color: '#e8e8e8', roughness: 0.3 })
+  );
+  innerRing.rotation.x = Math.PI / 2;
+  innerRing.position.y = plateThickness / 2 + 0.001;
+  plateGroup.add(innerRing);
+  
+  // Center design
+  const centerCircle = new THREE.Mesh(
+    new THREE.CircleGeometry(plateRadius * 0.25, 32),
     new THREE.MeshStandardMaterial({ color: '#f0f0f0', roughness: 0.4 })
   );
-  innerCircle.rotation.x = -Math.PI / 2;
-  innerCircle.position.y = plateThickness / 2 + 0.001;
-  plateGroup.add(innerCircle);
+  centerCircle.rotation.x = -Math.PI / 2;
+  centerCircle.position.y = plateThickness / 2 + 0.002;
+  plateGroup.add(centerCircle);
   
-  // Decorative ring
-  const decoRing = new THREE.Mesh(
-    new THREE.TorusGeometry(0.14, 0.003, 8, 32),
-    new THREE.MeshStandardMaterial({ color: '#ddd', roughness: 0.3 })
-  );
-  decoRing.rotation.x = Math.PI / 2;
-  decoRing.position.y = plateThickness / 2 + 0.001;
-  plateGroup.add(decoRing);
-  
-  // Label on plate
-  const labelCanvas = document.createElement('canvas');
-  labelCanvas.width = 128;
-  labelCanvas.height = 128;
-  const lctx = labelCanvas.getContext('2d')!;
-  lctx.fillStyle = color;
-  lctx.beginPath();
-  lctx.arc(64, 64, 30, 0, Math.PI * 2);
-  lctx.fill();
-  lctx.fillStyle = '#fff';
-  lctx.font = 'bold 20px Arial';
-  lctx.textAlign = 'center';
-  lctx.fillText(label.split(' ')[1] || label, 64, 70);
-  
-  const labelTex = new THREE.CanvasTexture(labelCanvas);
-  const labelMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.1, 0.1),
-    new THREE.MeshBasicMaterial({ map: labelTex, transparent: true })
-  );
-  labelMesh.rotation.x = -Math.PI / 2;
-  labelMesh.position.y = plateThickness / 2 + 0.002;
-  plateGroup.add(labelMesh);
+  // Small decorative dots around rim
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2;
+    const dot = new THREE.Mesh(
+      new THREE.CircleGeometry(0.008, 8),
+      new THREE.MeshStandardMaterial({ color: '#ddd' })
+    );
+    dot.rotation.x = -Math.PI / 2;
+    dot.position.set(
+      Math.cos(angle) * (plateRadius * 0.75),
+      plateThickness / 2 + 0.002,
+      Math.sin(angle) * (plateRadius * 0.75)
+    );
+    plateGroup.add(dot);
+  }
   
   // Glow for highlighted
   if (isHighlighted) {
     const glow = new THREE.Mesh(
-      new THREE.CylinderGeometry(plateRadius + 0.02, plateRadius + 0.02, plateThickness + 0.02, 32),
+      new THREE.CylinderGeometry(plateRadius + 0.03, plateRadius + 0.03, plateThickness + 0.03, 32),
       new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.2 })
     );
     plateGroup.add(glow);
@@ -1860,7 +1862,7 @@ function createUniversityBuilding(): THREE.Group {
   const university = new THREE.Group();
   const groundY = 0;
 
-  // Main building - larger and more detailed
+  // Materials
   const brickMat = new THREE.MeshStandardMaterial({ color: '#8b4513', roughness: 0.8 });
   const stoneMat = new THREE.MeshStandardMaterial({ color: '#d4c4a8', roughness: 0.6 });
   const roofMat = new THREE.MeshStandardMaterial({ color: '#2c3e50', roughness: 0.5 });
@@ -1868,231 +1870,288 @@ function createUniversityBuilding(): THREE.Group {
   const windowFrameMat = new THREE.MeshStandardMaterial({ color: '#f5f5f5', roughness: 0.5 });
   const doorMat = new THREE.MeshStandardMaterial({ color: '#4a2c2a', roughness: 0.6 });
   const columnMat = new THREE.MeshStandardMaterial({ color: '#f0e6d3', roughness: 0.4 });
+  const goldMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.8, roughness: 0.3 });
 
-  // Main building body
-  const mainBuilding = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.0, 0.8), brickMat);
-  mainBuilding.position.set(-0.3, groundY + 0.5, 0);
+  // Main building body - LARGER
+  const buildingWidth = 2.0;
+  const buildingHeight = 1.4;
+  const buildingDepth = 1.0;
+  
+  const mainBuilding = new THREE.Mesh(new THREE.BoxGeometry(buildingWidth, buildingHeight, buildingDepth), brickMat);
+  mainBuilding.position.set(0, groundY + buildingHeight / 2, 0);
   university.add(mainBuilding);
 
   // Stone base
-  const stoneBase = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.1, 0.9), stoneMat);
-  stoneBase.position.set(-0.3, groundY + 0.05, 0);
+  const stoneBase = new THREE.Mesh(new THREE.BoxGeometry(buildingWidth + 0.1, 0.12, buildingDepth + 0.1), stoneMat);
+  stoneBase.position.set(0, groundY + 0.06, 0);
   university.add(stoneBase);
 
-  // Entrance portico with columns
-  const porticoRoof = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.08, 0.4), stoneMat);
-  porticoRoof.position.set(0.35, groundY + 0.75, 0);
+  // ENTRANCE IN CENTER with grand portico
+  const porticoWidth = 0.8;
+  const porticoDepth = 0.5;
+  const porticoHeight = 0.9;
+  
+  // Portico floor/platform
+  const porticoFloor = new THREE.Mesh(new THREE.BoxGeometry(porticoWidth, 0.08, porticoDepth), stoneMat);
+  porticoFloor.position.set(0, groundY + 0.16, buildingDepth / 2 + porticoDepth / 2 - 0.1);
+  university.add(porticoFloor);
+  
+  // Portico roof
+  const porticoRoof = new THREE.Mesh(new THREE.BoxGeometry(porticoWidth + 0.1, 0.1, porticoDepth + 0.1), stoneMat);
+  porticoRoof.position.set(0, groundY + porticoHeight + 0.2, buildingDepth / 2 + porticoDepth / 2 - 0.1);
   university.add(porticoRoof);
 
   // Triangular pediment
-  const pedimentGeo = new THREE.BufferGeometry();
-  const pedimentVertices = new Float32Array([
-    -0.3, 0, 0.21,
-    0.3, 0, 0.21,
-    0, 0.2, 0.21
-  ]);
-  pedimentGeo.setAttribute('position', new THREE.BufferAttribute(pedimentVertices, 3));
-  pedimentGeo.computeVertexNormals();
+  const pedimentShape = new THREE.Shape();
+  pedimentShape.moveTo(-porticoWidth / 2 - 0.05, 0);
+  pedimentShape.lineTo(porticoWidth / 2 + 0.05, 0);
+  pedimentShape.lineTo(0, 0.25);
+  pedimentShape.closePath();
+  
+  const pedimentGeo = new THREE.ExtrudeGeometry(pedimentShape, { depth: 0.08, bevelEnabled: false });
   const pediment = new THREE.Mesh(pedimentGeo, stoneMat);
-  pediment.position.set(0.35, groundY + 0.79, 0);
+  pediment.position.set(0, groundY + porticoHeight + 0.25, buildingDepth / 2 + porticoDepth / 2 - 0.1);
+  pediment.rotation.x = -Math.PI / 2;
   university.add(pediment);
 
-  // Columns
-  for (let i = 0; i < 4; i++) {
-    const columnX = 0.15 + (i % 2) * 0.4;
-    const columnZ = (i < 2 ? 0.12 : -0.12);
-    
+  // 4 Columns
+  const columnPositions = [
+    [-porticoWidth / 2 + 0.1, buildingDepth / 2 + 0.1],
+    [-porticoWidth / 2 + 0.1, buildingDepth / 2 + porticoDepth - 0.15],
+    [porticoWidth / 2 - 0.1, buildingDepth / 2 + 0.1],
+    [porticoWidth / 2 - 0.1, buildingDepth / 2 + porticoDepth - 0.15],
+  ];
+  
+  columnPositions.forEach(([cx, cz]) => {
     // Column base
-    const colBase = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.05, 0.08), stoneMat);
-    colBase.position.set(columnX, groundY + 0.125, columnZ);
+    const colBase = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.12), stoneMat);
+    colBase.position.set(cx, groundY + 0.24, cz);
     university.add(colBase);
     
     // Column shaft
-    const column = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.55, 12), columnMat);
-    column.position.set(columnX, groundY + 0.425, columnZ);
+    const column = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, porticoHeight - 0.2, 16), columnMat);
+    column.position.set(cx, groundY + 0.28 + (porticoHeight - 0.2) / 2, cz);
     university.add(column);
     
-    // Column capital
-    const capital = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, 0.08), stoneMat);
-    capital.position.set(columnX, groundY + 0.72, columnZ);
+    // Column capital (decorative top)
+    const capital = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.06, 0.14), stoneMat);
+    capital.position.set(cx, groundY + porticoHeight + 0.13, cz);
     university.add(capital);
-  }
-
-  // Main entrance doors
-  const doorGroup = new THREE.Group();
-  [-0.06, 0.06].forEach(offsetX => {
-    const door = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.4, 0.02), doorMat);
-    door.position.set(0.35 + offsetX, groundY + 0.3, 0.41);
-    doorGroup.add(door);
-    
-    // Door handle
-    const handle = new THREE.Mesh(new THREE.SphereGeometry(0.01, 8, 8), new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.9 }));
-    handle.position.set(0.35 + offsetX + (offsetX > 0 ? -0.03 : 0.03), groundY + 0.3, 0.43);
-    doorGroup.add(handle);
   });
-  university.add(doorGroup);
 
+  // MAIN ENTRANCE DOORS - CENTERED
+  const doorWidth = 0.18;
+  const doorHeight = 0.55;
+  const doorGap = 0.02;
+  
+  // Door frame
+  const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(doorWidth * 2 + doorGap + 0.08, doorHeight + 0.1, 0.04), stoneMat);
+  doorFrame.position.set(0, groundY + 0.2 + doorHeight / 2, buildingDepth / 2 + 0.02);
+  university.add(doorFrame);
+  
+  // Left door
+  const leftDoor = new THREE.Mesh(new THREE.BoxGeometry(doorWidth, doorHeight, 0.03), doorMat);
+  leftDoor.position.set(-doorWidth / 2 - doorGap / 2, groundY + 0.2 + doorHeight / 2, buildingDepth / 2 + 0.04);
+  university.add(leftDoor);
+  
+  // Right door
+  const rightDoor = new THREE.Mesh(new THREE.BoxGeometry(doorWidth, doorHeight, 0.03), doorMat);
+  rightDoor.position.set(doorWidth / 2 + doorGap / 2, groundY + 0.2 + doorHeight / 2, buildingDepth / 2 + 0.04);
+  university.add(rightDoor);
+  
+  // Door handles
+  [-doorWidth / 2 - doorGap / 2 + 0.06, doorWidth / 2 + doorGap / 2 - 0.06].forEach(hx => {
+    const handle = new THREE.Mesh(new THREE.SphereGeometry(0.015, 8, 8), goldMat);
+    handle.position.set(hx, groundY + 0.2 + doorHeight / 2, buildingDepth / 2 + 0.06);
+    university.add(handle);
+  });
+  
   // Door arch
-  const archMat = new THREE.MeshStandardMaterial({ color: '#d4c4a8', roughness: 0.5 });
-  const arch = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.06, 0.03), archMat);
-  arch.position.set(0.35, groundY + 0.53, 0.41);
+  const archCanvas = document.createElement('canvas');
+  archCanvas.width = 100;
+  archCanvas.height = 50;
+  const archCtx = archCanvas.getContext('2d')!;
+  archCtx.fillStyle = '#d4c4a8';
+  archCtx.beginPath();
+  archCtx.arc(50, 50, 45, Math.PI, 0, false);
+  archCtx.fill();
+  const archTex = new THREE.CanvasTexture(archCanvas);
+  const arch = new THREE.Mesh(
+    new THREE.PlaneGeometry(doorWidth * 2 + doorGap + 0.1, 0.12),
+    new THREE.MeshBasicMaterial({ map: archTex, transparent: true })
+  );
+  arch.position.set(0, groundY + 0.2 + doorHeight + 0.06, buildingDepth / 2 + 0.05);
   university.add(arch);
 
-  // Windows - multiple rows
+  // Windows - multiple rows on building front
   const windowPositions = [
-    // Ground floor
-    [-0.7, 0.35], [-0.5, 0.35], [-0.1, 0.35],
-    // Upper floor
-    [-0.7, 0.7], [-0.5, 0.7], [-0.3, 0.7], [-0.1, 0.7], [0.1, 0.7], [0.35, 0.7], [0.55, 0.7]
+    // Left side ground floor
+    [-0.7, 0.45], [-0.45, 0.45],
+    // Right side ground floor
+    [0.45, 0.45], [0.7, 0.45],
+    // Upper floor - full row
+    [-0.8, 0.95], [-0.55, 0.95], [-0.3, 0.95], [0, 0.95], [0.3, 0.95], [0.55, 0.95], [0.8, 0.95],
   ];
 
   windowPositions.forEach(([wx, wy]) => {
     // Window frame
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.18, 0.02), windowFrameMat);
-    frame.position.set(wx, groundY + wy, 0.41);
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.22, 0.02), windowFrameMat);
+    frame.position.set(wx, groundY + wy, buildingDepth / 2 + 0.01);
     university.add(frame);
     
     // Window glass
-    const glass = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.16, 0.01), windowMat);
-    glass.position.set(wx, groundY + wy, 0.42);
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.18, 0.01), windowMat);
+    glass.position.set(wx, groundY + wy, buildingDepth / 2 + 0.02);
     university.add(glass);
     
     // Window sill
-    const sill = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.02, 0.04), stoneMat);
-    sill.position.set(wx, groundY + wy - 0.1, 0.42);
+    const sill = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.025, 0.05), stoneMat);
+    sill.position.set(wx, groundY + wy - 0.12, buildingDepth / 2 + 0.03);
     university.add(sill);
   });
 
   // Roof
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.06, 0.85), roofMat);
-  roof.position.set(-0.3, groundY + 1.03, 0);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(buildingWidth + 0.1, 0.08, buildingDepth + 0.1), roofMat);
+  roof.position.set(0, groundY + buildingHeight + 0.04, 0);
   university.add(roof);
 
-  // Roof cornice
-  const cornice = new THREE.Mesh(new THREE.BoxGeometry(1.28, 0.04, 0.88), stoneMat);
-  cornice.position.set(-0.3, groundY + 1.0, 0);
+  // Roof cornice (decorative edge)
+  const cornice = new THREE.Mesh(new THREE.BoxGeometry(buildingWidth + 0.15, 0.06, buildingDepth + 0.15), stoneMat);
+  cornice.position.set(0, groundY + buildingHeight, 0);
   university.add(cornice);
 
-  // Clock tower
-  const towerBase = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.3, 0.25), brickMat);
-  towerBase.position.set(-0.3, groundY + 1.18, 0);
+  // Clock tower in center
+  const towerWidth = 0.35;
+  const towerHeight = 0.4;
+  
+  const towerBase = new THREE.Mesh(new THREE.BoxGeometry(towerWidth, towerHeight, towerWidth), brickMat);
+  towerBase.position.set(0, groundY + buildingHeight + 0.08 + towerHeight / 2, 0);
   university.add(towerBase);
 
-  const towerRoof = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.2, 4), roofMat);
-  towerRoof.position.set(-0.3, groundY + 1.43, 0);
+  // Tower roof (pyramid)
+  const towerRoof = new THREE.Mesh(new THREE.ConeGeometry(towerWidth * 0.7, 0.3, 4), roofMat);
+  towerRoof.position.set(0, groundY + buildingHeight + 0.08 + towerHeight + 0.15, 0);
   towerRoof.rotation.y = Math.PI / 4;
   university.add(towerRoof);
 
   // Clock face
   const clockCanvas = document.createElement('canvas');
-  clockCanvas.width = 64;
-  clockCanvas.height = 64;
+  clockCanvas.width = 80;
+  clockCanvas.height = 80;
   const cctx = clockCanvas.getContext('2d')!;
   cctx.fillStyle = '#fff';
   cctx.beginPath();
-  cctx.arc(32, 32, 28, 0, Math.PI * 2);
+  cctx.arc(40, 40, 35, 0, Math.PI * 2);
   cctx.fill();
   cctx.strokeStyle = '#333';
-  cctx.lineWidth = 3;
-  cctx.stroke();
-  // Clock hands
-  cctx.beginPath();
-  cctx.moveTo(32, 32);
-  cctx.lineTo(32, 12);
-  cctx.moveTo(32, 32);
-  cctx.lineTo(48, 32);
+  cctx.lineWidth = 4;
   cctx.stroke();
   // Hour markers
   for (let i = 0; i < 12; i++) {
-    const angle = (i * Math.PI * 2) / 12;
+    const angle = (i / 12) * Math.PI * 2 - Math.PI / 2;
     cctx.fillStyle = '#333';
     cctx.beginPath();
-    cctx.arc(32 + Math.sin(angle) * 22, 32 - Math.cos(angle) * 22, 2, 0, Math.PI * 2);
+    cctx.arc(40 + Math.cos(angle) * 28, 40 + Math.sin(angle) * 28, 3, 0, Math.PI * 2);
     cctx.fill();
   }
+  // Clock hands
+  cctx.strokeStyle = '#333';
+  cctx.lineWidth = 3;
+  cctx.beginPath();
+  cctx.moveTo(40, 40);
+  cctx.lineTo(40, 15);
+  cctx.stroke();
+  cctx.lineWidth = 2;
+  cctx.beginPath();
+  cctx.moveTo(40, 40);
+  cctx.lineTo(58, 40);
+  cctx.stroke();
   
   const clockTex = new THREE.CanvasTexture(clockCanvas);
-  const clock = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.12), new THREE.MeshBasicMaterial({ map: clockTex }));
-  clock.position.set(-0.3, groundY + 1.2, 0.13);
+  const clock = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.18), new THREE.MeshBasicMaterial({ map: clockTex }));
+  clock.position.set(0, groundY + buildingHeight + 0.08 + towerHeight / 2, towerWidth / 2 + 0.01);
   university.add(clock);
 
-  // University sign
+  // University sign above door
   const signCanvas = document.createElement('canvas');
-  signCanvas.width = 300;
+  signCanvas.width = 400;
   signCanvas.height = 80;
   const schCtx = signCanvas.getContext('2d')!;
   schCtx.fillStyle = '#1a5276';
-  schCtx.fillRect(0, 0, 300, 80);
+  schCtx.fillRect(0, 0, 400, 80);
   schCtx.strokeStyle = '#ffd700';
   schCtx.lineWidth = 4;
-  schCtx.strokeRect(5, 5, 290, 70);
+  schCtx.strokeRect(5, 5, 390, 70);
   schCtx.fillStyle = '#ffd700';
-  schCtx.font = 'bold 24px serif';
+  schCtx.font = 'bold 32px serif';
   schCtx.textAlign = 'center';
-  schCtx.fillText('🎓 DS UNIVERSITY', 150, 50);
+  schCtx.fillText('🎓 DS UNIVERSITY 🎓', 200, 52);
   const signTex = new THREE.CanvasTexture(signCanvas);
-  const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.13), new THREE.MeshBasicMaterial({ map: signTex }));
-  signMesh.position.set(-0.3, groundY + 0.92, 0.41);
+  const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.14), new THREE.MeshBasicMaterial({ map: signTex }));
+  signMesh.position.set(0, groundY + porticoHeight + 0.5, buildingDepth / 2 + 0.02);
   university.add(signMesh);
 
-  // Steps
-  for (let i = 0; i < 3; i++) {
+  // Steps leading up to entrance
+  for (let i = 0; i < 4; i++) {
+    const stepWidth = porticoWidth - i * 0.05;
     const step = new THREE.Mesh(
-      new THREE.BoxGeometry(0.7 - i * 0.05, 0.04, 0.15 - i * 0.03),
+      new THREE.BoxGeometry(stepWidth, 0.04, 0.12),
       stoneMat
     );
-    step.position.set(0.35, groundY + 0.02 + i * 0.04, 0.55 + i * 0.06);
+    step.position.set(0, groundY + 0.02 + i * 0.04, buildingDepth / 2 + porticoDepth + 0.1 + i * 0.1);
     university.add(step);
   }
 
-  // Lawn/ground
+  // Ground/lawn
   const lawn = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.5, 1.5),
+    new THREE.PlaneGeometry(4, 2.5),
     new THREE.MeshStandardMaterial({ color: '#228b22', roughness: 0.9 })
   );
   lawn.rotation.x = -Math.PI / 2;
-  lawn.position.set(0, groundY - 0.01, 0.5);
+  lawn.position.set(0, groundY - 0.01, 0.8);
   university.add(lawn);
 
-  // Pathway
+  // Pathway to entrance
   const pathway = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.4, 1.0),
+    new THREE.PlaneGeometry(0.6, 1.5),
     new THREE.MeshStandardMaterial({ color: '#a9a9a9', roughness: 0.8 })
   );
   pathway.rotation.x = -Math.PI / 2;
-  pathway.position.set(0.35, groundY, 1.0);
+  pathway.position.set(0, groundY, buildingDepth / 2 + 1.2);
   university.add(pathway);
 
-  // Trees (simple)
-  [-0.9, 0.9].forEach(tx => {
+  // Trees on sides
+  [-1.2, 1.2].forEach(tx => {
+    // Trunk
     const trunk = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.03, 0.04, 0.25, 8),
+      new THREE.CylinderGeometry(0.04, 0.05, 0.35, 8),
       new THREE.MeshStandardMaterial({ color: '#8b4513' })
     );
-    trunk.position.set(tx, groundY + 0.125, 0.6);
+    trunk.position.set(tx, groundY + 0.175, 0.8);
     university.add(trunk);
     
+    // Foliage
     const foliage = new THREE.Mesh(
-      new THREE.SphereGeometry(0.15, 8, 8),
+      new THREE.SphereGeometry(0.22, 8, 8),
       new THREE.MeshStandardMaterial({ color: '#228b22', roughness: 0.9 })
     );
-    foliage.position.set(tx, groundY + 0.35, 0.6);
+    foliage.position.set(tx, groundY + 0.5, 0.8);
     university.add(foliage);
   });
 
-  // Flag pole
+  // Flag pole on left
   const pole = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.01, 0.01, 0.5, 8),
+    new THREE.CylinderGeometry(0.015, 0.015, 0.8, 8),
     new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.8 })
   );
-  pole.position.set(-0.8, groundY + 0.25, 0.6);
+  pole.position.set(-1.5, groundY + 0.4, 0.8);
   university.add(pole);
 
   const flag = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.12, 0.08),
+    new THREE.PlaneGeometry(0.2, 0.12),
     new THREE.MeshBasicMaterial({ color: '#e74c3c', side: THREE.DoubleSide })
   );
-  flag.position.set(-0.74, groundY + 0.46, 0.6);
+  flag.position.set(-1.38, groundY + 0.74, 0.8);
   university.add(flag);
 
   return university;
