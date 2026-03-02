@@ -3081,11 +3081,11 @@ function buildSceneContent(
       const schoolBuilding = createSchoolBuilding();
       schoolBuilding.position.set(startX - 1.2, groundY, 0);
       schoolBuilding.scale.setScalar(0.55);
-      schoolBuilding.rotation.y = Math.PI / 2;
+      schoolBuilding.rotation.y = 0; // Entrance faces RIGHT toward students
       group.add(schoolBuilding);
 
       const entranceSign = createTextSprite('🚪 ENTRANCE', '#00ff00', 16);
-      entranceSign.position.set(startX - 0.45, groundY + 0.52, 0);
+      entranceSign.position.set(startX - 0.6, groundY + 0.52, 0);
       entranceSign.scale.set(0.32, 0.11, 1);
       group.add(entranceSign);
 
@@ -3119,8 +3119,8 @@ function buildSceneContent(
             const human = createHuman3D(item.appearance, item.label, isHl, false, walkPhase);
             human.position.set(startX + i * spacing + 0.8 + extraX, groundY, extraZ);
             human.scale.setScalar(studentScale);
-            human.rotation.y = -Math.PI / 2;
-
+            human.rotation.y = Math.PI / 2; // Students face LEFT toward school
+            
             if (!(isFront && (animPhase === 'queue-dequeue-walk' || animPhase === 'queue-dequeue-enter'))) {
               applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue', animProgress);
             }
@@ -3164,8 +3164,7 @@ function buildSceneContent(
       });
     }
   }
-}
-// ==================== HOME COMPONENT ====================
+}============= HOME COMPONENT ====================
 // ==================== HOME COMPONENT ====================
 
 export default function Home() {
