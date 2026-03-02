@@ -3164,7 +3164,7 @@ function buildSceneContent(
       });
     }
   }
-}============= HOME COMPONENT ====================
+}
 // ==================== HOME COMPONENT ====================
 
 export default function Home() {
