@@ -1744,27 +1744,26 @@ function createSchoolBuilding(): THREE.Group {
   entrance.position.set(0, groundY + entranceHeight / 2, 0);
   school.add(entrance);
 
-  // Pediment (triangle top)
-  const pedimentBase = new THREE.Mesh(
-    new THREE.BoxGeometry(entranceDepth + 0.1, 0.08, entranceWidth + 0.15),
+  // Flat roof above entrance (no triangle)
+  const entranceRoof = new THREE.Mesh(
+    new THREE.BoxGeometry(entranceDepth + 0.15, 0.1, entranceWidth + 0.2),
     concreteMat
   );
-  pedimentBase.position.set(0.05, groundY + entranceHeight, 0);
-  school.add(pedimentBase);
+  entranceRoof.position.set(0.05, groundY + entranceHeight + 0.05, 0);
+  school.add(entranceRoof);
 
-  const pedimentTop = new THREE.Mesh(
-    new THREE.ConeGeometry(0.6, 0.28, 3),
-    wallMat
+  // Decorative trim under entrance roof
+  const entranceTrim = new THREE.Mesh(
+    new THREE.BoxGeometry(entranceDepth + 0.12, 0.04, entranceWidth + 0.15),
+    pillarMat
   );
-  pedimentTop.position.set(0.05, groundY + entranceHeight + 0.2, 0);
-  pedimentTop.rotation.x = Math.PI / 2;
-  pedimentTop.rotation.z = Math.PI / 2;
-  school.add(pedimentTop);
+  entranceTrim.position.set(0.03, groundY + entranceHeight, 0);
+  school.add(entranceTrim);
 
   // Only 2 pillars
   const pillarRadius = 0.07;
   const pillarHeight = entranceHeight - 0.2;
-  const pillarPositions = [-0.35, 0.35];
+  const pillarPositions = [-0.38, 0.38];
 
   pillarPositions.forEach(z => {
     const pillar = new THREE.Mesh(
@@ -1794,7 +1793,7 @@ function createSchoolBuilding(): THREE.Group {
   const doorHeight = 0.7;
   const doorGap = 0.02;
 
-  // Door frame (big frame around both doors)
+  // Door frame
   const bigFrame = new THREE.Mesh(
     new THREE.BoxGeometry(0.04, doorHeight + 0.1, doorWidth * 2 + doorGap + 0.08),
     new THREE.MeshStandardMaterial({ color: '#3e2723', roughness: 0.5 })
@@ -1803,10 +1802,9 @@ function createSchoolBuilding(): THREE.Group {
   school.add(bigFrame);
 
   // Arch above doors
-  const archMat = new THREE.MeshStandardMaterial({ color: '#3e2723', roughness: 0.5 });
   const arch = new THREE.Mesh(
     new THREE.TorusGeometry(0.24, 0.03, 8, 16, Math.PI),
-    archMat
+    new THREE.MeshStandardMaterial({ color: '#3e2723', roughness: 0.5 })
   );
   arch.position.set(0.19, groundY + doorHeight + 0.05, 0);
   arch.rotation.y = Math.PI / 2;
@@ -1829,7 +1827,7 @@ function createSchoolBuilding(): THREE.Group {
   rightDoor.position.set(0.2, groundY + doorHeight / 2, doorWidth / 2 + doorGap / 2);
   school.add(rightDoor);
 
-  // Door handles (knobs)
+  // Door handles
   const leftHandle = new THREE.Mesh(
     new THREE.SphereGeometry(0.018, 12, 12),
     goldMat
@@ -2046,11 +2044,13 @@ function createSchoolBuilding(): THREE.Group {
     });
   });
 
-  // Philippine Flag
+  // Philippine Flag - FIXED: flag attached to pole
   const createPhilippineFlag = (posZ: number) => {
     const flagGroup = new THREE.Group();
 
     const poleMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.8, roughness: 0.2 });
+    
+    // Flag pole
     const pole = new THREE.Mesh(
       new THREE.CylinderGeometry(0.015, 0.02, 1.2, 12),
       poleMat
@@ -2058,6 +2058,7 @@ function createSchoolBuilding(): THREE.Group {
     pole.position.y = 0.6;
     flagGroup.add(pole);
 
+    // Pole base
     const poleBase = new THREE.Mesh(
       new THREE.CylinderGeometry(0.04, 0.05, 0.08, 12),
       poleMat
@@ -2065,6 +2066,7 @@ function createSchoolBuilding(): THREE.Group {
     poleBase.position.y = 0.04;
     flagGroup.add(poleBase);
 
+    // Pole top ball
     const poleTop = new THREE.Mesh(
       new THREE.SphereGeometry(0.025, 12, 12),
       goldMat
@@ -2072,16 +2074,21 @@ function createSchoolBuilding(): THREE.Group {
     poleTop.position.y = 1.22;
     flagGroup.add(poleTop);
 
+    // Philippine Flag canvas
     const flagCanvas = document.createElement('canvas');
     flagCanvas.width = 200;
     flagCanvas.height = 100;
     const fctx = flagCanvas.getContext('2d')!;
 
+    // Blue stripe (top)
     fctx.fillStyle = '#0038a8';
     fctx.fillRect(0, 0, 200, 50);
+    
+    // Red stripe (bottom)
     fctx.fillStyle = '#ce1126';
     fctx.fillRect(0, 50, 200, 50);
 
+    // White triangle
     fctx.fillStyle = '#ffffff';
     fctx.beginPath();
     fctx.moveTo(0, 0);
@@ -2090,6 +2097,7 @@ function createSchoolBuilding(): THREE.Group {
     fctx.closePath();
     fctx.fill();
 
+    // Sun
     fctx.fillStyle = '#fcd116';
     const sunX = 33, sunY = 50;
     for (let i = 0; i < 8; i++) {
@@ -2109,6 +2117,7 @@ function createSchoolBuilding(): THREE.Group {
     fctx.arc(sunX, sunY, 10, 0, Math.PI * 2);
     fctx.fill();
 
+    // Stars
     const drawStar = (cx: number, cy: number, size: number) => {
       fctx.beginPath();
       for (let i = 0; i < 5; i++) {
@@ -2128,11 +2137,15 @@ function createSchoolBuilding(): THREE.Group {
     drawStar(42, 85, 6);
 
     const flagTex = new THREE.CanvasTexture(flagCanvas);
-    const flagGeo = new THREE.PlaneGeometry(0.28, 0.14, 8, 1);
+    
+    // Flag with wave effect
+    const flagWidth = 0.28;
+    const flagHeight = 0.14;
+    const flagGeo = new THREE.PlaneGeometry(flagWidth, flagHeight, 8, 1);
     const positions = flagGeo.attributes.position;
     for (let i = 0; i < positions.count; i++) {
       const x = positions.getX(i);
-      positions.setZ(i, Math.sin((x / 0.28) * Math.PI * 1.5) * 0.015);
+      positions.setZ(i, Math.sin((x / flagWidth + 0.5) * Math.PI * 1.5) * 0.012);
     }
     flagGeo.computeVertexNormals();
 
@@ -2140,11 +2153,11 @@ function createSchoolBuilding(): THREE.Group {
       flagGeo,
       new THREE.MeshStandardMaterial({ map: flagTex, side: THREE.DoubleSide, roughness: 0.8 })
     );
-    flagMesh.position.set(0.16, 1.08, 0);
-    flagMesh.rotation.y = Math.PI / 2;
+    // FLAG ATTACHED TO POLE: positioned so left edge touches pole
+    flagMesh.position.set(flagWidth / 2, 1.08, 0);
     flagGroup.add(flagMesh);
 
-    flagGroup.position.set(0.32, groundY, posZ);
+    flagGroup.position.set(0.35, groundY, posZ);
     return flagGroup;
   };
 
