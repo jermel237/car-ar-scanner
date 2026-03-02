@@ -42,19 +42,153 @@ interface DataItem {
   appearance?: HumanAppearance;
 }
 
-// ==================== TEXT SPRITE ====================
+// ==================== STEP-BY-STEP TUTORIAL SYSTEM ====================
+
+interface TutorialStep {
+  title: string;
+  description: string;
+  codeSnippet?: string;
+  highlightIndex?: number;
+  highlightIndex2?: number;
+  animPhase?: string;
+  animDuration?: number;
+  action?: () => void;
+}
+
+interface TutorialState {
+  isActive: boolean;
+  steps: TutorialStep[];
+  currentStep: number;
+  isAnimating: boolean;
+}
+
+// ==================== 3D TEXT SPRITE (IMPROVED) ====================
 
 function createTextSprite(text: string, color: string, fontSize: number = 20): THREE.Sprite {
   const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 64;
+  canvas.width = 512;
+  canvas.height = 128;
   const ctx = canvas.getContext('2d')!;
+  
+  // Clear with transparency
+  ctx.clearRect(0, 0, 512, 128);
+  
+  // Add subtle background for readability
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  ctx.roundRect(10, 10, canvas.width - 20, canvas.height - 20, 15);
+  ctx.fill();
+  
+  // Draw text with shadow for depth
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+  ctx.shadowBlur = 4;
+  ctx.shadowOffsetX = 2;
+  ctx.shadowOffsetY = 2;
+  
   ctx.fillStyle = color;
-  ctx.font = `bold ${fontSize}px Arial`;
+  ctx.font = `bold ${fontSize * 2}px Arial`;
   ctx.textAlign = 'center';
-  ctx.fillText(text, 128, 45);
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 256, 64);
+  
   const tex = new THREE.CanvasTexture(canvas);
-  return new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+  tex.needsUpdate = true;
+  
+  const spriteMat = new THREE.SpriteMaterial({ 
+    map: tex, 
+    transparent: true,
+    depthTest: false,
+    depthWrite: false
+  });
+  
+  const sprite = new THREE.Sprite(spriteMat);
+  sprite.renderOrder = 999;
+  return sprite;
+}
+
+// ==================== 3D FLOATING TEXT BOX ====================
+
+function create3DTextBox(
+  title: string, 
+  description: string, 
+  step: string,
+  position: THREE.Vector3
+): THREE.Group {
+  const group = new THREE.Group();
+  
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d')!;
+  
+  // Background with gradient
+  const gradient = ctx.createLinearGradient(0, 0, 0, 256);
+  gradient.addColorStop(0, 'rgba(30, 30, 60, 0.95)');
+  gradient.addColorStop(1, 'rgba(20, 20, 40, 0.95)');
+  ctx.fillStyle = gradient;
+  ctx.roundRect(0, 0, 512, 256, 20);
+  ctx.fill();
+  
+  // Border
+  ctx.strokeStyle = '#667eea';
+  ctx.lineWidth = 4;
+  ctx.roundRect(2, 2, 508, 252, 18);
+  ctx.stroke();
+  
+  // Step indicator
+  ctx.fillStyle = '#667eea';
+  ctx.roundRect(15, 15, 80, 30, 10);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 16px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(step, 55, 35);
+  
+  // Title
+  ctx.fillStyle = '#00ff88';
+  ctx.font = 'bold 24px Arial';
+  ctx.textAlign = 'left';
+  ctx.fillText(title, 110, 38);
+  
+  // Description (word wrap)
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '18px Arial';
+  const words = description.split(' ');
+  let line = '';
+  let y = 80;
+  const maxWidth = 480;
+  const lineHeight = 26;
+  
+  for (const word of words) {
+    const testLine = line + word + ' ';
+    const metrics = ctx.measureText(testLine);
+    if (metrics.width > maxWidth && line !== '') {
+      ctx.fillText(line.trim(), 20, y);
+      line = word + ' ';
+      y += lineHeight;
+      if (y > 230) break;
+    } else {
+      line = testLine;
+    }
+  }
+  ctx.fillText(line.trim(), 20, y);
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  
+  const material = new THREE.SpriteMaterial({ 
+    map: texture, 
+    transparent: true,
+    depthTest: false 
+  });
+  
+  const sprite = new THREE.Sprite(material);
+  sprite.scale.set(1.5, 0.75, 1);
+  sprite.position.copy(position);
+  sprite.renderOrder = 1000;
+  
+  group.add(sprite);
+  
+  return group;
 }
 
 // ==================== 3D ARROW ====================
@@ -634,7 +768,6 @@ function createHuman3D(appearance: HumanAppearance, name: string, isHighlighted:
 
   return human;
 }
-
 // ==================== BOOK ====================
 
 function createBook(label: string, color: string, isHighlighted: boolean, isOpen: boolean = false, openAmount: number = 0): THREE.Group {
@@ -812,7 +945,6 @@ function createClipboard(label: string, color: string, isHighlighted: boolean, a
     pctx.stroke();
   }
 
-  // Show tasks if provided
   const items = allTasks ? allTasks.map((t, i) => ({ text: t.label, checked: i < allTasks.length - 1 })) : [
     { text: label, checked: false },
     { text: 'Review notes', checked: true },
@@ -858,7 +990,6 @@ function createClipboard(label: string, color: string, isHighlighted: boolean, a
   clipboard.add(paper);
 
   const penGroup = new THREE.Group();
-
   const penBodyMat = new THREE.MeshStandardMaterial({ color: '#1a237e', metalness: 0.3, roughness: 0.5 });
   const penBody = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 12), penBodyMat);
   penGroup.add(penBody);
@@ -895,6 +1026,7 @@ function createClipboard(label: string, color: string, isHighlighted: boolean, a
 
   return clipboard;
 }
+
 // ==================== TRAIN CAR ====================
 
 function createTrainCar(isEngine: boolean, color: string, label: string, isHighlighted: boolean): THREE.Group {
@@ -1486,7 +1618,7 @@ function createPlate(label: string, isHighlighted: boolean): THREE.Group {
   return plate;
 }
 
-// ==================== CARDBOARD BOX (TOP OPENING FLAPS) ====================
+// ==================== CARDBOARD BOX ====================
 
 function createCardboardBox(label: string, color: string, isHighlighted: boolean, openAmount: number = 0): THREE.Group {
   const box = new THREE.Group();
@@ -1505,12 +1637,10 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   const cornerMat = new THREE.MeshStandardMaterial({ color: '#8b6914', roughness: 0.8 });
   const tapeMat = new THREE.MeshStandardMaterial({ color: '#d4a574', roughness: 0.6 });
 
-  // === BOTTOM ===
   const bottom = new THREE.Mesh(new THREE.BoxGeometry(boxW, wallThickness, boxD), cardboardMat);
   bottom.position.y = wallThickness / 2;
   box.add(bottom);
 
-  // === WALLS ===
   const frontWall = new THREE.Mesh(new THREE.BoxGeometry(boxW, boxH - wallThickness, wallThickness), cardboardMat);
   frontWall.position.set(0, wallThickness + (boxH - wallThickness) / 2, boxD / 2 - wallThickness / 2);
   box.add(frontWall);
@@ -1527,7 +1657,6 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   rightWall.position.set(boxW / 2 - wallThickness / 2, wallThickness + (boxH - wallThickness) / 2, 0);
   box.add(rightWall);
 
-  // === INNER FLOOR ===
   const innerFloor = new THREE.Mesh(
     new THREE.BoxGeometry(boxW - wallThickness * 2, 0.005, boxD - wallThickness * 2),
     innerMat
@@ -1535,14 +1664,12 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   innerFloor.position.y = wallThickness + 0.003;
   box.add(innerFloor);
 
-  // === CORNER REINFORCEMENTS ===
   [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(([sx, sz]) => {
     const corner = new THREE.Mesh(new THREE.BoxGeometry(0.025, boxH - wallThickness, 0.025), cornerMat);
     corner.position.set(sx * (boxW / 2 - 0.0125), wallThickness + (boxH - wallThickness) / 2, sz * (boxD / 2 - 0.0125));
     box.add(corner);
   });
 
-  // === TOP FLAPS ===
   const flapHeight = boxD / 2 - wallThickness;
   const flapWidth = boxW - wallThickness * 2;
   const topY = boxH;
@@ -1553,7 +1680,6 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
 
   const openAngle = Math.PI * 0.55;
 
-  // Front flap
   const frontFlapPivot = new THREE.Group();
   frontFlapPivot.position.set(0, topY, boxD / 2 - wallThickness);
   const frontFlap = new THREE.Mesh(new THREE.BoxGeometry(flapWidth, flapThickness, flapHeight), flapMat);
@@ -1562,7 +1688,6 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   frontFlapPivot.rotation.x = easedOpen * openAngle;
   box.add(frontFlapPivot);
 
-  // Back flap
   const backFlapPivot = new THREE.Group();
   backFlapPivot.position.set(0, topY, -boxD / 2 + wallThickness);
   const backFlap = new THREE.Mesh(new THREE.BoxGeometry(flapWidth, flapThickness, flapHeight), flapMat);
@@ -1571,7 +1696,6 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   backFlapPivot.rotation.x = -easedOpen * openAngle;
   box.add(backFlapPivot);
 
-  // Side flaps
   const sideFlapDepth = boxW / 2 - wallThickness;
   const sideFlapWidth = boxD - wallThickness * 2 - flapHeight * 2;
 
@@ -1591,14 +1715,12 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   rightFlapPivot.rotation.z = easedOpen * openAngle;
   box.add(rightFlapPivot);
 
-  // Tape (when closed)
   if (openAmount < 0.3) {
     const tape = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.005, boxD * 0.7), tapeMat);
     tape.position.set(0, topY + 0.003, 0);
     box.add(tape);
   }
 
-  // Label
   const labelCanvas = document.createElement('canvas');
   labelCanvas.width = 180;
   labelCanvas.height = 120;
@@ -1703,13 +1825,12 @@ function createDomino(value: string, isHighlighted: boolean): THREE.Group {
   return domino;
 }
 
-// ==================== TICKET DISPENSER (FACING RIGHT, FLAT TICKETS) ====================
+// ==================== TICKET DISPENSER ====================
 
 function createTicketDispenser(tickets: DataItem[], highlightIndex: number | null, animPhase: string, animProgress: number): THREE.Group {
   const dispenser = new THREE.Group();
   const groundY = 0;
 
-  // Machine body (rotated to face right)
   const machineMat = new THREE.MeshStandardMaterial({ color: '#c0392b', roughness: 0.4, metalness: 0.3 });
   const machineBody = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.9, 0.5), machineMat);
   machineBody.position.set(0, groundY + 0.45, -0.6);
@@ -1725,7 +1846,6 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   topTrim.position.set(0, groundY + 0.91, -0.6);
   dispenser.add(topTrim);
 
-  // Ticket slot on right side
   const slotFrame = new THREE.Mesh(
     new THREE.BoxGeometry(0.08, 0.08, 0.3),
     new THREE.MeshStandardMaterial({ color: '#2c3e50', metalness: 0.5 })
@@ -1740,7 +1860,6 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   slotHole.position.set(0.2, groundY + 0.35, -0.6);
   dispenser.add(slotHole);
 
-  // Screen on right side
   const screenFrame = new THREE.Mesh(
     new THREE.BoxGeometry(0.03, 0.22, 0.34),
     new THREE.MeshStandardMaterial({ color: '#1a1a1a' })
@@ -1768,7 +1887,6 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   screen.rotation.y = Math.PI / 2;
   dispenser.add(screen);
 
-  // Decorative lights
   const lightColors = ['#ff0000', '#00ff00', '#ffff00', '#00ffff'];
   lightColors.forEach((lc, i) => {
     const light = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), new THREE.MeshBasicMaterial({ color: lc }));
@@ -1776,7 +1894,6 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
     dispenser.add(light);
   });
 
-  // Sign
   const signCanvas = document.createElement('canvas');
   signCanvas.width = 220;
   signCanvas.height = 70;
@@ -1795,7 +1912,6 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   sign.position.set(0, groundY + 1.02, -0.35);
   dispenser.add(sign);
 
-  // Flat tickets extending to the right
   const ticketWidth = 0.18;
   const ticketHeight = 0.1;
   const ticketThickness = 0.008;
@@ -1838,7 +1954,6 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
     const ticketBody = new THREE.Mesh(new THREE.BoxGeometry(ticketWidth, ticketThickness, ticketHeight), ticketMat);
     ticketGroup.add(ticketBody);
 
-    // Perforations
     if (i < tickets.length - 1) {
       const perfMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
       for (let p = -3; p <= 3; p++) {
@@ -1848,7 +1963,6 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
       }
     }
 
-    // Label on top
     const ticketCanvas = document.createElement('canvas');
     ticketCanvas.width = 90;
     ticketCanvas.height = 50;
@@ -1882,7 +1996,6 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
     dispenser.add(ticketGroup);
   });
 
-  // Front/Rear labels
   if (tickets.length > 0) {
     const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
     frontSprite.position.set(ticketStartX, groundY + 0.2, ticketZ);
@@ -1895,7 +2008,6 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
     dispenser.add(rearSprite);
   }
 
-  // Counter
   const counterWidth = Math.max(1.2, tickets.length * totalTicketLength + 0.6);
   const counter = new THREE.Mesh(
     new THREE.BoxGeometry(counterWidth, 0.04, 0.7),
@@ -1904,20 +2016,20 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   counter.position.set(counterWidth / 2 - 0.3, groundY - 0.02, -0.6);
   dispenser.add(counter);
 
-  // Guide rails
   const railMat = new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.6 });
   const railLength = Math.max(0.5, tickets.length * totalTicketLength + 0.2);
-  
+
   const topRail = new THREE.Mesh(new THREE.BoxGeometry(railLength, 0.015, 0.015), railMat);
   topRail.position.set(ticketStartX + railLength / 2 - 0.1, ticketY + 0.02, ticketZ - ticketHeight / 2 - 0.015);
   dispenser.add(topRail);
-  
+
   const bottomRail = new THREE.Mesh(new THREE.BoxGeometry(railLength, 0.015, 0.015), railMat);
   bottomRail.position.set(ticketStartX + railLength / 2 - 0.1, ticketY + 0.02, ticketZ + ticketHeight / 2 + 0.015);
   dispenser.add(bottomRail);
 
   return dispenser;
 }
+
 // ==================== SCHOOL BUILDING ====================
 
 function createSchoolBuilding(): THREE.Group {
@@ -2230,7 +2342,6 @@ function applyItemAnimation(
     }
   }
 }
-
 // ==================== BUILD SCENE CONTENT ====================
 
 function buildSceneContent(
@@ -2242,7 +2353,8 @@ function buildSceneContent(
   environment: string,
   animPhase?: string,
   animData?: Record<string, any>,
-  animProgress?: number
+  animProgress?: number,
+  tutorialText?: { title: string; description: string; step: string } | null
 ): void {
   while (group.children.length > 0) {
     const child = group.children[0];
@@ -2260,6 +2372,17 @@ function buildSceneContent(
   const spacing = structure === 'linkedlist' ? 1.1 : structure === 'queue' ? 1.0 : 0.85;
   const startX = -((data.length - 1) * spacing) / 2;
   const groundY = 0;
+
+  // Add 3D Tutorial Text Box if provided
+  if (tutorialText) {
+    const textBox = create3DTextBox(
+      tutorialText.title,
+      tutorialText.description,
+      tutorialText.step,
+      new THREE.Vector3(0, structure === 'stack' ? 1.8 : 1.2, 0)
+    );
+    group.add(textBox);
+  }
 
   // ==================== ARRAY ====================
   if (structure === 'array') {
@@ -2369,27 +2492,23 @@ function buildSceneContent(
       group.add(board);
 
     } else if (environment === 'todo') {
-      // ToDo: Single clipboard showing all tasks as a list
       const clipboard = createClipboard('Tasks', '#e74c3c', false, data);
       clipboard.position.set(0, 0, 0);
       clipboard.scale.setScalar(1.2);
       group.add(clipboard);
 
-      // Array visualization below
       const arrayStr = `array = [${data.map(d => `"${d.label}"`).join(', ')}]`;
       const arrayLabel = createTextSprite(arrayStr.length > 40 ? arrayStr.substring(0, 37) + '...' : arrayStr, '#00ff00', 14);
       arrayLabel.position.set(0, -0.42, 0);
       arrayLabel.scale.set(1.0, 0.12, 1);
       group.add(arrayLabel);
 
-      // Show indices below
       const indexStr = `indices: ${data.map((_, i) => `[${i}]`).join('  ')}`;
       const indexLabel = createTextSprite(indexStr, '#aaaaaa', 12);
       indexLabel.position.set(0, -0.52, 0);
       indexLabel.scale.set(0.9, 0.1, 1);
       group.add(indexLabel);
 
-      // Highlight animation for appended item
       if (highlightIndex !== null && highlightIndex < data.length) {
         const highlightLabel = createTextSprite(`↑ NEW [${highlightIndex}]`, '#ffff00', 16);
         highlightLabel.position.set(0, -0.62, 0);
@@ -2789,14 +2908,18 @@ export default function Home() {
 
   const [highlightIndex, setHighlightIndex] = useState<number | null>(null);
   const [highlightIndex2, setHighlightIndex2] = useState<number | null>(null);
-  const [operationMessage, setOperationMessage] = useState('');
-  const [codeDisplay, setCodeDisplay] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
   const [animPhase, setAnimPhase] = useState('');
   const [animData, setAnimData] = useState<Record<string, any>>({});
   const [animProgress, setAnimProgress] = useState(1);
 
-  // Selection mode states
+  // ==================== STEP-BY-STEP TUTORIAL STATE ====================
+  const [tutorialActive, setTutorialActive] = useState(false);
+  const [tutorialSteps, setTutorialSteps] = useState<TutorialStep[]>([]);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [stepAnimating, setStepAnimating] = useState(false);
+  const [tutorialText, setTutorialText] = useState<{ title: string; description: string; step: string } | null>(null);
+
   const [selectionMode, setSelectionMode] = useState<SelectionMode>('none');
   const [swapFirstIndex, setSwapFirstIndex] = useState<number | null>(null);
   const [pendingOperation, setPendingOperation] = useState<string>('');
@@ -2937,171 +3060,282 @@ export default function Home() {
   const zoomOut = useCallback(() => setZoomLevel(prev => Math.max(prev - 0.25, 0.3)), []);
   const resetZoom = useCallback(() => setZoomLevel(1.0), []);
 
-  // ==================== ARRAY OPERATIONS WITH SELECTION ====================
+  // ==================== STEP-BY-STEP TUTORIAL FUNCTIONS ====================
 
-  const startArrayAccess = () => {
-    if (isAnimating || selectionMode !== 'none') return;
-    setSelectionMode('access');
-    setPendingOperation('Select index to ACCESS:');
-    setCodeDisplay(`// O(1) Direct Access\narray[index]`);
+  const runTutorialStep = async (step: TutorialStep) => {
+    setStepAnimating(true);
+    setTutorialText({ title: step.title, description: step.description, step: `Step ${currentStepIndex + 1}` });
+    
+    if (step.highlightIndex !== undefined) {
+      setHighlightIndex(step.highlightIndex);
+    }
+    if (step.highlightIndex2 !== undefined) {
+      setHighlightIndex2(step.highlightIndex2);
+    }
+    
+    if (step.animPhase && step.animDuration) {
+      await smoothAnimate(step.animDuration, step.animPhase, { index: step.highlightIndex, index1: step.highlightIndex, index2: step.highlightIndex2 });
+    }
+    
+    if (step.action) {
+      step.action();
+    }
+    
+    setStepAnimating(false);
   };
 
-  const selectIndexForAccess = async (index: number) => {
-    setSelectionMode('none');
-    setPendingOperation('');
+  const nextStep = async () => {
+    if (stepAnimating) return;
+    
+    if (currentStepIndex < tutorialSteps.length - 1) {
+      const nextIdx = currentStepIndex + 1;
+      setCurrentStepIndex(nextIdx);
+      await runTutorialStep(tutorialSteps[nextIdx]);
+    } else {
+      // Tutorial finished
+      endTutorial();
+    }
+  };
+
+  const endTutorial = () => {
+    setTutorialActive(false);
+    setTutorialSteps([]);
+    setCurrentStepIndex(0);
+    setTutorialText(null);
+    setHighlightIndex(null);
+    setHighlightIndex2(null);
+    setAnimPhase('');
+    setAnimData({});
+    setIsAnimating(false);
+  };
+
+  const startTutorial = (steps: TutorialStep[]) => {
+    if (isAnimating || tutorialActive) return;
     setIsAnimating(true);
+    setTutorialActive(true);
+    setTutorialSteps(steps);
+    setCurrentStepIndex(0);
+    runTutorialStep(steps[0]);
+  };
+
+  // ==================== ARRAY OPERATIONS WITH STEP-BY-STEP ====================
+
+  const arrayAccessTutorial = (index: number) => {
     const data = getArrayData();
+    const steps: TutorialStep[] = [
+      {
+        title: "📍 Array Access",
+        description: `We want to access the element at index [${index}]. In an array, we can directly jump to any position using its index.`,
+        highlightIndex: index,
+      },
+      {
+        title: "⚡ Direct Access",
+        description: `Time Complexity: O(1) - Constant time! Arrays store elements in contiguous memory, so we calculate the exact position instantly.`,
+        highlightIndex: index,
+        animPhase: 'access-lift',
+        animDuration: 600,
+      },
+      {
+        title: "✅ Found It!",
+        description: `The element at index [${index}] is "${data[index]?.label}". This direct access is why arrays are great for random access operations!`,
+        highlightIndex: index,
+        animPhase: 'access-bounce',
+        animDuration: 800,
+      },
+      {
+        title: "📚 Key Takeaway",
+        description: `Array access is O(1) because: memory_address = base_address + (index × element_size). No searching required!`,
+        highlightIndex: index,
+        animPhase: 'access-settle',
+        animDuration: 500,
+      },
+    ];
+    startTutorial(steps);
+  };
 
-    setHighlightIndex(index);
-    setOperationMessage(`Accessing [${index}]...`);
-    setCodeDisplay(`// O(1) Access\n\n// Pseudo Code:\narray = [${data.map(d => `"${d.label}"`).join(', ')}]\nindex = ${index}\nvalue = array[index]\nprint("Accessed:", value)\n\n// Result: "${data[index].label}"`);
+  const arrayInsertTutorial = (insertIndex: number) => {
+    const data = getArrayData();
+    const newItem: DataItem = { id: Date.now(), label: 'New', color: '#1abc9c' };
+    
+    const steps: TutorialStep[] = [
+      {
+        title: "➕ Array Insert",
+        description: `We want to insert a new element at index [${insertIndex}]. First, let's understand what needs to happen.`,
+      },
+      {
+        title: "🔄 Shift Elements",
+        description: `All elements from index [${insertIndex}] onwards must shift RIGHT by one position to make room. This takes O(n) time!`,
+        highlightIndex: insertIndex,
+      },
+      {
+        title: "📦 Make Space",
+        description: `Moving elements: for(i = length-1; i >= ${insertIndex}; i--) { array[i+1] = array[i]; } Each shift is one operation.`,
+        highlightIndex: insertIndex,
+        animPhase: 'insert-drop',
+        animDuration: 600,
+        action: () => {
+          (setArrayData as any)((prev: DataItem[]) => {
+            const arr = [...prev];
+            arr.splice(insertIndex, 0, newItem);
+            return arr;
+          });
+        },
+      },
+      {
+        title: "✅ Inserted!",
+        description: `The new element is now at index [${insertIndex}]. Total time: O(n) in worst case (inserting at beginning).`,
+        highlightIndex: insertIndex,
+        animPhase: 'insert-settle',
+        animDuration: 500,
+      },
+      {
+        title: "📚 Key Takeaway",
+        description: `Insert at end: O(1). Insert at beginning: O(n). Insert in middle: O(n). Arrays aren't ideal for frequent insertions!`,
+      },
+    ];
+    startTutorial(steps);
+  };
 
-    await smoothAnimate(400, 'access-lift', { index });
-    setOperationMessage(`Found: "${data[index].label}"`);
-    await smoothAnimate(600, 'access-bounce', { index });
-    await smoothAnimate(350, 'access-settle', { index });
+  const arrayDeleteTutorial = (deleteIndex: number) => {
+    const data = getArrayData();
+    const deletedItem = data[deleteIndex];
+    
+    const steps: TutorialStep[] = [
+      {
+        title: "🗑️ Array Delete",
+        description: `We want to delete the element at index [${deleteIndex}] which is "${deletedItem?.label}". Let's see the process.`,
+        highlightIndex: deleteIndex,
+      },
+      {
+        title: "🎯 Target Element",
+        description: `First, we identify the element to remove. It's at index [${deleteIndex}] in our array.`,
+        highlightIndex: deleteIndex,
+        animPhase: 'delete-lift',
+        animDuration: 600,
+      },
+      {
+        title: "💨 Remove Element",
+        description: `The element is being removed. But wait - this leaves a gap in our array!`,
+        highlightIndex: deleteIndex,
+        animPhase: 'delete-shrink',
+        animDuration: 600,
+      },
+      {
+        title: "🔄 Shift Left",
+        description: `All elements after index [${deleteIndex}] must shift LEFT to fill the gap. for(i = ${deleteIndex}; i < length-1; i++) { array[i] = array[i+1]; }`,
+        animPhase: 'delete-close',
+        animDuration: 500,
+        action: () => {
+          (setArrayData as any)((prev: DataItem[]) => prev.filter((_: any, i: number) => i !== deleteIndex));
+        },
+      },
+      {
+        title: "📚 Key Takeaway",
+        description: `Delete time complexity: O(n) for shifting. Delete at end: O(1). Delete at beginning: O(n) - worst case!`,
+      },
+    ];
+    startTutorial(steps);
+  };
 
-    await delay(1000);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  const arraySwapTutorial = (idx1: number, idx2: number) => {
+    const data = getArrayData();
+    
+    const steps: TutorialStep[] = [
+      {
+        title: "🔀 Array Swap",
+        description: `We will swap elements at index [${idx1}] and [${idx2}]. This is "${data[idx1]?.label}" and "${data[idx2]?.label}".`,
+        highlightIndex: idx1,
+        highlightIndex2: idx2,
+      },
+      {
+        title: "📦 Using Temp Variable",
+        description: `Step 1: temp = array[${idx1}]  // Save first element\nWe store "${data[idx1]?.label}" temporarily.`,
+        highlightIndex: idx1,
+        highlightIndex2: idx2,
+        animPhase: 'swap-lift',
+        animDuration: 500,
+      },
+      {
+        title: "↔️ Exchange Values",
+        description: `Step 2: array[${idx1}] = array[${idx2}]  // Move second to first\nStep 3: array[${idx2}] = temp  // Move temp to second`,
+        highlightIndex: idx1,
+        highlightIndex2: idx2,
+        animPhase: 'swap-cross',
+        animDuration: 500,
+        action: () => {
+          (setArrayData as any)((prev: DataItem[]) => {
+            const arr = [...prev];
+            [arr[idx1], arr[idx2]] = [arr[idx2], arr[idx1]];
+            return arr;
+          });
+        },
+      },
+      {
+        title: "✅ Swapped!",
+        description: `Elements exchanged successfully! Now [${idx1}] = "${data[idx2]?.label}" and [${idx2}] = "${data[idx1]?.label}"`,
+        highlightIndex: idx1,
+        highlightIndex2: idx2,
+        animPhase: 'swap-drop',
+        animDuration: 500,
+      },
+      {
+        title: "📚 Key Takeaway",
+        description: `Swap is always O(1) - just 3 operations regardless of array size. Used in many sorting algorithms!`,
+      },
+    ];
+    startTutorial(steps);
+  };
+
+  // Selection mode handlers
+  const startArrayAccess = () => {
+    if (isAnimating || selectionMode !== 'none' || tutorialActive) return;
+    setSelectionMode('access');
+    setPendingOperation('Select index to ACCESS:');
   };
 
   const startArrayInsert = () => {
-    if (isAnimating || selectionMode !== 'none' || getArrayData().length >= 6) return;
+    if (isAnimating || selectionMode !== 'none' || tutorialActive || getArrayData().length >= 6) return;
     setSelectionMode('insert');
     setPendingOperation('Select index to INSERT at:');
-    setCodeDisplay(`// O(n) Insert\narray.insert(index, value)`);
-  };
-
-  const selectIndexForInsert = async (insertIndex: number) => {
-    setSelectionMode('none');
-    setPendingOperation('');
-    setIsAnimating(true);
-    const data = getArrayData();
-
-    setOperationMessage(`Inserting at [${insertIndex}]...`);
-    setCodeDisplay(`// O(n) Insert - Shift elements\n\n// Before:\narray = [${data.map(d => `"${d.label}"`).join(', ')}]\nindex = ${insertIndex}\n\n// Shift elements right:\nfor i = length-1 down to index:\n  array[i+1] = array[i]\n\narray[index] = "New"\n\n// After: Element inserted at [${insertIndex}]`);
-
-    for (let i = data.length - 1; i >= insertIndex; i--) {
-      setHighlightIndex(i);
-      await delay(200);
-    }
-
-    let newItem: DataItem;
-    if (arrayEnv === 'classroom') {
-      const names = ['Emma', 'Liam', 'Mia', 'Noah', 'Ava', 'Jack'];
-      const skinTones = ['#f5c6a0', '#c68642', '#8d5524'];
-      const hairColors = ['#1a1a1a', '#3d2314', '#2c1810', '#d4a574'];
-      const shirtColors = ['#1abc9c', '#9b59b6', '#e74c3c', '#3498db', '#f39c12'];
-      const genders: ('male' | 'female')[] = ['male', 'female'];
-      const hairStyles: ('short' | 'long')[] = ['short', 'long'];
-      const gender = genders[Math.floor(Math.random() * genders.length)];
-
-      newItem = {
-        id: Date.now(),
-        label: names[Math.floor(Math.random() * names.length)],
-        color: shirtColors[Math.floor(Math.random() * shirtColors.length)],
-        appearance: {
-          skinTone: skinTones[Math.floor(Math.random() * skinTones.length)],
-          shirtColor: shirtColors[Math.floor(Math.random() * shirtColors.length)],
-          pantsColor: '#2c3e50',
-          hairColor: hairColors[Math.floor(Math.random() * hairColors.length)],
-          hairStyle: gender === 'female' ? 'long' : hairStyles[Math.floor(Math.random() * hairStyles.length)],
-          gender: gender
-        }
-      };
-    } else {
-      newItem = { id: Date.now(), label: 'New', color: '#1abc9c' };
-    }
-
-    (setArrayData as any)((prev: DataItem[]) => {
-      const arr = [...prev];
-      arr.splice(insertIndex, 0, newItem);
-      return arr;
-    });
-
-    setHighlightIndex(insertIndex);
-    await smoothAnimate(450, 'insert-drop', { index: insertIndex });
-    await smoothAnimate(350, 'insert-settle', { index: insertIndex });
-    setOperationMessage('Inserted!');
-    await delay(800);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
   const startArrayDelete = () => {
-    if (isAnimating || selectionMode !== 'none' || getArrayData().length <= 2) return;
+    if (isAnimating || selectionMode !== 'none' || tutorialActive || getArrayData().length <= 2) return;
     setSelectionMode('delete');
     setPendingOperation('Select index to DELETE:');
-    setCodeDisplay(`// O(n) Delete\narray.delete(index)`);
-  };
-
-  const selectIndexForDelete = async (deleteIndex: number) => {
-    setSelectionMode('none');
-    setPendingOperation('');
-    setIsAnimating(true);
-    const data = getArrayData();
-
-    setHighlightIndex(deleteIndex);
-    setOperationMessage(`Deleting [${deleteIndex}]: "${data[deleteIndex].label}"`);
-    setCodeDisplay(`// O(n) Delete - Shift elements\n\n// Before:\narray = [${data.map(d => `"${d.label}"`).join(', ')}]\nindex = ${deleteIndex}\ndeleted = array[index]  // "${data[deleteIndex].label}"\n\n// Shift elements left:\nfor i = index to length-2:\n  array[i] = array[i+1]\n\nlength = length - 1\n\n// Result: "${data[deleteIndex].label}" removed`);
-
-    await smoothAnimate(450, 'delete-lift', { index: deleteIndex });
-    await smoothAnimate(400, 'delete-shrink', { index: deleteIndex });
-    setHighlightIndex(null);
-    (setArrayData as any)((prev: DataItem[]) => prev.filter((_: any, i: number) => i !== deleteIndex));
-    await smoothAnimate(350, 'delete-close', { deleteIndex });
-
-    await delay(500);
-    setAnimPhase(''); setAnimData({});
-    setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
   };
 
   const startArraySwap = () => {
-    if (isAnimating || selectionMode !== 'none' || getArrayData().length < 2) return;
+    if (isAnimating || selectionMode !== 'none' || tutorialActive || getArrayData().length < 2) return;
     setSelectionMode('swap-first');
     setSwapFirstIndex(null);
     setPendingOperation('Select FIRST index to swap:');
-    setCodeDisplay(`// O(1) Swap\nswap(array[i], array[j])`);
   };
 
-  const selectIndexForSwap = async (index: number) => {
-    if (selectionMode === 'swap-first') {
+  const handleIndexSelect = (index: number) => {
+    if (selectionMode === 'access') {
+      setSelectionMode('none');
+      setPendingOperation('');
+      arrayAccessTutorial(index);
+    } else if (selectionMode === 'insert') {
+      setSelectionMode('none');
+      setPendingOperation('');
+      arrayInsertTutorial(index);
+    } else if (selectionMode === 'delete') {
+      setSelectionMode('none');
+      setPendingOperation('');
+      arrayDeleteTutorial(index);
+    } else if (selectionMode === 'swap-first') {
       setSwapFirstIndex(index);
       setHighlightIndex(index);
       setSelectionMode('swap-second');
       setPendingOperation(`Selected [${index}]. Now select SECOND index:`);
-    } else if (selectionMode === 'swap-second' && swapFirstIndex !== null) {
-      if (index === swapFirstIndex) {
-        setOperationMessage('Cannot swap with same index!');
-        await delay(800);
-        setOperationMessage('');
-        return;
-      }
-
+    } else if (selectionMode === 'swap-second' && swapFirstIndex !== null && index !== swapFirstIndex) {
       setSelectionMode('none');
       setPendingOperation('');
-      setIsAnimating(true);
-
-      const data = getArrayData();
-      const idx1 = swapFirstIndex;
-      const idx2 = index;
-
-      setHighlightIndex(idx1);
-      setHighlightIndex2(idx2);
-      setOperationMessage(`Swapping [${idx1}] ↔ [${idx2}]`);
-      setCodeDisplay(`// O(1) Swap Operation\n\n// Before:\narray = [${data.map(d => `"${d.label}"`).join(', ')}]\ni = ${idx1}  // "${data[idx1].label}"\nj = ${idx2}  // "${data[idx2].label}"\n\n// Swap using temp:\ntemp = array[i]\narray[i] = array[j]\narray[j] = temp\n\n// After: [${idx1}]="${data[idx2].label}", [${idx2}]="${data[idx1].label}"`);
-
-      await smoothAnimate(400, 'swap-lift', { index1: idx1, index2: idx2 });
-      await smoothAnimate(350, 'swap-cross', { index1: idx1, index2: idx2 });
-      (setArrayData as any)((prev: DataItem[]) => { const a = [...prev]; [a[idx1], a[idx2]] = [a[idx2], a[idx1]]; return a; });
-      await smoothAnimate(400, 'swap-drop', { index1: idx1, index2: idx2 });
-
-      await delay(800);
-      setAnimPhase(''); setAnimData({});
-      setHighlightIndex(null); setHighlightIndex2(null);
+      setHighlightIndex(null);
+      arraySwapTutorial(swapFirstIndex, index);
       setSwapFirstIndex(null);
-      setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
     }
   };
 
@@ -3111,209 +3345,436 @@ export default function Home() {
     setSwapFirstIndex(null);
     setHighlightIndex(null);
     setHighlightIndex2(null);
-    setCodeDisplay('');
   };
 
-  // ToDo List - Only Append operation
-  const todoAppend = async () => {
-    if (isAnimating || getArrayData().length >= 6) return;
-    setIsAnimating(true);
-
+  // ToDo append
+  const todoAppendTutorial = () => {
+    if (isAnimating || tutorialActive || getArrayData().length >= 6) return;
+    
     const data = getArrayData();
     const newIndex = data.length;
-    const taskNames = ['Meeting', 'Email', 'Report', 'Call', 'Review', 'Plan'];
-    const taskColors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c'];
-    const newTask = {
-      id: Date.now(),
-      label: taskNames[Math.floor(Math.random() * taskNames.length)],
-      color: taskColors[Math.floor(Math.random() * taskColors.length)]
-    };
-
-    setOperationMessage(`Appending "${newTask.label}"...`);
-    setCodeDisplay(`// O(1) Append Operation\n\n// Current Array:\narray = [${data.map(d => `"${d.label}"`).join(', ')}]\nlength = ${data.length}\n\n// Pseudo Code:\nnew_value = "${newTask.label}"\narray[length] = new_value\nlength = length + 1\n\n// Result:\narray = [${[...data, newTask].map(d => `"${d.label}"`).join(', ')}]\n// New length: ${data.length + 1}`);
-
-    (setArrayData as any)((prev: DataItem[]) => [...prev, newTask]);
-
-    setHighlightIndex(newIndex);
-    await smoothAnimate(450, 'insert-drop', { index: newIndex });
-    await smoothAnimate(350, 'insert-settle', { index: newIndex });
-
-    setOperationMessage(`Appended "${newTask.label}" at index [${newIndex}]`);
-    await delay(1200);
-
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+    const taskNames = ['Meeting', 'Email', 'Report', 'Call', 'Review'];
+    const newTask = { id: Date.now(), label: taskNames[Math.floor(Math.random() * taskNames.length)], color: '#1abc9c' };
+    
+    const steps: TutorialStep[] = [
+      {
+        title: "➕ Append to Array",
+        description: `We're adding "${newTask.label}" to the END of our array. Current length: ${data.length}`,
+      },
+      {
+        title: "📍 Find Position",
+        description: `The new element goes at index [${newIndex}]. For append, we already know the position - it's always array.length!`,
+        highlightIndex: newIndex,
+        action: () => {
+          (setArrayData as any)((prev: DataItem[]) => [...prev, newTask]);
+        },
+      },
+      {
+        title: "⚡ Direct Placement",
+        description: `array[${newIndex}] = "${newTask.label}"\nlength = ${newIndex + 1}\n\nNo shifting needed - that's why append is O(1)!`,
+        highlightIndex: newIndex,
+        animPhase: 'insert-drop',
+        animDuration: 600,
+      },
+      {
+        title: "📚 Key Takeaway",
+        description: `Append is O(1) - constant time! We just place at the end. This is why dynamic arrays (like ArrayList) are efficient for adding at the end.`,
+        highlightIndex: newIndex,
+        animPhase: 'insert-settle',
+        animDuration: 400,
+      },
+    ];
+    startTutorial(steps);
   };
 
-  // ==================== LINKED LIST OPERATIONS ====================
+  // ==================== LINKED LIST TUTORIALS ====================
 
-  const linkedListInsertHead = async () => {
-    if (isAnimating || getLinkedListData().length >= 5) return; setIsAnimating(true);
-    setOperationMessage('Inserting at HEAD...');
+  const linkedListInsertHeadTutorial = () => {
+    if (isAnimating || tutorialActive || getLinkedListData().length >= 5) return;
+    
     const newItem: DataItem = linkedListEnv === 'people'
       ? { id: Date.now(), label: 'New', color: '#1abc9c', appearance: { skinTone: '#f5c6a0', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#3d2314', hairStyle: 'short', gender: 'male' } }
       : { id: Date.now(), label: 'New', color: '#1abc9c' };
-    (setLinkedListData as any)((prev: DataItem[]) => [newItem, ...prev]);
-    setHighlightIndex(0);
-    await smoothAnimate(450, 'll-insert-head', { index: 0 });
-    await smoothAnimate(350, 'll-insert-head-settle', { index: 0 });
-    setOperationMessage('Inserted at HEAD!'); await delay(700);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+    
+    const steps: TutorialStep[] = [
+      {
+        title: "⬅️ Insert at HEAD",
+        description: "We're adding a new node at the BEGINNING of the linked list. This is the most efficient insertion!",
+      },
+      {
+        title: "🔗 Create New Node",
+        description: "Step 1: Create a new node with our data.\nnewNode = Node('New')\nnewNode.next = null",
+        action: () => {
+          (setLinkedListData as any)((prev: DataItem[]) => [newItem, ...prev]);
+        },
+      },
+      {
+        title: "🔄 Update Pointers",
+        description: "Step 2: Point new node to current head.\nnewNode.next = head\n\nStep 3: Update head to new node.\nhead = newNode",
+        highlightIndex: 0,
+        animPhase: 'll-insert-head',
+        animDuration: 600,
+      },
+      {
+        title: "✅ Inserted!",
+        description: "The new node is now the head of the list. Total operations: 2 pointer updates!",
+        highlightIndex: 0,
+        animPhase: 'll-insert-head-settle',
+        animDuration: 400,
+      },
+      {
+        title: "📚 Key Takeaway",
+        description: "Insert at HEAD: O(1) - constant time! Unlike arrays, no shifting is needed. Just update two pointers!",
+      },
+    ];
+    startTutorial(steps);
   };
 
-  const linkedListInsertTail = async () => {
-    if (isAnimating || getLinkedListData().length >= 5) return; setIsAnimating(true);
+  const linkedListInsertTailTutorial = () => {
+    if (isAnimating || tutorialActive || getLinkedListData().length >= 5) return;
+    
     const data = getLinkedListData();
-    setOperationMessage('Traversing to TAIL...');
-    for (let i = 0; i < data.length; i++) {
-      setHighlightIndex(i);
-      await smoothAnimate(300, 'll-traverse', { index: i });
-    }
     const newItem: DataItem = linkedListEnv === 'people'
       ? { id: Date.now(), label: 'Last', color: '#e74c3c', appearance: { skinTone: '#8d5524', shirtColor: '#e74c3c', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } }
       : { id: Date.now(), label: 'New', color: '#e74c3c' };
-    (setLinkedListData as any)((prev: DataItem[]) => [...prev, newItem]);
-    setHighlightIndex(data.length);
-    await smoothAnimate(450, 'll-insert-tail', { index: data.length });
-    await smoothAnimate(350, 'll-insert-tail-settle', { index: data.length });
-    setOperationMessage('Inserted at TAIL!'); await delay(700);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+    
+    const traverseSteps: TutorialStep[] = data.map((item, i) => ({
+      title: "🔍 Traversing...",
+      description: `Visiting node ${i}: "${item.label}"\ncurrent = current.next\n\n${i === data.length - 1 ? "This is the last node (current.next == null)" : "Not the tail yet, keep going..."}`,
+      highlightIndex: i,
+      animPhase: 'll-traverse',
+      animDuration: 400,
+    }));
+    
+    const steps: TutorialStep[] = [
+      {
+        title: "➡️ Insert at TAIL",
+        description: "We're adding a new node at the END of the linked list. First, we need to FIND the tail!",
+      },
+      {
+        title: "🏃 Start Traversal",
+        description: "Unlike arrays, we can't jump to the end directly. We must traverse from head to find the tail.\n\ncurrent = head",
+      },
+      ...traverseSteps,
+      {
+        title: "🔗 Found Tail!",
+        description: "Now we create and attach the new node.\nnewNode = Node('New')\ntail.next = newNode",
+        highlightIndex: data.length,
+        action: () => {
+          (setLinkedListData as any)((prev: DataItem[]) => [...prev, newItem]);
+        },
+        animPhase: 'll-insert-tail',
+        animDuration: 600,
+      },
+      {
+        title: "📚 Key Takeaway",
+        description: `Insert at TAIL: O(n) - we traversed ${data.length} nodes! With a tail pointer, this could be O(1).`,
+        highlightIndex: data.length,
+        animPhase: 'll-insert-tail-settle',
+        animDuration: 400,
+      },
+    ];
+    startTutorial(steps);
   };
 
-  const linkedListDeleteHead = async () => {
-    if (isAnimating || getLinkedListData().length <= 2) return; setIsAnimating(true);
-    setHighlightIndex(0);
-    setOperationMessage('Deleting HEAD...');
-    await smoothAnimate(450, 'll-delete-lift', { index: 0 });
-    await smoothAnimate(400, 'll-delete-shrink', { index: 0 });
-    (setLinkedListData as any)((prev: DataItem[]) => prev.slice(1));
-    await delay(300);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const linkedListTraverse = async () => {
-    if (isAnimating) return; setIsAnimating(true);
+  const linkedListDeleteHeadTutorial = () => {
+    if (isAnimating || tutorialActive || getLinkedListData().length <= 2) return;
+    
     const data = getLinkedListData();
-    for (let i = 0; i < data.length; i++) {
-      setHighlightIndex(i);
-      setOperationMessage(`Visiting: ${data[i].label}`);
-      await smoothAnimate(400, 'll-traverse', { index: i });
-    }
-    setOperationMessage(`Done! ${data.length} nodes`); await delay(700);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+    const steps: TutorialStep[] = [
+      {
+        title: "🗑️ Delete HEAD",
+        description: `We're removing the first node "${data[0]?.label}" from the linked list. This is very efficient!`,
+        highlightIndex: 0,
+      },
+      {
+        title: "📝 Save Reference",
+        description: "Step 1: Save reference to current head.\noldHead = head\nThis lets us free the memory later.",
+        highlightIndex: 0,
+        animPhase: 'll-delete-lift',
+        animDuration: 600,
+      },
+      {
+        title: "🔄 Update HEAD",
+        description: "Step 2: Move head pointer to next node.\nhead = head.next\n\nThe old head is now disconnected!",
+        highlightIndex: 0,
+        animPhase: 'll-delete-shrink',
+        animDuration: 600,
+        action: () => {
+          (setLinkedListData as any)((prev: DataItem[]) => prev.slice(1));
+        },
+      },
+      {
+        title: "📚 Key Takeaway",
+        description: "Delete HEAD: O(1) - constant time! Just one pointer update. No traversal needed!",
+      },
+    ];
+    startTutorial(steps);
   };
 
-  // ==================== STACK OPERATIONS ====================
+  const linkedListTraverseTutorial = () => {
+    if (isAnimating || tutorialActive) return;
+    
+    const data = getLinkedListData();
+    const traverseSteps: TutorialStep[] = data.map((item, i) => ({
+      title: `📍 Node ${i}`,
+      description: `Visiting: "${item.label}"\n\nprint(current.data)  // "${item.label}"\ncurrent = current.next`,
+      highlightIndex: i,
+      animPhase: 'll-traverse',
+      animDuration: 500,
+    }));
+    
+    const steps: TutorialStep[] = [
+      {
+        title: "🔍 Traverse List",
+        description: "Traversal visits EVERY node from head to tail. We'll print each node's data.",
+      },
+      {
+        title: "🏁 Start at HEAD",
+        description: "current = head\n\nWe begin at the first node and follow the 'next' pointers.",
+      },
+      ...traverseSteps,
+      {
+        title: "🏁 Reached NULL",
+        description: `current.next == NULL\n\nTraversal complete! We visited ${data.length} nodes.`,
+      },
+      {
+        title: "📚 Key Takeaway",
+        description: `Traversal: O(n) - we visit every node exactly once. Used for searching, printing, and finding the tail.`,
+      },
+    ];
+    startTutorial(steps);
+  };
 
-  const stackPush = async () => {
-    if (isAnimating || getStackData().length >= 5) return; setIsAnimating(true);
+  // ==================== STACK TUTORIALS ====================
+
+  const stackPushTutorial = () => {
+    if (isAnimating || tutorialActive || getStackData().length >= 5) return;
+    
     const data = getStackData();
     const labels = stackEnv === 'books' ? ['Physics', 'English', 'Art'] : stackEnv === 'plates' ? [`Plate ${data.length + 1}`] : [`Box ${String.fromCharCode(65 + data.length)}`];
-    const colors = stackEnv === 'books' ? ['#9b59b6', '#e74c3c', '#1abc9c'] : ['#7f8c8d'];
-    const newItem = { id: Date.now(), label: labels[Math.floor(Math.random() * labels.length)], color: colors[Math.floor(Math.random() * colors.length)] };
-    setOperationMessage(`Pushing "${newItem.label}"...`);
-    (setStackData as any)((prev: DataItem[]) => [...prev, newItem]);
-    setHighlightIndex(data.length);
-    await smoothAnimate(450, 'stack-push-drop', { index: data.length });
-    await smoothAnimate(350, 'stack-push-settle', { index: data.length });
-    setOperationMessage('Pushed!'); await delay(600);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+    const newItem = { id: Date.now(), label: labels[0], color: '#9b59b6' };
+    
+    const steps: TutorialStep[] = [
+      {
+        title: "⬆️ Stack PUSH",
+        description: `We're pushing "${newItem.label}" onto the stack. PUSH always adds to the TOP!`,
+      },
+      {
+        title: "📍 Find TOP",
+        description: `Current stack size: ${data.length}\nTOP is at index: ${data.length - 1}\n\nNew element goes at index: ${data.length}`,
+        action: () => {
+          (setStackData as any)((prev: DataItem[]) => [...prev, newItem]);
+        },
+      },
+      {
+        title: "📦 Place on TOP",
+        description: "stack[top + 1] = newElement\ntop = top + 1\n\nThe element is placed above all others.",
+        highlightIndex: data.length,
+        animPhase: 'stack-push-drop',
+        animDuration: 600,
+      },
+      {
+        title: "✅ Pushed!",
+        description: `"${newItem.label}" is now on TOP of the stack. Stack size: ${data.length + 1}`,
+        highlightIndex: data.length,
+        animPhase: 'stack-push-settle',
+        animDuration: 400,
+      },
+      {
+        title: "📚 Key Takeaway",
+        description: "PUSH: O(1) - constant time! We always know where TOP is, so no searching needed.",
+      },
+    ];
+    startTutorial(steps);
   };
 
-  const stackPop = async () => {
-    if (isAnimating || getStackData().length <= 1) return; setIsAnimating(true);
-    const data = getStackData(), topItem = data[data.length - 1];
-    setHighlightIndex(data.length - 1);
-    setOperationMessage(`Popping "${topItem.label}"...`);
-    await smoothAnimate(400, 'stack-pop-lift', { index: data.length - 1 });
-    await smoothAnimate(400, 'stack-pop-fly', { index: data.length - 1 });
-    (setStackData as any)((prev: DataItem[]) => prev.slice(0, -1));
-    await delay(300);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  const stackPopTutorial = () => {
+    if (isAnimating || tutorialActive || getStackData().length <= 1) return;
+    
+    const data = getStackData();
+    const topItem = data[data.length - 1];
+    
+    const steps: TutorialStep[] = [
+      {
+        title: "⬇️ Stack POP",
+        description: `We're removing the TOP element. In a stack, we can ONLY remove from the top!`,
+        highlightIndex: data.length - 1,
+      },
+      {
+        title: "🎯 Identify TOP",
+        description: `TOP element: "${topItem.label}" at index [${data.length - 1}]\n\nvalue = stack[top]`,
+        highlightIndex: data.length - 1,
+        animPhase: 'stack-pop-lift',
+        animDuration: 500,
+      },
+      {
+        title: "📤 Remove Element",
+        description: "top = top - 1\nreturn value\n\nThe element is removed and returned.",
+        highlightIndex: data.length - 1,
+        animPhase: 'stack-pop-fly',
+        animDuration: 600,
+        action: () => {
+          (setStackData as any)((prev: DataItem[]) => prev.slice(0, -1));
+        },
+      },
+      {
+        title: "📚 Key Takeaway",
+        description: `POP: O(1) - constant time! LIFO = Last In, First Out. The most recent push is the first to pop.`,
+      },
+    ];
+    startTutorial(steps);
   };
 
-  const stackPeek = async () => {
-    if (isAnimating || getStackData().length === 0) return; setIsAnimating(true);
-    const data = getStackData(), topItem = data[data.length - 1];
-    setHighlightIndex(data.length - 1);
-    setOperationMessage(`Peeking TOP...`);
-    setCodeDisplay(`// O(1)\nstack.peek()`);
-    await smoothAnimate(600, 'stack-peek-lift', { index: data.length - 1 });
-    setOperationMessage(`TOP: "${topItem.label}"`);
-    await smoothAnimate(1500, 'stack-peek-open', { index: data.length - 1 });
-    await delay(800);
-    await smoothAnimate(600, 'stack-peek-settle', { index: data.length - 1 });
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  const stackPeekTutorial = () => {
+    if (isAnimating || tutorialActive || getStackData().length === 0) return;
+    
+    const data = getStackData();
+    const topItem = data[data.length - 1];
+    
+    const steps: TutorialStep[] = [
+      {
+        title: "👁️ Stack PEEK",
+        description: "PEEK looks at the TOP element WITHOUT removing it. Let's see what's on top!",
+        highlightIndex: data.length - 1,
+      },
+      {
+        title: "🔍 Looking at TOP",
+        description: `return stack[top]\n\nTOP element: "${topItem.label}"\n\nThe element stays in place!`,
+        highlightIndex: data.length - 1,
+        animPhase: 'stack-peek-lift',
+        animDuration: 800,
+      },
+      {
+        title: "📖 Examining...",
+        description: `We can see "${topItem.label}" but it remains on the stack. Stack size unchanged: ${data.length}`,
+        highlightIndex: data.length - 1,
+        animPhase: 'stack-peek-open',
+        animDuration: 1500,
+      },
+      {
+        title: "📚 Key Takeaway",
+        description: "PEEK: O(1) - constant time! Useful for checking the top without modifying the stack. Often used before POP.",
+        animPhase: 'stack-peek-settle',
+        animDuration: 500,
+      },
+    ];
+    startTutorial(steps);
   };
 
-  // ==================== QUEUE OPERATIONS ====================
+  // ==================== QUEUE TUTORIALS ====================
 
-  const queueEnqueue = async () => {
-    if (isAnimating || getQueueData().length >= 5) return; setIsAnimating(true);
+  const queueEnqueueTutorial = () => {
+    if (isAnimating || tutorialActive || getQueueData().length >= 5) return;
+    
     const data = getQueueData();
     const newItem: DataItem = queueEnv === 'students'
       ? { id: Date.now(), label: `Stu ${data.length + 1}`, color: '#1abc9c', appearance: { skinTone: '#f5c6a0', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#3d2314', hairStyle: 'short', gender: 'male' } }
       : queueEnv === 'tollgate'
         ? { id: Date.now(), label: `NEW-${Math.floor(Math.random() * 900) + 100}`, color: '#1abc9c' }
         : { id: Date.now(), label: `T-00${data.length + 1}`, color: '#1abc9c' };
-    setOperationMessage(`Enqueue: "${newItem.label}"...`);
-    (setQueueData as any)((prev: DataItem[]) => [...prev, newItem]);
-    setHighlightIndex(data.length);
-    await smoothAnimate(500, 'queue-enqueue-enter', { index: data.length });
-    await smoothAnimate(350, 'queue-enqueue-settle', { index: data.length });
-    setOperationMessage('Enqueued!'); await delay(600);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+    
+    const steps: TutorialStep[] = [
+      {
+        title: "➕ Queue ENQUEUE",
+        description: `Adding "${newItem.label}" to the queue. In a queue, new elements join at the REAR!`,
+      },
+      {
+        title: "📍 Find REAR",
+        description: `Current queue size: ${data.length}\nFRONT is at index 0\nREAR is at index ${data.length - 1}\n\nNew element goes at index: ${data.length}`,
+        action: () => {
+          (setQueueData as any)((prev: DataItem[]) => [...prev, newItem]);
+        },
+      },
+      {
+        title: "🚶 Join the Line",
+        description: "queue[rear + 1] = newElement\nrear = rear + 1\n\nJust like joining the back of a line!",
+        highlightIndex: data.length,
+        animPhase: 'queue-enqueue-enter',
+        animDuration: 700,
+      },
+      {
+        title: "✅ Enqueued!",
+        description: `"${newItem.label}" is now at the REAR. They'll be served after everyone ahead of them.`,
+        highlightIndex: data.length,
+        animPhase: 'queue-enqueue-settle',
+        animDuration: 400,
+      },
+      {
+        title: "📚 Key Takeaway",
+        description: "ENQUEUE: O(1) - constant time! FIFO = First In, First Out. Fair and orderly!",
+      },
+    ];
+    startTutorial(steps);
   };
 
-  const queueDequeue = async () => {
-    if (isAnimating || getQueueData().length <= 1) return; setIsAnimating(true);
-    const frontItem = getQueueData()[0];
-    setHighlightIndex(0);
-    setOperationMessage(`Dequeue: "${frontItem.label}"...`);
-    setCodeDisplay(`// O(1) FIFO\nqueue.dequeue()`);
-
-    if (queueEnv === 'tollgate') {
-      setOperationMessage('Gate opening...');
-      await smoothAnimate(1000, 'queue-dequeue-gate-open', { index: 0 });
-      setOperationMessage(`${frontItem.label} passing through...`);
-      await smoothAnimate(1200, 'queue-dequeue-drive', { index: 0 });
-      (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
-      setOperationMessage('Gate closing...');
-      await smoothAnimate(800, 'queue-dequeue-gate-close', { index: -1 });
-    } else if (queueEnv === 'students') {
-      setOperationMessage(`${frontItem.label} walking to school...`);
-      await smoothAnimate(1500, 'queue-dequeue-walk', { index: 0 });
-      setOperationMessage(`${frontItem.label} entering school...`);
-      await smoothAnimate(1000, 'queue-dequeue-enter', { index: 0 });
-      (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
-    } else {
-      setOperationMessage(`Processing ${frontItem.label}...`);
-      await smoothAnimate(1200, 'queue-dequeue-drive', { index: 0 });
-      (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
-    }
-
-    await delay(200);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  const queueDequeueTutorial = () => {
+    if (isAnimating || tutorialActive || getQueueData().length <= 1) return;
+    
+    const data = getQueueData();
+    const frontItem = data[0];
+    
+    const steps: TutorialStep[] = [
+      {
+        title: "➖ Queue DEQUEUE",
+        description: `Removing from the queue. In a queue, elements leave from the FRONT - first come, first served!`,
+        highlightIndex: 0,
+      },
+      {
+        title: "🎯 Identify FRONT",
+        description: `FRONT element: "${frontItem.label}" at index [0]\n\nThis was the first to join, so they're served first!`,
+        highlightIndex: 0,
+      },
+      {
+        title: "🚶 Leaving Queue",
+        description: "value = queue[front]\nfront = front + 1\n\nThe front element exits the queue.",
+        highlightIndex: 0,
+        animPhase: queueEnv === 'tollgate' ? 'queue-dequeue-gate-open' : 'queue-dequeue-walk',
+        animDuration: queueEnv === 'tollgate' ? 1000 : 1500,
+      },
+      {
+        title: "👋 Goodbye!",
+        description: `"${frontItem.label}" has been dequeued and served. Queue size: ${data.length - 1}`,
+        highlightIndex: 0,
+        animPhase: queueEnv === 'tollgate' ? 'queue-dequeue-drive' : 'queue-dequeue-enter',
+        animDuration: 1200,
+        action: () => {
+          (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
+        },
+      },
+      {
+        title: "📚 Key Takeaway",
+        description: "DEQUEUE: O(1) with circular array, O(n) if shifting. FIFO ensures fairness!",
+      },
+    ];
+    startTutorial(steps);
   };
 
-  const queueFront = async () => {
-    if (isAnimating || getQueueData().length === 0) return; setIsAnimating(true);
-    const frontItem = getQueueData()[0];
-    setHighlightIndex(0);
-    setOperationMessage(`FRONT: "${frontItem.label}"`);
-    await smoothAnimate(1000, 'queue-front-peek', { index: 0 });
-    await delay(500);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  const queueFrontTutorial = () => {
+    if (isAnimating || tutorialActive || getQueueData().length === 0) return;
+    
+    const data = getQueueData();
+    const frontItem = data[0];
+    
+    const steps: TutorialStep[] = [
+      {
+        title: "👁️ Queue FRONT",
+        description: "FRONT (or PEEK) shows who's next to be served without removing them.",
+        highlightIndex: 0,
+      },
+      {
+        title: "🔍 Looking at FRONT",
+        description: `return queue[front]\n\nFRONT element: "${frontItem.label}"\n\nThey stay in the queue!`,
+        highlightIndex: 0,
+        animPhase: 'queue-front-peek',
+        animDuration: 1200,
+      },
+      {
+        title: "📚 Key Takeaway",
+        description: "FRONT/PEEK: O(1) - constant time! Useful for checking without modifying the queue.",
+      },
+    ];
+    startTutorial(steps);
   };
 
   // ==================== CAMERA & WEBXR SETUP ====================
@@ -3478,8 +3939,8 @@ export default function Home() {
 
   useEffect(() => {
     if (appMode !== 'webxr' || !webxrPlaced || !xrGroupRef.current) return;
-    buildSceneContent(xrGroupRef.current, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData, animProgress);
-  }, [appMode, webxrPlaced, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData, animProgress]);
+    buildSceneContent(xrGroupRef.current, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData, animProgress, tutorialText);
+  }, [appMode, webxrPlaced, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData, animProgress, tutorialText]);
 
   useEffect(() => {
     if (xrGroupRef.current && webxrActive && webxrPlaced) xrGroupRef.current.scale.setScalar(0.3 * zoomLevel);
@@ -3579,7 +4040,7 @@ export default function Home() {
       {!webxrActive && showVisualization && activePosition && (
         <Visualization3D position={activePosition} data={currentData} highlightIndex={highlightIndex} highlightIndex2={highlightIndex2}
           structure={currentStructure} environment={currentEnvId} zoomLevel={zoomLevel} setZoomLevel={setZoomLevel}
-          isSurfaceMode={appMode === 'surface'} animPhase={animPhase} animData={animData} animProgress={animProgress} />
+          isSurfaceMode={appMode === 'surface'} animPhase={animPhase} animData={animData} animProgress={animProgress} tutorialText={tutorialText} />
       )}
 
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: 10, zIndex: 100 }}>
@@ -3591,7 +4052,7 @@ export default function Home() {
           <button onClick={() => switchToMode('webxr')} style={{ padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20, background: appMode === 'webxr' ? '#e17055' : 'transparent', color: 'white', opacity: appMode === 'webxr' ? 1 : webxrSupported ? 0.5 : 0.25 }}>🌐 AR{!webxrSupported && ' ✗'}</button>
         </div>
 
-        {showControls && (
+        {showControls && !tutorialActive && (
           <div style={{ position: 'absolute', top: 50, left: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <button onPointerDown={zoomIn} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#667eea', color: 'white', fontSize: 28, fontWeight: 'bold' }}>+</button>
             <div style={{ width: 50, height: 50, borderRadius: '50%', background: '#000', border: '3px solid #0f0', color: '#0f0', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{Math.round(zoomLevel * 100)}%</div>
@@ -3600,16 +4061,18 @@ export default function Home() {
           </div>
         )}
 
-        <div style={{ position: 'absolute', top: 48, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 4, background: 'rgba(0,0,0,0.8)', padding: 4, borderRadius: 25 }}>
-          {(['array', 'linkedlist', 'stack', 'queue'] as DataStructure[]).map(s => (
-            <button key={s} onClick={() => { if (!isAnimating && selectionMode === 'none') { setCurrentStructure(s); cancelSelection(); if (appMode === 'surface') { setSurfacePlaced(false); setSurfacePosition(null); } } }}
-              style={{ padding: '8px 12px', fontSize: 11, border: 'none', borderRadius: 20, background: currentStructure === s ? '#667eea' : 'transparent', color: 'white', opacity: currentStructure === s ? 1 : 0.6 }}>
-              {{ array: '📊', linkedlist: '🔗', stack: '📚', queue: '🚗' }[s]}{currentStructure === s && ' ' + { array: 'Array', linkedlist: 'List', stack: 'Stack', queue: 'Queue' }[s]}
-            </button>
-          ))}
-        </div>
+        {!tutorialActive && (
+          <div style={{ position: 'absolute', top: 48, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 4, background: 'rgba(0,0,0,0.8)', padding: 4, borderRadius: 25 }}>
+            {(['array', 'linkedlist', 'stack', 'queue'] as DataStructure[]).map(s => (
+              <button key={s} onClick={() => { if (!isAnimating && selectionMode === 'none') { setCurrentStructure(s); cancelSelection(); if (appMode === 'surface') { setSurfacePlaced(false); setSurfacePosition(null); } } }}
+                style={{ padding: '8px 12px', fontSize: 11, border: 'none', borderRadius: 20, background: currentStructure === s ? '#667eea' : 'transparent', color: 'white', opacity: currentStructure === s ? 1 : 0.6 }}>
+                {{ array: '📊', linkedlist: '🔗', stack: '📚', queue: '🚗' }[s]}{currentStructure === s && ' ' + { array: 'Array', linkedlist: 'List', stack: 'Stack', queue: 'Queue' }[s]}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {showControls && (
+        {showControls && !tutorialActive && (
           <div style={{ position: 'absolute', top: 90, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 4, background: 'rgba(0,0,0,0.7)', padding: 4, borderRadius: 20 }}>
             {envTabs.map(e => (
               <button key={e.id} onClick={() => !isAnimating && selectionMode === 'none' && (setCurrentEnv as any)(e.id)}
@@ -3619,19 +4082,51 @@ export default function Home() {
             ))}
           </div>
         )}
-
-        {operationMessage && <div style={{ position: 'absolute', top: 128, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.9)', color: '#0f0', padding: '10px 20px', borderRadius: 15, fontSize: 14, border: '1px solid #0f0', whiteSpace: 'nowrap' }}>⚡ {operationMessage}</div>}
-        
-        {codeDisplay && (
-          <div style={{ position: 'absolute', top: 168, left: '50%', transform: 'translateX(-50%)', background: '#1e1e1e', color: '#0f0', padding: '12px 16px', borderRadius: 10, fontSize: 10, fontFamily: 'monospace', whiteSpace: 'pre-wrap', border: '1px solid #444', maxWidth: '90%', maxHeight: 160, overflow: 'auto', lineHeight: 1.4 }}>
-            {codeDisplay}
-          </div>
-        )}
         
         {webxrActive && <button onClick={stopWebXR} style={{ position: 'absolute', top: 10, right: 10, padding: '10px 18px', background: '#e74c3c', color: 'white', border: 'none', borderRadius: 20, fontSize: 13, fontWeight: 'bold', zIndex: 300 }}>✕ Exit AR</button>}
       </div>
 
-      {showControls && (
+      {/* Tutorial Step Display */}
+      {tutorialActive && tutorialText && (
+        <div style={{ position: 'fixed', bottom: 100, left: '50%', transform: 'translateX(-50%)', width: '90%', maxWidth: 400, zIndex: 200 }}>
+          <div style={{ background: 'linear-gradient(135deg, rgba(30,30,60,0.98), rgba(20,20,40,0.98))', borderRadius: 20, padding: 20, border: '2px solid #667eea', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <span style={{ background: '#667eea', color: 'white', padding: '4px 12px', borderRadius: 12, fontSize: 12, fontWeight: 'bold' }}>
+                {tutorialText.step} of {tutorialSteps.length}
+              </span>
+              <button onClick={endTutorial} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '4px 12px', borderRadius: 12, fontSize: 12, cursor: 'pointer' }}>
+                ✕ Skip
+              </button>
+            </div>
+            <h3 style={{ color: '#00ff88', margin: '0 0 10px 0', fontSize: 18 }}>{tutorialText.title}</h3>
+            <p style={{ color: '#ffffff', margin: '0 0 16px 0', fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{tutorialText.description}</p>
+            <button 
+              onClick={nextStep} 
+              disabled={stepAnimating}
+              style={{ 
+                width: '100%', 
+                padding: '14px 24px', 
+                background: stepAnimating ? '#555' : 'linear-gradient(135deg, #667eea, #764ba2)', 
+                border: 'none', 
+                borderRadius: 12, 
+                color: 'white', 
+                fontSize: 16, 
+                fontWeight: 'bold', 
+                cursor: stepAnimating ? 'not-allowed' : 'pointer',
+                transition: 'all 0.3s'
+              }}>
+              {currentStepIndex >= tutorialSteps.length - 1 ? '✓ Finish' : 'Next Step →'}
+            </button>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 12 }}>
+              {tutorialSteps.map((_, i) => (
+                <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i <= currentStepIndex ? '#667eea' : 'rgba(255,255,255,0.3)' }} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showControls && !tutorialActive && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '20px 10px 30px', background: 'linear-gradient(to top, rgba(0,0,0,0.95), transparent)', zIndex: 100 }}>
           {(appMode === 'surface' && surfacePlaced) && (
             <div style={{ textAlign: 'center', marginBottom: 10 }}>
@@ -3646,7 +4141,6 @@ export default function Home() {
           
           <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
             {currentStructure === 'array' && (<>
-              {/* Selection Mode UI */}
               {selectionMode !== 'none' && (
                 <div style={{ width: '100%', marginBottom: 10 }}>
                   <div style={{ textAlign: 'center', color: '#ffff00', marginBottom: 8, fontSize: 14, fontWeight: 'bold' }}>
@@ -3654,59 +4148,28 @@ export default function Home() {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'center', gap: 6, flexWrap: 'wrap' }}>
                     {getArrayData().map((_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => {
-                          if (selectionMode === 'access') selectIndexForAccess(i);
-                          else if (selectionMode === 'insert') selectIndexForInsert(i);
-                          else if (selectionMode === 'delete') selectIndexForDelete(i);
-                          else if (selectionMode === 'swap-first' || selectionMode === 'swap-second') selectIndexForSwap(i);
-                        }}
-                        style={{
-                          width: 44, height: 44,
-                          borderRadius: '50%',
-                          border: (highlightIndex === i || swapFirstIndex === i) ? '3px solid #ffff00' : '2px solid rgba(255,255,255,0.5)',
-                          background: (highlightIndex === i || swapFirstIndex === i) ? '#ffff00' : 'rgba(255,255,255,0.15)',
-                          color: (highlightIndex === i || swapFirstIndex === i) ? '#000' : '#fff',
-                          fontSize: 16, fontWeight: 'bold',
-                          cursor: 'pointer'
-                        }}
-                      >
+                      <button key={i} onClick={() => handleIndexSelect(i)}
+                        style={{ width: 44, height: 44, borderRadius: '50%', border: (highlightIndex === i || swapFirstIndex === i) ? '3px solid #ffff00' : '2px solid rgba(255,255,255,0.5)', background: (highlightIndex === i || swapFirstIndex === i) ? '#ffff00' : 'rgba(255,255,255,0.15)', color: (highlightIndex === i || swapFirstIndex === i) ? '#000' : '#fff', fontSize: 16, fontWeight: 'bold', cursor: 'pointer' }}>
                         [{i}]
                       </button>
                     ))}
                     {selectionMode === 'insert' && (
-                      <button
-                        onClick={() => selectIndexForInsert(getArrayData().length)}
-                        style={{
-                          width: 44, height: 44,
-                          borderRadius: '50%',
-                          border: '2px dashed rgba(255,255,255,0.5)',
-                          background: 'rgba(46, 204, 113, 0.3)',
-                          color: '#2ecc71',
-                          fontSize: 14, fontWeight: 'bold',
-                          cursor: 'pointer'
-                        }}
-                      >
+                      <button onClick={() => handleIndexSelect(getArrayData().length)}
+                        style={{ width: 44, height: 44, borderRadius: '50%', border: '2px dashed rgba(255,255,255,0.5)', background: 'rgba(46, 204, 113, 0.3)', color: '#2ecc71', fontSize: 14, fontWeight: 'bold', cursor: 'pointer' }}>
                         [{getArrayData().length}]
                       </button>
                     )}
                   </div>
                   <div style={{ textAlign: 'center', marginTop: 8 }}>
-                    <button onClick={cancelSelection} style={{
-                      padding: '8px 20px', fontSize: 12, fontWeight: 'bold',
-                      border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20,
-                      background: 'rgba(231, 76, 60, 0.3)', color: '#fff', cursor: 'pointer'
-                    }}>✕ Cancel</button>
+                    <button onClick={cancelSelection} style={{ padding: '8px 20px', fontSize: 12, fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, background: 'rgba(231, 76, 60, 0.3)', color: '#fff', cursor: 'pointer' }}>✕ Cancel</button>
                   </div>
                 </div>
               )}
 
-              {/* Normal operation buttons */}
               {selectionMode === 'none' && (
                 <>
                   {arrayEnv === 'todo' ? (
-                    <OpBtn onClick={todoAppend} disabled={isAnimating || getArrayData().length >= 6} color="#2ecc71" label="➕ Append" />
+                    <OpBtn onClick={todoAppendTutorial} disabled={isAnimating || getArrayData().length >= 6} color="#2ecc71" label="➕ Append" />
                   ) : (
                     <>
                       <OpBtn onClick={startArrayAccess} disabled={isAnimating} color="#f39c12" label="📍 Access" />
@@ -3720,22 +4183,22 @@ export default function Home() {
             </>)}
             
             {currentStructure === 'linkedlist' && (<>
-              <OpBtn onClick={linkedListInsertHead} disabled={isAnimating || getLinkedListData().length >= 5} color="#2ecc71" label="⬅️ +Head" />
-              <OpBtn onClick={linkedListInsertTail} disabled={isAnimating || getLinkedListData().length >= 5} color="#3498db" label="➡️ +Tail" />
-              <OpBtn onClick={linkedListDeleteHead} disabled={isAnimating || getLinkedListData().length <= 2} color="#e74c3c" label="🗑️ -Head" />
-              <OpBtn onClick={linkedListTraverse} disabled={isAnimating} color="#9b59b6" label="🔍 Traverse" />
+              <OpBtn onClick={linkedListInsertHeadTutorial} disabled={isAnimating || getLinkedListData().length >= 5} color="#2ecc71" label="⬅️ +Head" />
+              <OpBtn onClick={linkedListInsertTailTutorial} disabled={isAnimating || getLinkedListData().length >= 5} color="#3498db" label="➡️ +Tail" />
+              <OpBtn onClick={linkedListDeleteHeadTutorial} disabled={isAnimating || getLinkedListData().length <= 2} color="#e74c3c" label="🗑️ -Head" />
+              <OpBtn onClick={linkedListTraverseTutorial} disabled={isAnimating} color="#9b59b6" label="🔍 Traverse" />
             </>)}
             
             {currentStructure === 'stack' && (<>
-              <OpBtn onClick={stackPush} disabled={isAnimating || getStackData().length >= 5} color="#2ecc71" label="⬆️ Push" />
-              <OpBtn onClick={stackPop} disabled={isAnimating || getStackData().length <= 1} color="#e74c3c" label="⬇️ Pop" />
-              <OpBtn onClick={stackPeek} disabled={isAnimating} color="#f39c12" label="👁️ Peek" />
+              <OpBtn onClick={stackPushTutorial} disabled={isAnimating || getStackData().length >= 5} color="#2ecc71" label="⬆️ Push" />
+              <OpBtn onClick={stackPopTutorial} disabled={isAnimating || getStackData().length <= 1} color="#e74c3c" label="⬇️ Pop" />
+              <OpBtn onClick={stackPeekTutorial} disabled={isAnimating} color="#f39c12" label="👁️ Peek" />
             </>)}
             
             {currentStructure === 'queue' && (<>
-              <OpBtn onClick={queueEnqueue} disabled={isAnimating || getQueueData().length >= 5} color="#2ecc71" label="➕ Enqueue" />
-              <OpBtn onClick={queueDequeue} disabled={isAnimating || getQueueData().length <= 1} color="#e74c3c" label="➖ Dequeue" />
-              <OpBtn onClick={queueFront} disabled={isAnimating} color="#f39c12" label="👁️ Front" />
+              <OpBtn onClick={queueEnqueueTutorial} disabled={isAnimating || getQueueData().length >= 5} color="#2ecc71" label="➕ Enqueue" />
+              <OpBtn onClick={queueDequeueTutorial} disabled={isAnimating || getQueueData().length <= 1} color="#e74c3c" label="➖ Dequeue" />
+              <OpBtn onClick={queueFrontTutorial} disabled={isAnimating} color="#f39c12" label="👁️ Front" />
             </>)}
           </div>
           
@@ -3777,10 +4240,11 @@ function OpBtn({ onClick, disabled, color, label }: { onClick: () => void; disab
   );
 }
 
-function Visualization3D({ position, data, highlightIndex, highlightIndex2, structure, environment, zoomLevel, setZoomLevel, isSurfaceMode, animPhase, animData, animProgress }: {
+function Visualization3D({ position, data, highlightIndex, highlightIndex2, structure, environment, zoomLevel, setZoomLevel, isSurfaceMode, animPhase, animData, animProgress, tutorialText }: {
   position: Position; data: DataItem[]; highlightIndex: number | null; highlightIndex2: number | null;
   structure: DataStructure; environment: string; zoomLevel: number; setZoomLevel: (z: number) => void;
   isSurfaceMode: boolean; animPhase: string; animData: Record<string, any>; animProgress: number;
+  tutorialText?: { title: string; description: string; step: string } | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const groupRef = useRef<THREE.Group | null>(null);
@@ -3861,8 +4325,8 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
 
   useEffect(() => {
     if (!groupRef.current) return;
-    buildSceneContent(groupRef.current, data, highlightIndex, highlightIndex2, structure, environment, animPhase, animData, animProgress);
-  }, [data, highlightIndex, highlightIndex2, structure, environment, animPhase, animData, animProgress]);
+    buildSceneContent(groupRef.current, data, highlightIndex, highlightIndex2, structure, environment, animPhase, animData, animProgress, tutorialText);
+  }, [data, highlightIndex, highlightIndex2, structure, environment, animPhase, animData, animProgress, tutorialText]);
 
   return <div ref={containerRef} style={{ position: 'absolute', left: 0, top: 0, width: '100vw', height: '100vh', zIndex: 50, touchAction: 'none', pointerEvents: 'auto', overflow: 'visible' }} />;
 }
