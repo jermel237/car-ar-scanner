@@ -3135,11 +3135,11 @@ function buildSceneContent(
       const ticketDispenserGroup = createTicketDispenser(data, highlightIndex, animPhase || '', animProgress || 0);
       group.add(ticketDispenserGroup);
 
-        } else if (environment === 'students') {
+    } else if (environment === 'students') {
       const schoolBuilding = createSchoolBuilding();
       schoolBuilding.position.set(startX - 0.8, groundY, 0);
       schoolBuilding.scale.setScalar(0.5);
-      schoolBuilding.rotation.y = Math.PI / 2; // School faces students
+      schoolBuilding.rotation.y = 0; // School entrance faces RIGHT toward students
       group.add(schoolBuilding);
 
       data.forEach((item, i) => {
@@ -3170,7 +3170,7 @@ function buildSceneContent(
             const human = createHuman3D(item.appearance, item.label, isHl, false, walkPhase);
             human.position.set(startX + i * spacing + 0.6 + extraX, groundY, 0);
             human.scale.setScalar(studentScale);
-            human.rotation.y = -Math.PI / 2; // Students face school
+            human.rotation.y = -Math.PI / 2; // Students face LEFT toward school
 
             if (!(isFront && (animPhase === 'queue-dequeue-walk' || animPhase === 'queue-dequeue-enter'))) {
               applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue', animProgress);
