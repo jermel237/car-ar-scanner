@@ -2492,29 +2492,77 @@ function buildSceneContent(
       group.add(board);
 
     } else if (environment === 'todo') {
+      // ToDo List - Show as clipboard with individual task items that can be manipulated
       const clipboard = createClipboard('Tasks', '#e74c3c', false, data);
-      clipboard.position.set(0, 0, 0);
-      clipboard.scale.setScalar(1.2);
+      clipboard.position.set(-0.8, 0, 0);
+      clipboard.scale.setScalar(0.9);
       group.add(clipboard);
 
+      // Also show tasks as individual items for manipulation
+      const taskStartX = 0.3;
+      data.forEach((item, i) => {
+        const isHl = highlightIndex === i || highlightIndex2 === i;
+        
+        // Create task card
+        const taskGroup = new THREE.Group();
+        
+        const cardMat = new THREE.MeshStandardMaterial({
+          color: item.color,
+          roughness: 0.4,
+          emissive: isHl ? '#ffff00' : '#000',
+          emissiveIntensity: isHl ? 0.3 : 0,
+        });
+        
+        const card = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.18, 0.02), cardMat);
+        taskGroup.add(card);
+        
+        // Task label
+        const taskCanvas = document.createElement('canvas');
+        taskCanvas.width = 140;
+        taskCanvas.height = 72;
+        const tctx = taskCanvas.getContext('2d')!;
+        tctx.fillStyle = 'rgba(255,255,255,0.95)';
+        tctx.fillRect(0, 0, 140, 72);
+        tctx.fillStyle = '#333';
+        tctx.font = 'bold 20px Arial';
+        tctx.textAlign = 'center';
+        tctx.fillText(item.label, 70, 32);
+        tctx.font = '14px Arial';
+        tctx.fillStyle = '#666';
+        tctx.fillText(`Task ${i + 1}`, 70, 55);
+        
+        const taskTex = new THREE.CanvasTexture(taskCanvas);
+        const taskLabel = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.33, 0.16),
+          new THREE.MeshBasicMaterial({ map: taskTex, transparent: true })
+        );
+        taskLabel.position.z = 0.011;
+        taskGroup.add(taskLabel);
+        
+        if (isHl) {
+          const glow = new THREE.Mesh(
+            new THREE.BoxGeometry(0.39, 0.22, 0.025),
+            new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.2 })
+          );
+          taskGroup.add(glow);
+        }
+        
+        taskGroup.position.set(taskStartX + (i % 2) * 0.45, 0.15 - Math.floor(i / 2) * 0.25, 0);
+        applyItemAnimation(taskGroup, i, animPhase || '', animData || {}, 'array', animProgress);
+        group.add(taskGroup);
+        
+        const idx = createTextSprite(`[${i}]`, isHl ? '#ffff00' : '#ffffff', 18);
+        idx.position.set(taskStartX + (i % 2) * 0.45, 0.28 - Math.floor(i / 2) * 0.25, 0);
+        idx.scale.set(0.2, 0.1, 1);
+        group.add(idx);
+      });
+
+      // Array representation text
       const arrayStr = `array = [${data.map(d => `"${d.label}"`).join(', ')}]`;
-      const arrayLabel = createTextSprite(arrayStr.length > 40 ? arrayStr.substring(0, 37) + '...' : arrayStr, '#00ff00', 14);
-      arrayLabel.position.set(0, -0.42, 0);
-      arrayLabel.scale.set(1.0, 0.12, 1);
+      const arrayLabel = createTextSprite(arrayStr.length > 35 ? arrayStr.substring(0, 32) + '...' : arrayStr, '#00ff00', 12);
+      arrayLabel.position.set(0, -0.45, 0);
+      arrayLabel.scale.set(0.9, 0.1, 1);
       group.add(arrayLabel);
-
-      const indexStr = `indices: ${data.map((_, i) => `[${i}]`).join('  ')}`;
-      const indexLabel = createTextSprite(indexStr, '#aaaaaa', 12);
-      indexLabel.position.set(0, -0.52, 0);
-      indexLabel.scale.set(0.9, 0.1, 1);
-      group.add(indexLabel);
-
-      if (highlightIndex !== null && highlightIndex < data.length) {
-        const highlightLabel = createTextSprite(`↑ NEW [${highlightIndex}]`, '#ffff00', 16);
-        highlightLabel.position.set(0, -0.62, 0);
-        highlightLabel.scale.set(0.5, 0.1, 1);
-        group.add(highlightLabel);
-      }
     }
 
   // ==================== LINKED LIST ====================
@@ -3060,6 +3108,47 @@ export default function Home() {
   const zoomOut = useCallback(() => setZoomLevel(prev => Math.max(prev - 0.25, 0.3)), []);
   const resetZoom = useCallback(() => setZoomLevel(1.0), []);
 
+  // Helper to generate new items based on environment
+  const generateNewItem = (): DataItem => {
+    if (arrayEnv === 'classroom') {
+      const names = ['Emma', 'Liam', 'Mia', 'Noah', 'Ava', 'Jack', 'Zoe', 'Leo'];
+      const skinTones = ['#f5c6a0', '#c68642', '#8d5524'];
+      const hairColors = ['#1a1a1a', '#3d2314', '#2c1810', '#d4a574'];
+      const shirtColors = ['#1abc9c', '#9b59b6', '#e74c3c', '#3498db', '#f39c12', '#2ecc71'];
+      const genders: ('male' | 'female')[] = ['male', 'female'];
+      const gender = genders[Math.floor(Math.random() * genders.length)];
+      return {
+        id: Date.now(),
+        label: names[Math.floor(Math.random() * names.length)],
+        color: shirtColors[Math.floor(Math.random() * shirtColors.length)],
+        appearance: {
+          skinTone: skinTones[Math.floor(Math.random() * skinTones.length)],
+          shirtColor: shirtColors[Math.floor(Math.random() * shirtColors.length)],
+          pantsColor: '#2c3e50',
+          hairColor: hairColors[Math.floor(Math.random() * hairColors.length)],
+          hairStyle: gender === 'female' ? 'long' : (['short', 'short', 'bald'] as const)[Math.floor(Math.random() * 3)],
+          gender: gender
+        }
+      };
+    } else if (arrayEnv === 'todo') {
+      const taskNames = ['Meeting', 'Email', 'Report', 'Call', 'Review', 'Plan', 'Debug', 'Test'];
+      const taskColors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22'];
+      return {
+        id: Date.now(),
+        label: taskNames[Math.floor(Math.random() * taskNames.length)],
+        color: taskColors[Math.floor(Math.random() * taskColors.length)]
+      };
+    } else {
+      const cerealNames = ['Granola', 'Muesli', 'Bran', 'Oats', 'Wheat'];
+      const cerealColors = ['#8B4513', '#D2691E', '#CD853F', '#DEB887', '#F4A460'];
+      return {
+        id: Date.now(),
+        label: cerealNames[Math.floor(Math.random() * cerealNames.length)],
+        color: cerealColors[Math.floor(Math.random() * cerealColors.length)]
+      };
+    }
+  };
+
   // ==================== STEP-BY-STEP TUTORIAL FUNCTIONS ====================
 
   const runTutorialStep = async (step: TutorialStep) => {
@@ -3092,7 +3181,6 @@ export default function Home() {
       setCurrentStepIndex(nextIdx);
       await runTutorialStep(tutorialSteps[nextIdx]);
     } else {
-      // Tutorial finished
       endTutorial();
     }
   };
@@ -3118,58 +3206,131 @@ export default function Home() {
     runTutorialStep(steps[0]);
   };
 
-  // ==================== ARRAY OPERATIONS WITH STEP-BY-STEP ====================
+  // ==================== APPEND VS INSERT TUTORIAL ====================
+  // This replaces the old "Access" operation and teaches the difference
 
-  const arrayAccessTutorial = (index: number) => {
+  const appendVsInsertTutorial = () => {
+    if (isAnimating || tutorialActive || getArrayData().length >= 6) return;
+    
     const data = getArrayData();
+    const newItem = generateNewItem();
+    const insertIndex = Math.floor(data.length / 2); // Insert in middle to show shifting
+    
     const steps: TutorialStep[] = [
       {
-        title: "📍 Array Access",
-        description: `We want to access the element at index [${index}]. In an array, we can directly jump to any position using its index.`,
-        highlightIndex: index,
+        title: "📚 Append vs Insert",
+        description: "Let's compare two ways to add elements:\n\n• APPEND: Add to END (fast!)\n• INSERT: Add at specific INDEX (slower)\n\nWatch the difference!",
       },
       {
-        title: "⚡ Direct Access",
-        description: `Time Complexity: O(1) - Constant time! Arrays store elements in contiguous memory, so we calculate the exact position instantly.`,
-        highlightIndex: index,
-        animPhase: 'access-lift',
+        title: "⚡ APPEND - Step 1",
+        description: `Current array has ${data.length} elements.\nAppend adds to index [${data.length}] - the END.\n\nNo other elements need to move!`,
+        highlightIndex: data.length,
+      },
+      {
+        title: "⚡ APPEND - Step 2",
+        description: `Simply place the new element:\narray[${data.length}] = "${newItem.label}"\nlength++\n\nTime Complexity: O(1) - Constant!`,
+        highlightIndex: data.length,
+        animPhase: 'insert-drop',
         animDuration: 600,
+        action: () => {
+          (setArrayData as any)((prev: DataItem[]) => [...prev, newItem]);
+        },
       },
       {
-        title: "✅ Found It!",
-        description: `The element at index [${index}] is "${data[index]?.label}". This direct access is why arrays are great for random access operations!`,
-        highlightIndex: index,
-        animPhase: 'access-bounce',
-        animDuration: 800,
+        title: "✅ Appended!",
+        description: `"${newItem.label}" added at end!\n\nAPPEND = O(1)\n• No shifting required\n• Direct placement at array[length]\n• Fast and efficient!`,
+        highlightIndex: data.length,
+        animPhase: 'insert-settle',
+        animDuration: 400,
       },
       {
-        title: "📚 Key Takeaway",
-        description: `Array access is O(1) because: memory_address = base_address + (index × element_size). No searching required!`,
-        highlightIndex: index,
-        animPhase: 'access-settle',
-        animDuration: 500,
+        title: "🔄 Now let's INSERT",
+        description: `Now we'll INSERT at index [${insertIndex}] (middle).\n\nThis requires SHIFTING elements to make room. Watch carefully!`,
+        highlightIndex: insertIndex,
+      },
+      {
+        title: "🔄 INSERT - Shifting",
+        description: `Before inserting at [${insertIndex}], we must:\n\nfor i = length-1 down to ${insertIndex}:\n    array[i+1] = array[i]\n\nEach element moves RIGHT by 1!`,
+        highlightIndex: insertIndex,
       },
     ];
+
+    // Add steps showing each element shifting
+    for (let i = data.length; i > insertIndex; i--) {
+      steps.push({
+        title: `🔄 Shifting [${i}] → [${i + 1}]`,
+        description: `Moving element from index [${i}] to [${i + 1}]\n\narray[${i + 1}] = array[${i}]`,
+        highlightIndex: i,
+        animPhase: 'access-lift',
+        animDuration: 300,
+      });
+    }
+
+    const newItem2 = generateNewItem();
+    steps.push(
+      {
+        title: "📦 Insert New Element",
+        description: `Now there's space at [${insertIndex}]!\n\narray[${insertIndex}] = "${newItem2.label}"`,
+        highlightIndex: insertIndex,
+        animPhase: 'insert-drop',
+        animDuration: 600,
+        action: () => {
+          (setArrayData as any)((prev: DataItem[]) => {
+            const arr = [...prev];
+            arr.splice(insertIndex, 0, newItem2);
+            return arr;
+          });
+        },
+      },
+      {
+        title: "✅ Inserted!",
+        description: `"${newItem2.label}" inserted at [${insertIndex}]!\n\nINSERT = O(n)\n• Must shift ${data.length - insertIndex + 1} elements\n• More elements = more shifting\n• Slower than append!`,
+        highlightIndex: insertIndex,
+        animPhase: 'insert-settle',
+        animDuration: 400,
+      },
+      {
+        title: "📊 Comparison Summary",
+        description: `APPEND (end): O(1) - Constant time\n  → Just place at array[length]\n\nINSERT (index): O(n) - Linear time\n  → Must shift elements first\n\n💡 Use append when possible!`,
+      }
+    );
+
     startTutorial(steps);
   };
 
+  // ==================== INSERT AT INDEX TUTORIAL ====================
+
   const arrayInsertTutorial = (insertIndex: number) => {
     const data = getArrayData();
-    const newItem: DataItem = { id: Date.now(), label: 'New', color: '#1abc9c' };
+    const newItem = generateNewItem();
     
     const steps: TutorialStep[] = [
       {
         title: "➕ Array Insert",
-        description: `We want to insert a new element at index [${insertIndex}]. First, let's understand what needs to happen.`,
+        description: `Inserting at index [${insertIndex}].\n\nCurrent array: ${data.length} elements\nWe need to make room first!`,
       },
       {
-        title: "🔄 Shift Elements",
-        description: `All elements from index [${insertIndex}] onwards must shift RIGHT by one position to make room. This takes O(n) time!`,
+        title: "🔄 Shift Right",
+        description: `All elements from [${insertIndex}] must shift RIGHT:\n\nfor (i = ${data.length - 1}; i >= ${insertIndex}; i--)\n    array[i+1] = array[i]`,
         highlightIndex: insertIndex,
       },
+    ];
+
+    // Show shifting animation for each element
+    for (let i = data.length - 1; i >= insertIndex; i--) {
+      steps.push({
+        title: `↗️ Shift [${i}] → [${i + 1}]`,
+        description: `Moving "${data[i]?.label || 'element'}" one position right`,
+        highlightIndex: i,
+        animPhase: 'access-lift',
+        animDuration: 250,
+      });
+    }
+
+    steps.push(
       {
-        title: "📦 Make Space",
-        description: `Moving elements: for(i = length-1; i >= ${insertIndex}; i--) { array[i+1] = array[i]; } Each shift is one operation.`,
+        title: "📦 Place Element",
+        description: `Space created at [${insertIndex}]!\narray[${insertIndex}] = "${newItem.label}"`,
         highlightIndex: insertIndex,
         animPhase: 'insert-drop',
         animDuration: 600,
@@ -3183,18 +3344,21 @@ export default function Home() {
       },
       {
         title: "✅ Inserted!",
-        description: `The new element is now at index [${insertIndex}]. Total time: O(n) in worst case (inserting at beginning).`,
+        description: `"${newItem.label}" now at index [${insertIndex}]\n\nTime: O(n) - we shifted ${data.length - insertIndex} elements`,
         highlightIndex: insertIndex,
         animPhase: 'insert-settle',
-        animDuration: 500,
+        animDuration: 400,
       },
       {
-        title: "📚 Key Takeaway",
-        description: `Insert at end: O(1). Insert at beginning: O(n). Insert in middle: O(n). Arrays aren't ideal for frequent insertions!`,
-      },
-    ];
+        title: "📚 Key Points",
+        description: `Insert at [0] = O(n) worst case (shift ALL)\nInsert at [${data.length}] = O(1) best case (no shift)\nInsert in middle = O(n/2) average`,
+      }
+    );
+
     startTutorial(steps);
   };
+
+  // ==================== DELETE TUTORIAL ====================
 
   const arrayDeleteTutorial = (deleteIndex: number) => {
     const data = getArrayData();
@@ -3203,26 +3367,44 @@ export default function Home() {
     const steps: TutorialStep[] = [
       {
         title: "🗑️ Array Delete",
-        description: `We want to delete the element at index [${deleteIndex}] which is "${deletedItem?.label}". Let's see the process.`,
+        description: `Deleting "${deletedItem?.label}" at index [${deleteIndex}].\n\nThis will leave a gap that must be filled!`,
         highlightIndex: deleteIndex,
       },
       {
-        title: "🎯 Target Element",
-        description: `First, we identify the element to remove. It's at index [${deleteIndex}] in our array.`,
+        title: "🎯 Remove Element",
+        description: `First, remove the element:\ndeleted = array[${deleteIndex}] // "${deletedItem?.label}"\n\nNow we have a gap at [${deleteIndex}]!`,
         highlightIndex: deleteIndex,
         animPhase: 'delete-lift',
         animDuration: 600,
       },
       {
-        title: "💨 Remove Element",
-        description: `The element is being removed. But wait - this leaves a gap in our array!`,
+        title: "💨 Element Gone",
+        description: `The element is removed.\n\nBut we can't leave a gap in the array! All elements after must shift LEFT.`,
         highlightIndex: deleteIndex,
         animPhase: 'delete-shrink',
         animDuration: 600,
       },
       {
         title: "🔄 Shift Left",
-        description: `All elements after index [${deleteIndex}] must shift LEFT to fill the gap. for(i = ${deleteIndex}; i < length-1; i++) { array[i] = array[i+1]; }`,
+        description: `Shifting elements to fill the gap:\n\nfor (i = ${deleteIndex}; i < ${data.length - 1}; i++)\n    array[i] = array[i+1]`,
+      },
+    ];
+
+    // Show each element shifting left
+    for (let i = deleteIndex; i < data.length - 1; i++) {
+      steps.push({
+        title: `↙️ Shift [${i + 1}] → [${i}]`,
+        description: `Moving "${data[i + 1]?.label}" left to fill gap`,
+        highlightIndex: i,
+        animPhase: 'access-settle',
+        animDuration: 250,
+      });
+    }
+
+    steps.push(
+      {
+        title: "✅ Deleted!",
+        description: `"${deletedItem?.label}" removed!\nArray size: ${data.length} → ${data.length - 1}`,
         animPhase: 'delete-close',
         animDuration: 500,
         action: () => {
@@ -3230,12 +3412,15 @@ export default function Home() {
         },
       },
       {
-        title: "📚 Key Takeaway",
-        description: `Delete time complexity: O(n) for shifting. Delete at end: O(1). Delete at beginning: O(n) - worst case!`,
-      },
-    ];
+        title: "📚 Key Points",
+        description: `Delete at [0] = O(n) worst (shift ALL left)\nDelete at [${data.length - 1}] = O(1) best (no shift)\n\nTime Complexity: O(n) average`,
+      }
+    );
+
     startTutorial(steps);
   };
+
+  // ==================== SWAP TUTORIAL ====================
 
   const arraySwapTutorial = (idx1: number, idx2: number) => {
     const data = getArrayData();
@@ -3243,25 +3428,31 @@ export default function Home() {
     const steps: TutorialStep[] = [
       {
         title: "🔀 Array Swap",
-        description: `We will swap elements at index [${idx1}] and [${idx2}]. This is "${data[idx1]?.label}" and "${data[idx2]?.label}".`,
+        description: `Swapping elements:\n[${idx1}] "${data[idx1]?.label}" ↔ [${idx2}] "${data[idx2]?.label}"\n\nSwap uses a temporary variable!`,
         highlightIndex: idx1,
         highlightIndex2: idx2,
       },
       {
-        title: "📦 Using Temp Variable",
-        description: `Step 1: temp = array[${idx1}]  // Save first element\nWe store "${data[idx1]?.label}" temporarily.`,
+        title: "📦 Step 1: Save First",
+        description: `temp = array[${idx1}]\ntemp = "${data[idx1]?.label}"\n\nWe save this so we don't lose it!`,
         highlightIndex: idx1,
         highlightIndex2: idx2,
         animPhase: 'swap-lift',
         animDuration: 500,
       },
       {
-        title: "↔️ Exchange Values",
-        description: `Step 2: array[${idx1}] = array[${idx2}]  // Move second to first\nStep 3: array[${idx2}] = temp  // Move temp to second`,
+        title: "➡️ Step 2: Copy Second",
+        description: `array[${idx1}] = array[${idx2}]\narray[${idx1}] = "${data[idx2]?.label}"\n\nFirst position now has second's value!`,
         highlightIndex: idx1,
         highlightIndex2: idx2,
         animPhase: 'swap-cross',
         animDuration: 500,
+      },
+      {
+        title: "⬅️ Step 3: Use Temp",
+        description: `array[${idx2}] = temp\narray[${idx2}] = "${data[idx1]?.label}"\n\nSecond position gets original first!`,
+        highlightIndex: idx1,
+        highlightIndex2: idx2,
         action: () => {
           (setArrayData as any)((prev: DataItem[]) => {
             const arr = [...prev];
@@ -3272,25 +3463,68 @@ export default function Home() {
       },
       {
         title: "✅ Swapped!",
-        description: `Elements exchanged successfully! Now [${idx1}] = "${data[idx2]?.label}" and [${idx2}] = "${data[idx1]?.label}"`,
+        description: `Elements exchanged!\n[${idx1}] = "${data[idx2]?.label}"\n[${idx2}] = "${data[idx1]?.label}"`,
         highlightIndex: idx1,
         highlightIndex2: idx2,
         animPhase: 'swap-drop',
         animDuration: 500,
       },
       {
-        title: "📚 Key Takeaway",
-        description: `Swap is always O(1) - just 3 operations regardless of array size. Used in many sorting algorithms!`,
+        title: "📚 Key Points",
+        description: `Swap is ALWAYS O(1)!\n\n• Just 3 operations\n• No matter array size\n• Used in sorting algorithms\n• No shifting needed!`,
+      },
+    ];
+    startTutorial(steps);
+  };
+
+  // ==================== APPEND TUTORIAL ====================
+
+  const arrayAppendTutorial = () => {
+    if (isAnimating || tutorialActive || getArrayData().length >= 6) return;
+    
+    const data = getArrayData();
+    const newIndex = data.length;
+    const newItem = generateNewItem();
+    
+    const steps: TutorialStep[] = [
+      {
+        title: "➕ Append to End",
+        description: `Adding "${newItem.label}" to the END of array.\n\nCurrent length: ${data.length}\nNew element goes at: [${newIndex}]`,
+      },
+      {
+        title: "📍 Direct Placement",
+        description: `No shifting needed!\n\narray[${newIndex}] = "${newItem.label}"\nlength = ${newIndex + 1}\n\nWe know exactly where to put it!`,
+        highlightIndex: newIndex,
+        action: () => {
+          (setArrayData as any)((prev: DataItem[]) => [...prev, newItem]);
+        },
+      },
+      {
+        title: "⚡ Fast Operation",
+        description: `Placing element at end...`,
+        highlightIndex: newIndex,
+        animPhase: 'insert-drop',
+        animDuration: 600,
+      },
+      {
+        title: "✅ Appended!",
+        description: `"${newItem.label}" added at index [${newIndex}]!\n\nTime Complexity: O(1) - Constant!\nNo elements were shifted.`,
+        highlightIndex: newIndex,
+        animPhase: 'insert-settle',
+        animDuration: 400,
+      },
+      {
+        title: "📚 Why O(1)?",
+        description: `Append is fast because:\n\n• We know length = next index\n• Direct memory access\n• No loops or shifts\n• Same speed for any array size!`,
       },
     ];
     startTutorial(steps);
   };
 
   // Selection mode handlers
-  const startArrayAccess = () => {
-    if (isAnimating || selectionMode !== 'none' || tutorialActive) return;
-    setSelectionMode('access');
-    setPendingOperation('Select index to ACCESS:');
+  const startAppendVsInsert = () => {
+    if (isAnimating || selectionMode !== 'none' || tutorialActive || getArrayData().length >= 5) return;
+    appendVsInsertTutorial();
   };
 
   const startArrayInsert = () => {
@@ -3312,12 +3546,13 @@ export default function Home() {
     setPendingOperation('Select FIRST index to swap:');
   };
 
+  const startArrayAppend = () => {
+    if (isAnimating || tutorialActive || getArrayData().length >= 6) return;
+    arrayAppendTutorial();
+  };
+
   const handleIndexSelect = (index: number) => {
-    if (selectionMode === 'access') {
-      setSelectionMode('none');
-      setPendingOperation('');
-      arrayAccessTutorial(index);
-    } else if (selectionMode === 'insert') {
+    if (selectionMode === 'insert') {
       setSelectionMode('none');
       setPendingOperation('');
       arrayInsertTutorial(index);
@@ -3347,46 +3582,6 @@ export default function Home() {
     setHighlightIndex2(null);
   };
 
-  // ToDo append
-  const todoAppendTutorial = () => {
-    if (isAnimating || tutorialActive || getArrayData().length >= 6) return;
-    
-    const data = getArrayData();
-    const newIndex = data.length;
-    const taskNames = ['Meeting', 'Email', 'Report', 'Call', 'Review'];
-    const newTask = { id: Date.now(), label: taskNames[Math.floor(Math.random() * taskNames.length)], color: '#1abc9c' };
-    
-    const steps: TutorialStep[] = [
-      {
-        title: "➕ Append to Array",
-        description: `We're adding "${newTask.label}" to the END of our array. Current length: ${data.length}`,
-      },
-      {
-        title: "📍 Find Position",
-        description: `The new element goes at index [${newIndex}]. For append, we already know the position - it's always array.length!`,
-        highlightIndex: newIndex,
-        action: () => {
-          (setArrayData as any)((prev: DataItem[]) => [...prev, newTask]);
-        },
-      },
-      {
-        title: "⚡ Direct Placement",
-        description: `array[${newIndex}] = "${newTask.label}"\nlength = ${newIndex + 1}\n\nNo shifting needed - that's why append is O(1)!`,
-        highlightIndex: newIndex,
-        animPhase: 'insert-drop',
-        animDuration: 600,
-      },
-      {
-        title: "📚 Key Takeaway",
-        description: `Append is O(1) - constant time! We just place at the end. This is why dynamic arrays (like ArrayList) are efficient for adding at the end.`,
-        highlightIndex: newIndex,
-        animPhase: 'insert-settle',
-        animDuration: 400,
-      },
-    ];
-    startTutorial(steps);
-  };
-
   // ==================== LINKED LIST TUTORIALS ====================
 
   const linkedListInsertHeadTutorial = () => {
@@ -3399,32 +3594,32 @@ export default function Home() {
     const steps: TutorialStep[] = [
       {
         title: "⬅️ Insert at HEAD",
-        description: "We're adding a new node at the BEGINNING of the linked list. This is the most efficient insertion!",
+        description: "Adding a new node at the BEGINNING.\n\nThis is the most efficient insertion for linked lists!",
       },
       {
         title: "🔗 Create New Node",
-        description: "Step 1: Create a new node with our data.\nnewNode = Node('New')\nnewNode.next = null",
+        description: "newNode = new Node(data)\nnewNode.next = null\n\nThe node is created but not connected yet.",
         action: () => {
           (setLinkedListData as any)((prev: DataItem[]) => [newItem, ...prev]);
         },
       },
       {
-        title: "🔄 Update Pointers",
-        description: "Step 2: Point new node to current head.\nnewNode.next = head\n\nStep 3: Update head to new node.\nhead = newNode",
+        title: "🔄 Link to Old Head",
+        description: "newNode.next = head\n\nPoint new node to current first node.",
         highlightIndex: 0,
         animPhase: 'll-insert-head',
         animDuration: 600,
       },
       {
-        title: "✅ Inserted!",
-        description: "The new node is now the head of the list. Total operations: 2 pointer updates!",
+        title: "👑 Update Head",
+        description: "head = newNode\n\nThe new node is now the head!",
         highlightIndex: 0,
         animPhase: 'll-insert-head-settle',
         animDuration: 400,
       },
       {
-        title: "📚 Key Takeaway",
-        description: "Insert at HEAD: O(1) - constant time! Unlike arrays, no shifting is needed. Just update two pointers!",
+        title: "📚 Key Points",
+        description: "Insert at HEAD = O(1)\n\n• Just 2 pointer updates\n• No traversal needed\n• No shifting like arrays\n• Super fast!",
       },
     ];
     startTutorial(steps);
@@ -3439,8 +3634,8 @@ export default function Home() {
       : { id: Date.now(), label: 'New', color: '#e74c3c' };
     
     const traverseSteps: TutorialStep[] = data.map((item, i) => ({
-      title: "🔍 Traversing...",
-      description: `Visiting node ${i}: "${item.label}"\ncurrent = current.next\n\n${i === data.length - 1 ? "This is the last node (current.next == null)" : "Not the tail yet, keep going..."}`,
+      title: `🔍 Visiting Node ${i}`,
+      description: `current = "${item.label}"\n${i === data.length - 1 ? "current.next == NULL → Found tail!" : "current.next != NULL → Keep going..."}`,
       highlightIndex: i,
       animPhase: 'll-traverse',
       animDuration: 400,
@@ -3449,16 +3644,16 @@ export default function Home() {
     const steps: TutorialStep[] = [
       {
         title: "➡️ Insert at TAIL",
-        description: "We're adding a new node at the END of the linked list. First, we need to FIND the tail!",
+        description: "Adding a new node at the END.\n\nUnlike arrays, we can't jump to the end!\nWe must traverse from head to find tail.",
       },
       {
         title: "🏃 Start Traversal",
-        description: "Unlike arrays, we can't jump to the end directly. We must traverse from head to find the tail.\n\ncurrent = head",
+        description: "current = head\n\nBegin at the first node...",
       },
       ...traverseSteps,
       {
-        title: "🔗 Found Tail!",
-        description: "Now we create and attach the new node.\nnewNode = Node('New')\ntail.next = newNode",
+        title: "🔗 Link New Node",
+        description: "tail.next = newNode\n\nConnect the last node to our new node!",
         highlightIndex: data.length,
         action: () => {
           (setLinkedListData as any)((prev: DataItem[]) => [...prev, newItem]);
@@ -3467,11 +3662,15 @@ export default function Home() {
         animDuration: 600,
       },
       {
-        title: "📚 Key Takeaway",
-        description: `Insert at TAIL: O(n) - we traversed ${data.length} nodes! With a tail pointer, this could be O(1).`,
+        title: "✅ Inserted!",
+        description: `New node added at tail!`,
         highlightIndex: data.length,
         animPhase: 'll-insert-tail-settle',
         animDuration: 400,
+      },
+      {
+        title: "📚 Key Points",
+        description: `Insert at TAIL = O(n)\n\n• Must traverse ${data.length} nodes\n• With tail pointer = O(1)\n• Trade-off: memory vs speed`,
       },
     ];
     startTutorial(steps);
@@ -3484,19 +3683,19 @@ export default function Home() {
     const steps: TutorialStep[] = [
       {
         title: "🗑️ Delete HEAD",
-        description: `We're removing the first node "${data[0]?.label}" from the linked list. This is very efficient!`,
+        description: `Removing "${data[0]?.label}" from the beginning.\n\nThis is very efficient!`,
         highlightIndex: 0,
       },
       {
         title: "📝 Save Reference",
-        description: "Step 1: Save reference to current head.\noldHead = head\nThis lets us free the memory later.",
+        description: "toDelete = head\n\nSave reference so we can free memory.",
         highlightIndex: 0,
         animPhase: 'll-delete-lift',
         animDuration: 600,
       },
       {
-        title: "🔄 Update HEAD",
-        description: "Step 2: Move head pointer to next node.\nhead = head.next\n\nThe old head is now disconnected!",
+        title: "👑 Update Head",
+        description: "head = head.next\n\nHead now points to second node!",
         highlightIndex: 0,
         animPhase: 'll-delete-shrink',
         animDuration: 600,
@@ -3505,8 +3704,8 @@ export default function Home() {
         },
       },
       {
-        title: "📚 Key Takeaway",
-        description: "Delete HEAD: O(1) - constant time! Just one pointer update. No traversal needed!",
+        title: "📚 Key Points",
+        description: "Delete HEAD = O(1)\n\n• Just one pointer update\n• No traversal needed\n• No shifting like arrays\n• Instant!",
       },
     ];
     startTutorial(steps);
@@ -3518,7 +3717,7 @@ export default function Home() {
     const data = getLinkedListData();
     const traverseSteps: TutorialStep[] = data.map((item, i) => ({
       title: `📍 Node ${i}`,
-      description: `Visiting: "${item.label}"\n\nprint(current.data)  // "${item.label}"\ncurrent = current.next`,
+      description: `Visiting: "${item.label}"\n\nprint(current.data)\ncurrent = current.next`,
       highlightIndex: i,
       animPhase: 'll-traverse',
       animDuration: 500,
@@ -3527,20 +3726,16 @@ export default function Home() {
     const steps: TutorialStep[] = [
       {
         title: "🔍 Traverse List",
-        description: "Traversal visits EVERY node from head to tail. We'll print each node's data.",
-      },
-      {
-        title: "🏁 Start at HEAD",
-        description: "current = head\n\nWe begin at the first node and follow the 'next' pointers.",
+        description: "Visit every node from HEAD to TAIL.\n\ncurrent = head\nwhile (current != null):",
       },
       ...traverseSteps,
       {
-        title: "🏁 Reached NULL",
-        description: `current.next == NULL\n\nTraversal complete! We visited ${data.length} nodes.`,
+        title: "🏁 Reached End",
+        description: `current = NULL\n\nTraversal complete!\nVisited ${data.length} nodes.`,
       },
       {
-        title: "📚 Key Takeaway",
-        description: `Traversal: O(n) - we visit every node exactly once. Used for searching, printing, and finding the tail.`,
+        title: "📚 Key Points",
+        description: `Traversal = O(n)\n\n• Must visit every node\n• Can't skip nodes\n• Used for search, print, count\n• Linear time complexity`,
       },
     ];
     startTutorial(steps);
@@ -3552,38 +3747,39 @@ export default function Home() {
     if (isAnimating || tutorialActive || getStackData().length >= 5) return;
     
     const data = getStackData();
-    const labels = stackEnv === 'books' ? ['Physics', 'English', 'Art'] : stackEnv === 'plates' ? [`Plate ${data.length + 1}`] : [`Box ${String.fromCharCode(65 + data.length)}`];
-    const newItem = { id: Date.now(), label: labels[0], color: '#9b59b6' };
+    const labels = stackEnv === 'books' ? ['Physics', 'English', 'Art', 'Music'] : stackEnv === 'plates' ? [`Plate ${data.length + 1}`] : [`Box ${String.fromCharCode(65 + data.length)}`];
+    const colors = stackEnv === 'books' ? ['#9b59b6', '#e74c3c', '#1abc9c', '#3498db'] : ['#7f8c8d'];
+    const newItem = { id: Date.now(), label: labels[Math.floor(Math.random() * labels.length)], color: colors[Math.floor(Math.random() * colors.length)] };
     
     const steps: TutorialStep[] = [
       {
         title: "⬆️ Stack PUSH",
-        description: `We're pushing "${newItem.label}" onto the stack. PUSH always adds to the TOP!`,
+        description: `Pushing "${newItem.label}" onto the stack.\n\nPUSH always adds to the TOP!\n(LIFO - Last In, First Out)`,
       },
       {
         title: "📍 Find TOP",
-        description: `Current stack size: ${data.length}\nTOP is at index: ${data.length - 1}\n\nNew element goes at index: ${data.length}`,
+        description: `top = ${data.length - 1}\nnew position = ${data.length}\n\nThe new element goes above everything!`,
         action: () => {
           (setStackData as any)((prev: DataItem[]) => [...prev, newItem]);
         },
       },
       {
         title: "📦 Place on TOP",
-        description: "stack[top + 1] = newElement\ntop = top + 1\n\nThe element is placed above all others.",
+        description: `stack[${data.length}] = "${newItem.label}"\ntop++`,
         highlightIndex: data.length,
         animPhase: 'stack-push-drop',
         animDuration: 600,
       },
       {
         title: "✅ Pushed!",
-        description: `"${newItem.label}" is now on TOP of the stack. Stack size: ${data.length + 1}`,
+        description: `"${newItem.label}" is now on TOP!`,
         highlightIndex: data.length,
         animPhase: 'stack-push-settle',
         animDuration: 400,
       },
       {
-        title: "📚 Key Takeaway",
-        description: "PUSH: O(1) - constant time! We always know where TOP is, so no searching needed.",
+        title: "📚 Key Points",
+        description: `PUSH = O(1)\n\n• Always add to top\n• No searching\n• No shifting\n• Instant operation!`,
       },
     ];
     startTutorial(steps);
@@ -3598,19 +3794,19 @@ export default function Home() {
     const steps: TutorialStep[] = [
       {
         title: "⬇️ Stack POP",
-        description: `We're removing the TOP element. In a stack, we can ONLY remove from the top!`,
+        description: `Removing the TOP element.\n\nPOP only removes from TOP!\nCan't remove from middle or bottom.`,
         highlightIndex: data.length - 1,
       },
       {
         title: "🎯 Identify TOP",
-        description: `TOP element: "${topItem.label}" at index [${data.length - 1}]\n\nvalue = stack[top]`,
+        description: `top = ${data.length - 1}\nvalue = stack[top] = "${topItem.label}"`,
         highlightIndex: data.length - 1,
         animPhase: 'stack-pop-lift',
         animDuration: 500,
       },
       {
-        title: "📤 Remove Element",
-        description: "top = top - 1\nreturn value\n\nThe element is removed and returned.",
+        title: "📤 Remove",
+        description: `Removing "${topItem.label}"...\ntop--`,
         highlightIndex: data.length - 1,
         animPhase: 'stack-pop-fly',
         animDuration: 600,
@@ -3619,8 +3815,8 @@ export default function Home() {
         },
       },
       {
-        title: "📚 Key Takeaway",
-        description: `POP: O(1) - constant time! LIFO = Last In, First Out. The most recent push is the first to pop.`,
+        title: "📚 Key Points",
+        description: `POP = O(1)\n\n• Always remove from top\n• Returns the removed item\n• LIFO: Last pushed = first popped`,
       },
     ];
     startTutorial(steps);
@@ -3635,26 +3831,26 @@ export default function Home() {
     const steps: TutorialStep[] = [
       {
         title: "👁️ Stack PEEK",
-        description: "PEEK looks at the TOP element WITHOUT removing it. Let's see what's on top!",
+        description: "Look at TOP without removing it.\n\nUseful to check before popping!",
         highlightIndex: data.length - 1,
       },
       {
-        title: "🔍 Looking at TOP",
-        description: `return stack[top]\n\nTOP element: "${topItem.label}"\n\nThe element stays in place!`,
+        title: "🔍 Examine TOP",
+        description: `return stack[top]\nreturn "${topItem.label}"\n\nElement stays in place!`,
         highlightIndex: data.length - 1,
         animPhase: 'stack-peek-lift',
         animDuration: 800,
       },
       {
-        title: "📖 Examining...",
-        description: `We can see "${topItem.label}" but it remains on the stack. Stack size unchanged: ${data.length}`,
+        title: "📖 Viewing...",
+        description: `TOP = "${topItem.label}"\n\nStack unchanged, just looking!`,
         highlightIndex: data.length - 1,
         animPhase: 'stack-peek-open',
         animDuration: 1500,
       },
       {
-        title: "📚 Key Takeaway",
-        description: "PEEK: O(1) - constant time! Useful for checking the top without modifying the stack. Often used before POP.",
+        title: "📚 Key Points",
+        description: `PEEK = O(1)\n\n• Just return stack[top]\n• Doesn't modify stack\n• Often used before pop`,
         animPhase: 'stack-peek-settle',
         animDuration: 500,
       },
@@ -3677,32 +3873,32 @@ export default function Home() {
     const steps: TutorialStep[] = [
       {
         title: "➕ Queue ENQUEUE",
-        description: `Adding "${newItem.label}" to the queue. In a queue, new elements join at the REAR!`,
+        description: `Adding "${newItem.label}" to queue.\n\nNew elements join at the REAR!\n(FIFO - First In, First Out)`,
       },
       {
         title: "📍 Find REAR",
-        description: `Current queue size: ${data.length}\nFRONT is at index 0\nREAR is at index ${data.length - 1}\n\nNew element goes at index: ${data.length}`,
+        description: `rear = ${data.length - 1}\nnew position = ${data.length}\n\nJoin the back of the line!`,
         action: () => {
           (setQueueData as any)((prev: DataItem[]) => [...prev, newItem]);
         },
       },
       {
-        title: "🚶 Join the Line",
-        description: "queue[rear + 1] = newElement\nrear = rear + 1\n\nJust like joining the back of a line!",
+        title: "🚶 Joining Queue",
+        description: `queue[${data.length}] = "${newItem.label}"\nrear++`,
         highlightIndex: data.length,
         animPhase: 'queue-enqueue-enter',
         animDuration: 700,
       },
       {
         title: "✅ Enqueued!",
-        description: `"${newItem.label}" is now at the REAR. They'll be served after everyone ahead of them.`,
+        description: `"${newItem.label}" joined at rear!`,
         highlightIndex: data.length,
         animPhase: 'queue-enqueue-settle',
         animDuration: 400,
       },
       {
-        title: "📚 Key Takeaway",
-        description: "ENQUEUE: O(1) - constant time! FIFO = First In, First Out. Fair and orderly!",
+        title: "📚 Key Points",
+        description: `ENQUEUE = O(1)\n\n• Add to rear\n• Like joining a line\n• Fair: first come, first served!`,
       },
     ];
     startTutorial(steps);
@@ -3717,24 +3913,24 @@ export default function Home() {
     const steps: TutorialStep[] = [
       {
         title: "➖ Queue DEQUEUE",
-        description: `Removing from the queue. In a queue, elements leave from the FRONT - first come, first served!`,
+        description: `Removing from FRONT.\n\nFirst one in line gets served first!`,
         highlightIndex: 0,
       },
       {
         title: "🎯 Identify FRONT",
-        description: `FRONT element: "${frontItem.label}" at index [0]\n\nThis was the first to join, so they're served first!`,
+        description: `front = 0\nvalue = queue[front] = "${frontItem.label}"`,
         highlightIndex: 0,
       },
       {
         title: "🚶 Leaving Queue",
-        description: "value = queue[front]\nfront = front + 1\n\nThe front element exits the queue.",
+        description: `"${frontItem.label}" being served...\nfront++`,
         highlightIndex: 0,
         animPhase: queueEnv === 'tollgate' ? 'queue-dequeue-gate-open' : 'queue-dequeue-walk',
         animDuration: queueEnv === 'tollgate' ? 1000 : 1500,
       },
       {
-        title: "👋 Goodbye!",
-        description: `"${frontItem.label}" has been dequeued and served. Queue size: ${data.length - 1}`,
+        title: "👋 Dequeued!",
+        description: `"${frontItem.label}" removed from queue!`,
         highlightIndex: 0,
         animPhase: queueEnv === 'tollgate' ? 'queue-dequeue-drive' : 'queue-dequeue-enter',
         animDuration: 1200,
@@ -3743,8 +3939,8 @@ export default function Home() {
         },
       },
       {
-        title: "📚 Key Takeaway",
-        description: "DEQUEUE: O(1) with circular array, O(n) if shifting. FIFO ensures fairness!",
+        title: "📚 Key Points",
+        description: `DEQUEUE = O(1) with circular array\n\n• Remove from front\n• FIFO: Fair ordering\n• Like real-life queues!`,
       },
     ];
     startTutorial(steps);
@@ -3759,19 +3955,19 @@ export default function Home() {
     const steps: TutorialStep[] = [
       {
         title: "👁️ Queue FRONT",
-        description: "FRONT (or PEEK) shows who's next to be served without removing them.",
+        description: "Peek at who's next without removing.",
         highlightIndex: 0,
       },
       {
-        title: "🔍 Looking at FRONT",
-        description: `return queue[front]\n\nFRONT element: "${frontItem.label}"\n\nThey stay in the queue!`,
+        title: "🔍 Checking FRONT",
+        description: `return queue[front]\nreturn "${frontItem.label}"\n\nThey stay in line!`,
         highlightIndex: 0,
         animPhase: 'queue-front-peek',
         animDuration: 1200,
       },
       {
-        title: "📚 Key Takeaway",
-        description: "FRONT/PEEK: O(1) - constant time! Useful for checking without modifying the queue.",
+        title: "📚 Key Points",
+        description: `FRONT/PEEK = O(1)\n\n• Just check queue[front]\n• Queue unchanged\n• Useful before dequeue`,
       },
     ];
     startTutorial(steps);
@@ -4115,7 +4311,7 @@ export default function Home() {
                 cursor: stepAnimating ? 'not-allowed' : 'pointer',
                 transition: 'all 0.3s'
               }}>
-              {currentStepIndex >= tutorialSteps.length - 1 ? '✓ Finish' : 'Next Step →'}
+              {stepAnimating ? '⏳ Animating...' : currentStepIndex >= tutorialSteps.length - 1 ? '✓ Finish' : 'Next Step →'}
             </button>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 12 }}>
               {tutorialSteps.map((_, i) => (
@@ -4141,6 +4337,7 @@ export default function Home() {
           
           <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
             {currentStructure === 'array' && (<>
+              {/* Selection Mode UI */}
               {selectionMode !== 'none' && (
                 <div style={{ width: '100%', marginBottom: 10 }}>
                   <div style={{ textAlign: 'center', color: '#ffff00', marginBottom: 8, fontSize: 14, fontWeight: 'bold' }}>
@@ -4166,18 +4363,14 @@ export default function Home() {
                 </div>
               )}
 
+              {/* ALL array environments now have the SAME operations */}
               {selectionMode === 'none' && (
                 <>
-                  {arrayEnv === 'todo' ? (
-                    <OpBtn onClick={todoAppendTutorial} disabled={isAnimating || getArrayData().length >= 6} color="#2ecc71" label="➕ Append" />
-                  ) : (
-                    <>
-                      <OpBtn onClick={startArrayAccess} disabled={isAnimating} color="#f39c12" label="📍 Access" />
-                      <OpBtn onClick={startArrayInsert} disabled={isAnimating || getArrayData().length >= 6} color="#2ecc71" label="➕ Insert" />
-                      <OpBtn onClick={startArrayDelete} disabled={isAnimating || getArrayData().length <= 2} color="#e74c3c" label="➖ Delete" />
-                      <OpBtn onClick={startArraySwap} disabled={isAnimating || getArrayData().length < 2} color="#9b59b6" label="🔀 Swap" />
-                    </>
-                  )}
+                  <OpBtn onClick={startAppendVsInsert} disabled={isAnimating || getArrayData().length >= 5} color="#f39c12" label="📚 Learn" />
+                  <OpBtn onClick={startArrayAppend} disabled={isAnimating || getArrayData().length >= 6} color="#2ecc71" label="➕ Append" />
+                  <OpBtn onClick={startArrayInsert} disabled={isAnimating || getArrayData().length >= 6} color="#3498db" label="📥 Insert" />
+                  <OpBtn onClick={startArrayDelete} disabled={isAnimating || getArrayData().length <= 2} color="#e74c3c" label="🗑️ Delete" />
+                  <OpBtn onClick={startArraySwap} disabled={isAnimating || getArrayData().length < 2} color="#9b59b6" label="🔀 Swap" />
                 </>
               )}
             </>)}
@@ -4233,9 +4426,9 @@ export default function Home() {
 function OpBtn({ onClick, disabled, color, label }: { onClick: () => void; disabled: boolean; color: string; label: string }) {
   return (
     <button onClick={onClick} disabled={disabled} style={{
-      padding: '12px 18px', fontSize: 13, fontWeight: 'bold', border: 'none', borderRadius: 25,
+      padding: '12px 16px', fontSize: 12, fontWeight: 'bold', border: 'none', borderRadius: 25,
       background: disabled ? '#555' : color, color: 'white', opacity: disabled ? 0.5 : 1,
-      cursor: disabled ? 'not-allowed' : 'pointer',
+      cursor: disabled ? 'not-allowed' : 'pointer', minWidth: 70,
     }}>{label}</button>
   );
 }
