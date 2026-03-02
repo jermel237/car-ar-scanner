@@ -1720,6 +1720,7 @@ function createSchoolBuilding(): THREE.Group {
   const goldMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.8, roughness: 0.2 });
   const concreteMat = new THREE.MeshStandardMaterial({ color: '#a0a0a0', roughness: 0.8 });
 
+  // Main building
   const mainBuildingWidth = 2.4;
   const mainBuildingHeight = 1.8;
   const mainBuildingDepth = 0.8;
@@ -1731,9 +1732,10 @@ function createSchoolBuilding(): THREE.Group {
   mainBuilding.position.set(-0.4, groundY + mainBuildingHeight / 2, 0);
   school.add(mainBuilding);
 
-  const entranceWidth = 0.9;
-  const entranceHeight = 1.4;
-  const entranceDepth = 0.3;
+  // Entrance section
+  const entranceWidth = 1.0;
+  const entranceHeight = 1.5;
+  const entranceDepth = 0.35;
 
   const entrance = new THREE.Mesh(
     new THREE.BoxGeometry(entranceDepth, entranceHeight, entranceWidth),
@@ -1742,117 +1744,152 @@ function createSchoolBuilding(): THREE.Group {
   entrance.position.set(0, groundY + entranceHeight / 2, 0);
   school.add(entrance);
 
+  // Pediment (triangle top)
   const pedimentBase = new THREE.Mesh(
-    new THREE.BoxGeometry(entranceDepth + 0.1, 0.08, entranceWidth + 0.1),
+    new THREE.BoxGeometry(entranceDepth + 0.1, 0.08, entranceWidth + 0.15),
     concreteMat
   );
   pedimentBase.position.set(0.05, groundY + entranceHeight, 0);
   school.add(pedimentBase);
 
   const pedimentTop = new THREE.Mesh(
-    new THREE.ConeGeometry(0.55, 0.25, 3),
+    new THREE.ConeGeometry(0.6, 0.28, 3),
     wallMat
   );
-  pedimentTop.position.set(0.05, groundY + entranceHeight + 0.17, 0);
+  pedimentTop.position.set(0.05, groundY + entranceHeight + 0.2, 0);
   pedimentTop.rotation.x = Math.PI / 2;
   pedimentTop.rotation.z = Math.PI / 2;
   school.add(pedimentTop);
 
-  const pillarRadius = 0.05;
+  // Only 2 pillars
+  const pillarRadius = 0.07;
   const pillarHeight = entranceHeight - 0.2;
-  const pillarPositions = [-0.32, -0.12, 0.12, 0.32];
+  const pillarPositions = [-0.35, 0.35];
 
   pillarPositions.forEach(z => {
     const pillar = new THREE.Mesh(
-      new THREE.CylinderGeometry(pillarRadius, pillarRadius * 1.1, pillarHeight, 16),
+      new THREE.CylinderGeometry(pillarRadius, pillarRadius * 1.15, pillarHeight, 16),
       pillarMat
     );
-    pillar.position.set(0.16, groundY + pillarHeight / 2 + 0.1, z);
+    pillar.position.set(0.18, groundY + pillarHeight / 2 + 0.1, z);
     school.add(pillar);
 
     const pillarBase = new THREE.Mesh(
-      new THREE.BoxGeometry(0.14, 0.1, 0.14),
+      new THREE.BoxGeometry(0.18, 0.12, 0.18),
       pillarMat
     );
-    pillarBase.position.set(0.16, groundY + 0.05, z);
+    pillarBase.position.set(0.18, groundY + 0.06, z);
     school.add(pillarBase);
 
     const pillarCap = new THREE.Mesh(
-      new THREE.BoxGeometry(0.13, 0.05, 0.13),
+      new THREE.BoxGeometry(0.16, 0.06, 0.16),
       pillarMat
     );
-    pillarCap.position.set(0.16, groundY + pillarHeight + 0.12, z);
+    pillarCap.position.set(0.18, groundY + pillarHeight + 0.13, z);
     school.add(pillarCap);
   });
 
-  const doorWidth = 0.16;
-  const doorHeight = 0.48;
+  // Big double doors in the middle
+  const doorWidth = 0.22;
+  const doorHeight = 0.7;
+  const doorGap = 0.02;
 
-  [-0.12, 0.12].forEach(z => {
-    const doorFrame = new THREE.Mesh(
-      new THREE.BoxGeometry(0.03, doorHeight + 0.05, doorWidth + 0.04),
-      new THREE.MeshStandardMaterial({ color: '#3e2723', roughness: 0.5 })
-    );
-    doorFrame.position.set(0.17, groundY + doorHeight / 2 + 0.025, z);
-    school.add(doorFrame);
+  // Door frame (big frame around both doors)
+  const bigFrame = new THREE.Mesh(
+    new THREE.BoxGeometry(0.04, doorHeight + 0.1, doorWidth * 2 + doorGap + 0.08),
+    new THREE.MeshStandardMaterial({ color: '#3e2723', roughness: 0.5 })
+  );
+  bigFrame.position.set(0.19, groundY + doorHeight / 2 + 0.05, 0);
+  school.add(bigFrame);
 
-    const door = new THREE.Mesh(
-      new THREE.BoxGeometry(0.02, doorHeight, doorWidth),
-      doorMat
-    );
-    door.position.set(0.18, groundY + doorHeight / 2, z);
-    school.add(door);
+  // Arch above doors
+  const archMat = new THREE.MeshStandardMaterial({ color: '#3e2723', roughness: 0.5 });
+  const arch = new THREE.Mesh(
+    new THREE.TorusGeometry(0.24, 0.03, 8, 16, Math.PI),
+    archMat
+  );
+  arch.position.set(0.19, groundY + doorHeight + 0.05, 0);
+  arch.rotation.y = Math.PI / 2;
+  arch.rotation.x = Math.PI / 2;
+  school.add(arch);
 
-    const handle = new THREE.Mesh(
-      new THREE.SphereGeometry(0.012, 8, 8),
-      goldMat
-    );
-    handle.position.set(0.2, groundY + doorHeight / 2, z + 0.04);
-    school.add(handle);
+  // Left door
+  const leftDoor = new THREE.Mesh(
+    new THREE.BoxGeometry(0.025, doorHeight, doorWidth),
+    doorMat
+  );
+  leftDoor.position.set(0.2, groundY + doorHeight / 2, -doorWidth / 2 - doorGap / 2);
+  school.add(leftDoor);
 
+  // Right door
+  const rightDoor = new THREE.Mesh(
+    new THREE.BoxGeometry(0.025, doorHeight, doorWidth),
+    doorMat
+  );
+  rightDoor.position.set(0.2, groundY + doorHeight / 2, doorWidth / 2 + doorGap / 2);
+  school.add(rightDoor);
+
+  // Door handles (knobs)
+  const leftHandle = new THREE.Mesh(
+    new THREE.SphereGeometry(0.018, 12, 12),
+    goldMat
+  );
+  leftHandle.position.set(0.22, groundY + doorHeight / 2, -doorGap / 2 - 0.03);
+  school.add(leftHandle);
+
+  const rightHandle = new THREE.Mesh(
+    new THREE.SphereGeometry(0.018, 12, 12),
+    goldMat
+  );
+  rightHandle.position.set(0.22, groundY + doorHeight / 2, doorGap / 2 + 0.03);
+  school.add(rightHandle);
+
+  // Door windows
+  [-1, 1].forEach(side => {
     const doorWindow = new THREE.Mesh(
-      new THREE.PlaneGeometry(doorWidth * 0.5, doorHeight * 0.25),
+      new THREE.PlaneGeometry(doorWidth * 0.5, doorHeight * 0.3),
       windowMat
     );
-    doorWindow.position.set(0.19, groundY + doorHeight * 0.72, z);
+    doorWindow.position.set(0.215, groundY + doorHeight * 0.72, side * (doorWidth / 2 + doorGap / 2));
     doorWindow.rotation.y = Math.PI / 2;
     school.add(doorWindow);
   });
 
-  const stepWidth = entranceWidth + 0.2;
-  const stepDepth = 0.1;
-  const stepHeight = 0.035;
+  // Steps
+  const stepWidth = entranceWidth + 0.3;
+  const stepDepth = 0.12;
+  const stepHeight = 0.04;
 
   for (let i = 0; i < 4; i++) {
     const step = new THREE.Mesh(
-      new THREE.BoxGeometry(stepDepth, stepHeight, stepWidth - i * 0.04),
+      new THREE.BoxGeometry(stepDepth, stepHeight, stepWidth - i * 0.05),
       concreteMat
     );
-    step.position.set(0.2 + i * stepDepth, groundY + stepHeight / 2 + i * stepHeight, 0);
+    step.position.set(0.22 + i * stepDepth, groundY + stepHeight / 2 + i * stepHeight, 0);
     school.add(step);
   }
 
+  // Windows on main building
   const windowPositions = [
-    { z: -0.9, floors: [0.4, 0.9, 1.4] },
+    { z: -0.95, floors: [0.4, 0.9, 1.4] },
     { z: -0.7, floors: [0.4, 0.9, 1.4] },
-    { z: 0.9, floors: [0.4, 0.9, 1.4] },
+    { z: 0.95, floors: [0.4, 0.9, 1.4] },
     { z: 0.7, floors: [0.4, 0.9, 1.4] },
-    { z: -0.3, floors: [1.0, 1.45] },
-    { z: 0, floors: [1.45] },
-    { z: 0.3, floors: [1.0, 1.45] },
+    { z: -0.35, floors: [1.05, 1.45] },
+    { z: 0.35, floors: [1.05, 1.45] },
   ];
 
   windowPositions.forEach(wp => {
     wp.floors.forEach(floorY => {
       const frame = new THREE.Mesh(
-        new THREE.BoxGeometry(0.03, 0.18, 0.1),
+        new THREE.BoxGeometry(0.03, 0.2, 0.12),
         windowFrameMat
       );
       frame.position.set(0, groundY + floorY, wp.z);
       school.add(frame);
 
       const glass = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.15, 0.08),
+        new THREE.PlaneGeometry(0.17, 0.1),
         windowMat
       );
       glass.position.set(0.02, groundY + floorY, wp.z);
@@ -1860,39 +1897,41 @@ function createSchoolBuilding(): THREE.Group {
       school.add(glass);
 
       const sill = new THREE.Mesh(
-        new THREE.BoxGeometry(0.04, 0.015, 0.12),
+        new THREE.BoxGeometry(0.04, 0.018, 0.14),
         concreteMat
       );
-      sill.position.set(0.01, groundY + floorY - 0.1, wp.z);
+      sill.position.set(0.01, groundY + floorY - 0.11, wp.z);
       school.add(sill);
     });
   });
 
-  const towerWidth = 0.35;
-  const towerHeight = 0.55;
+  // Clock tower
+  const towerWidth = 0.4;
+  const towerHeight = 0.6;
 
   const tower = new THREE.Mesh(
-    new THREE.BoxGeometry(0.25, towerHeight, towerWidth),
+    new THREE.BoxGeometry(0.28, towerHeight, towerWidth),
     wallMat
   );
   tower.position.set(-0.4, groundY + mainBuildingHeight + towerHeight / 2, 0);
   school.add(tower);
 
   const towerRoof = new THREE.Mesh(
-    new THREE.ConeGeometry(0.22, 0.28, 4),
+    new THREE.ConeGeometry(0.25, 0.32, 4),
     roofMat
   );
-  towerRoof.position.set(-0.4, groundY + mainBuildingHeight + towerHeight + 0.14, 0);
+  towerRoof.position.set(-0.4, groundY + mainBuildingHeight + towerHeight + 0.16, 0);
   towerRoof.rotation.y = Math.PI / 4;
   school.add(towerRoof);
 
   const spire = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.008, 0.025, 0.12, 8),
+    new THREE.CylinderGeometry(0.01, 0.03, 0.15, 8),
     goldMat
   );
-  spire.position.set(-0.4, groundY + mainBuildingHeight + towerHeight + 0.34, 0);
+  spire.position.set(-0.4, groundY + mainBuildingHeight + towerHeight + 0.4, 0);
   school.add(spire);
 
+  // Clock
   const clockCanvas = document.createElement('canvas');
   clockCanvas.width = 128;
   clockCanvas.height = 128;
@@ -1932,27 +1971,29 @@ function createSchoolBuilding(): THREE.Group {
 
   const clockTex = new THREE.CanvasTexture(clockCanvas);
   const clock = new THREE.Mesh(
-    new THREE.CircleGeometry(0.09, 32),
+    new THREE.CircleGeometry(0.1, 32),
     new THREE.MeshBasicMaterial({ map: clockTex })
   );
-  clock.position.set(-0.265, groundY + mainBuildingHeight + towerHeight / 2 + 0.08, 0);
+  clock.position.set(-0.265, groundY + mainBuildingHeight + towerHeight / 2 + 0.1, 0);
   clock.rotation.y = Math.PI / 2;
   school.add(clock);
 
+  // Main roof
   const mainRoof = new THREE.Mesh(
-    new THREE.BoxGeometry(mainBuildingDepth + 0.1, 0.07, mainBuildingWidth + 0.1),
+    new THREE.BoxGeometry(mainBuildingDepth + 0.12, 0.08, mainBuildingWidth + 0.12),
     roofMat
   );
-  mainRoof.position.set(-0.4, groundY + mainBuildingHeight + 0.035, 0);
+  mainRoof.position.set(-0.4, groundY + mainBuildingHeight + 0.04, 0);
   school.add(mainRoof);
 
   const roofTrim = new THREE.Mesh(
-    new THREE.BoxGeometry(mainBuildingDepth + 0.12, 0.035, mainBuildingWidth + 0.12),
+    new THREE.BoxGeometry(mainBuildingDepth + 0.15, 0.04, mainBuildingWidth + 0.15),
     pillarMat
   );
   roofTrim.position.set(-0.4, groundY + mainBuildingHeight, 0);
   school.add(roofTrim);
 
+  // University sign
   const signCanvas = document.createElement('canvas');
   signCanvas.width = 400;
   signCanvas.height = 80;
@@ -1971,34 +2012,35 @@ function createSchoolBuilding(): THREE.Group {
 
   const signTex = new THREE.CanvasTexture(signCanvas);
   const signMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.65, 0.13),
+    new THREE.PlaneGeometry(0.7, 0.14),
     new THREE.MeshBasicMaterial({ map: signTex })
   );
-  signMesh.position.set(0.02, groundY + entranceHeight + 0.16, 0);
+  signMesh.position.set(0.02, groundY + entranceHeight + 0.18, 0);
   signMesh.rotation.y = Math.PI / 2;
   school.add(signMesh);
 
+  // Side wings
   [-1, 1].forEach(side => {
     const wing = new THREE.Mesh(
-      new THREE.BoxGeometry(0.45, mainBuildingHeight * 0.82, 0.45),
+      new THREE.BoxGeometry(0.5, mainBuildingHeight * 0.85, 0.5),
       wallMat
     );
-    wing.position.set(-0.52, groundY + mainBuildingHeight * 0.82 / 2, side * 0.95);
+    wing.position.set(-0.55, groundY + mainBuildingHeight * 0.85 / 2, side * 1.0);
     school.add(wing);
 
     const wingRoof = new THREE.Mesh(
-      new THREE.BoxGeometry(0.5, 0.05, 0.5),
+      new THREE.BoxGeometry(0.55, 0.06, 0.55),
       roofMat
     );
-    wingRoof.position.set(-0.52, groundY + mainBuildingHeight * 0.82 + 0.025, side * 0.95);
+    wingRoof.position.set(-0.55, groundY + mainBuildingHeight * 0.85 + 0.03, side * 1.0);
     school.add(wingRoof);
 
-    [0.35, 0.72, 1.1].forEach(wy => {
+    [0.35, 0.75, 1.15].forEach(wy => {
       const wingWindow = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.12, 0.1),
+        new THREE.PlaneGeometry(0.14, 0.11),
         windowMat
       );
-      wingWindow.position.set(-0.28, groundY + wy, side * 0.95);
+      wingWindow.position.set(-0.29, groundY + wy, side * 1.0);
       wingWindow.rotation.y = Math.PI / 2;
       school.add(wingWindow);
     });
@@ -2010,24 +2052,24 @@ function createSchoolBuilding(): THREE.Group {
 
     const poleMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.8, roughness: 0.2 });
     const pole = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.012, 0.018, 1.1, 12),
+      new THREE.CylinderGeometry(0.015, 0.02, 1.2, 12),
       poleMat
     );
-    pole.position.y = 0.55;
+    pole.position.y = 0.6;
     flagGroup.add(pole);
 
     const poleBase = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.035, 0.045, 0.07, 12),
+      new THREE.CylinderGeometry(0.04, 0.05, 0.08, 12),
       poleMat
     );
-    poleBase.position.y = 0.035;
+    poleBase.position.y = 0.04;
     flagGroup.add(poleBase);
 
     const poleTop = new THREE.Mesh(
-      new THREE.SphereGeometry(0.02, 12, 12),
+      new THREE.SphereGeometry(0.025, 12, 12),
       goldMat
     );
-    poleTop.position.y = 1.12;
+    poleTop.position.y = 1.22;
     flagGroup.add(poleTop);
 
     const flagCanvas = document.createElement('canvas');
@@ -2086,11 +2128,11 @@ function createSchoolBuilding(): THREE.Group {
     drawStar(42, 85, 6);
 
     const flagTex = new THREE.CanvasTexture(flagCanvas);
-    const flagGeo = new THREE.PlaneGeometry(0.26, 0.13, 8, 1);
+    const flagGeo = new THREE.PlaneGeometry(0.28, 0.14, 8, 1);
     const positions = flagGeo.attributes.position;
     for (let i = 0; i < positions.count; i++) {
       const x = positions.getX(i);
-      positions.setZ(i, Math.sin((x / 0.26) * Math.PI * 1.5) * 0.012);
+      positions.setZ(i, Math.sin((x / 0.28) * Math.PI * 1.5) * 0.015);
     }
     flagGeo.computeVertexNormals();
 
@@ -2098,52 +2140,55 @@ function createSchoolBuilding(): THREE.Group {
       flagGeo,
       new THREE.MeshStandardMaterial({ map: flagTex, side: THREE.DoubleSide, roughness: 0.8 })
     );
-    flagMesh.position.set(0.15, 1.02, 0);
+    flagMesh.position.set(0.16, 1.08, 0);
     flagMesh.rotation.y = Math.PI / 2;
     flagGroup.add(flagMesh);
 
-    flagGroup.position.set(0.28, groundY, posZ);
+    flagGroup.position.set(0.32, groundY, posZ);
     return flagGroup;
   };
 
-  school.add(createPhilippineFlag(0.65));
-  school.add(createPhilippineFlag(-0.65));
+  school.add(createPhilippineFlag(0.7));
+  school.add(createPhilippineFlag(-0.7));
 
+  // Plaza
   const plaza = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.2, 1.4),
+    new THREE.PlaneGeometry(2.4, 1.5),
     new THREE.MeshStandardMaterial({ color: '#d4c4b0', roughness: 0.9, side: THREE.DoubleSide })
   );
   plaza.rotation.x = -Math.PI / 2;
   plaza.rotation.z = Math.PI / 2;
-  plaza.position.set(0.75, groundY - 0.005, 0);
+  plaza.position.set(0.8, groundY - 0.005, 0);
   school.add(plaza);
 
   const pathLine = new THREE.Mesh(
-    new THREE.BoxGeometry(1.4, 0.005, 0.35),
+    new THREE.BoxGeometry(1.5, 0.006, 0.4),
     new THREE.MeshStandardMaterial({ color: '#a89078', roughness: 0.8 })
   );
-  pathLine.position.set(0.75, groundY - 0.002, 0);
+  pathLine.position.set(0.8, groundY - 0.002, 0);
   school.add(pathLine);
 
+  // Bushes
   const bushMat = new THREE.MeshStandardMaterial({ color: '#228b22', roughness: 0.9 });
-  [[-0.45, 0.55], [-0.45, -0.55], [0.18, 0.48], [0.18, -0.48]].forEach(([x, z]) => {
-    const bush = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), bushMat);
-    bush.position.set(x, groundY + 0.05, z);
+  [[-0.5, 0.6], [-0.5, -0.6], [0.22, 0.52], [0.22, -0.52]].forEach(([x, z]) => {
+    const bush = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), bushMat);
+    bush.position.set(x, groundY + 0.06, z);
     bush.scale.y = 0.7;
     school.add(bush);
   });
 
+  // Lamp posts
   const lampMat = new THREE.MeshStandardMaterial({ color: '#2c2c2c', roughness: 0.4, metalness: 0.6 });
-  [0.52, -0.52].forEach(z => {
-    const lampPost = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.018, 0.45, 8), lampMat);
-    lampPost.position.set(0.48, groundY + 0.225, z);
+  [0.58, -0.58].forEach(z => {
+    const lampPost = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.5, 8), lampMat);
+    lampPost.position.set(0.55, groundY + 0.25, z);
     school.add(lampPost);
 
     const lampHead = new THREE.Mesh(
-      new THREE.SphereGeometry(0.035, 12, 12),
+      new THREE.SphereGeometry(0.04, 12, 12),
       new THREE.MeshStandardMaterial({ color: '#ffffcc', emissive: '#ffff99', emissiveIntensity: 0.3 })
     );
-    lampHead.position.set(0.48, groundY + 0.48, z);
+    lampHead.position.set(0.55, groundY + 0.52, z);
     school.add(lampHead);
   });
 
@@ -3077,17 +3122,12 @@ function buildSceneContent(
       const ticketDispenserGroup = createTicketDispenser(data, highlightIndex, animPhase || '', animProgress || 0);
       group.add(ticketDispenserGroup);
 
-    } else if (environment === 'students') {
+     } else if (environment === 'students') {
       const schoolBuilding = createSchoolBuilding();
-      schoolBuilding.position.set(startX - 1.2, groundY, 0);
-      schoolBuilding.scale.setScalar(0.55);
-      schoolBuilding.rotation.y = 0; // Entrance faces RIGHT toward students
+      schoolBuilding.position.set(startX - 0.8, groundY, 0);
+      schoolBuilding.scale.setScalar(0.5);
+      schoolBuilding.rotation.y = -Math.PI / 2; // School entrance faces RIGHT toward students
       group.add(schoolBuilding);
-
-      const entranceSign = createTextSprite('🚪 ENTRANCE', '#00ff00', 16);
-      entranceSign.position.set(startX - 0.6, groundY + 0.52, 0);
-      entranceSign.scale.set(0.32, 0.11, 1);
-      group.add(entranceSign);
 
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
@@ -3096,31 +3136,29 @@ function buildSceneContent(
         if (item.appearance) {
           let walkPhase = 0;
           let extraX = 0;
-          let extraZ = 0;
           let studentScale = 0.55;
           let shouldRender = true;
 
           if (isFront) {
             if (animPhase === 'queue-dequeue-walk') {
               const progress = animProgress || 0;
-              walkPhase = progress * Math.PI * 12;
-              extraX = -progress * 1.5;
-              extraZ = Math.sin(progress * Math.PI) * 0.04;
+              walkPhase = progress * Math.PI * 10;
+              extraX = -progress * 1.2;
             } else if (animPhase === 'queue-dequeue-enter') {
               const progress = animProgress || 0;
-              walkPhase = Math.PI * 12 + progress * Math.PI * 6;
-              extraX = -1.5 - progress * 0.5;
-              studentScale = 0.55 * Math.max(0.01, 1 - progress * 0.98);
-              if (progress > 0.92) shouldRender = false;
+              walkPhase = Math.PI * 10 + progress * Math.PI * 4;
+              extraX = -1.2 - progress * 0.4;
+              studentScale = 0.55 * Math.max(0.01, 1 - progress * 0.95);
+              if (progress > 0.95) shouldRender = false;
             }
           }
 
           if (shouldRender) {
             const human = createHuman3D(item.appearance, item.label, isHl, false, walkPhase);
-            human.position.set(startX + i * spacing + 0.8 + extraX, groundY, extraZ);
+            human.position.set(startX + i * spacing + 0.6 + extraX, groundY, 0);
             human.scale.setScalar(studentScale);
-            human.rotation.y = Math.PI / 2; // Students face LEFT toward school
-            
+            human.rotation.y = -Math.PI / 2; // Students face LEFT toward school
+
             if (!(isFront && (animPhase === 'queue-dequeue-walk' || animPhase === 'queue-dequeue-enter'))) {
               applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue', animProgress);
             }
@@ -3132,39 +3170,27 @@ function buildSceneContent(
 
       if (data.length > 0) {
         const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
-        frontSprite.position.set(startX + 0.8, groundY - 0.18, 0.22);
+        frontSprite.position.set(startX + 0.6, groundY - 0.18, 0);
         frontSprite.scale.set(0.26, 0.09, 1);
         group.add(frontSprite);
 
-        if (data.length > 1) {
-          const rearSprite = createTextSprite('REAR', '#ff6600', 16);
-          rearSprite.position.set(startX + (data.length - 1) * spacing + 0.8, groundY - 0.18, 0.22);
-          rearSprite.scale.set(0.26, 0.09, 1);
-          group.add(rearSprite);
-        }
+        const rearSprite = createTextSprite('REAR', '#ff6600', 16);
+        rearSprite.position.set(startX + (data.length - 1) * spacing + 0.6, groundY - 0.18, 0);
+        rearSprite.scale.set(0.26, 0.09, 1);
+        group.add(rearSprite);
       }
 
       const pathway = new THREE.Mesh(
-        new THREE.PlaneGeometry(Math.max(2.8, data.length * spacing + 3.0), 0.55),
-        new THREE.MeshStandardMaterial({ color: '#c4b8a8', side: THREE.DoubleSide, roughness: 0.9 })
+        new THREE.PlaneGeometry(Math.max(2.5, data.length * spacing + 2.5), 0.5),
+        new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
       );
       pathway.rotation.x = -Math.PI / 2;
-      pathway.position.set(0.5, groundY - 0.01, 0);
+      pathway.position.set(0.3, groundY - 0.01, 0);
       group.add(pathway);
-
-      const grassMat = new THREE.MeshStandardMaterial({ color: '#4a7c4e', roughness: 0.95, side: THREE.DoubleSide });
-      [-0.42, 0.42].forEach(z => {
-        const grass = new THREE.Mesh(
-          new THREE.PlaneGeometry(Math.max(2.5, data.length * spacing + 2.5), 0.22),
-          grassMat
-        );
-        grass.rotation.x = -Math.PI / 2;
-        grass.position.set(0.5, groundY - 0.012, z);
-        group.add(grass);
-      });
     }
   }
 }
+
 // ==================== HOME COMPONENT ====================
 
 export default function Home() {
