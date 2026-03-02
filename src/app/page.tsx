@@ -1379,13 +1379,13 @@ function createPlate(label: string, isHighlighted: boolean): THREE.Group {
   return plate;
 }
 
-// ==================== CARDBOARD BOX (TOP FLAPS) ====================
+// ==================== CARDBOARD BOX (TOP FLAPS OPENING) ====================
 
 function createCardboardBox(label: string, color: string, isHighlighted: boolean, openAmount: number = 0): THREE.Group {
   const box = new THREE.Group();
   const boxW = 0.48, boxH = 0.34, boxD = 0.38;
   const wallThickness = 0.015;
-  const flapThickness = 0.012;
+  const flapThickness = 0.01;
 
   const cardboardMat = new THREE.MeshStandardMaterial({
     color,
@@ -1404,23 +1404,23 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   box.add(bottom);
 
   // Front wall
-  const frontWall = new THREE.Mesh(new THREE.BoxGeometry(boxW, boxH - wallThickness, wallThickness), cardboardMat);
-  frontWall.position.set(0, wallThickness + (boxH - wallThickness) / 2, boxD / 2 - wallThickness / 2);
+  const frontWall = new THREE.Mesh(new THREE.BoxGeometry(boxW, boxH, wallThickness), cardboardMat);
+  frontWall.position.set(0, wallThickness + boxH / 2, boxD / 2 - wallThickness / 2);
   box.add(frontWall);
 
   // Back wall
-  const backWall = new THREE.Mesh(new THREE.BoxGeometry(boxW, boxH - wallThickness, wallThickness), cardboardMat);
-  backWall.position.set(0, wallThickness + (boxH - wallThickness) / 2, -boxD / 2 + wallThickness / 2);
+  const backWall = new THREE.Mesh(new THREE.BoxGeometry(boxW, boxH, wallThickness), cardboardMat);
+  backWall.position.set(0, wallThickness + boxH / 2, -boxD / 2 + wallThickness / 2);
   box.add(backWall);
 
   // Left wall
-  const leftWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, boxH - wallThickness, boxD - wallThickness * 2), cardboardMat);
-  leftWall.position.set(-boxW / 2 + wallThickness / 2, wallThickness + (boxH - wallThickness) / 2, 0);
+  const leftWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, boxH, boxD - wallThickness * 2), cardboardMat);
+  leftWall.position.set(-boxW / 2 + wallThickness / 2, wallThickness + boxH / 2, 0);
   box.add(leftWall);
 
   // Right wall
-  const rightWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, boxH - wallThickness, boxD - wallThickness * 2), cardboardMat);
-  rightWall.position.set(boxW / 2 - wallThickness / 2, wallThickness + (boxH - wallThickness) / 2, 0);
+  const rightWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, boxH, boxD - wallThickness * 2), cardboardMat);
+  rightWall.position.set(boxW / 2 - wallThickness / 2, wallThickness + boxH / 2, 0);
   box.add(rightWall);
 
   // Inner floor
@@ -1431,73 +1431,111 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   innerFloor.position.y = wallThickness + 0.003;
   box.add(innerFloor);
 
-  // Corners
+  // Corner reinforcements
   [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(([sx, sz]) => {
-    const corner = new THREE.Mesh(new THREE.BoxGeometry(0.025, boxH - wallThickness, 0.025), cornerMat);
-    corner.position.set(sx * (boxW / 2 - 0.0125), wallThickness + (boxH - wallThickness) / 2, sz * (boxD / 2 - 0.0125));
+    const corner = new THREE.Mesh(new THREE.BoxGeometry(0.02, boxH, 0.02), cornerMat);
+    corner.position.set(sx * (boxW / 2 - 0.01), wallThickness + boxH / 2, sz * (boxD / 2 - 0.01));
     box.add(corner);
   });
 
-  // TOP FLAPS - open upward like real cardboard box
-  const flapHeight = boxD / 2 - wallThickness;
-  const flapWidth = boxW - wallThickness * 2;
-  const topY = boxH;
-
-  // Easing for smooth animation
+  // TOP FLAPS - opening from top
+  const topY = wallThickness + boxH;
+  
+  // Easing
   const easedOpen = openAmount < 0.5
     ? 2 * openAmount * openAmount
     : 1 - Math.pow(-2 * openAmount + 2, 2) / 2;
 
-  const openAngle = Math.PI * 0.55; // How far flaps open
+  const openAngle = Math.PI * 0.6; // How far flaps open (about 108 degrees)
 
-  // FRONT FLAP (opens toward viewer)
+  // Main flaps (front and back - larger)
+  const mainFlapDepth = (boxD - wallThickness * 2) / 2;
+  const mainFlapWidth = boxW - wallThickness * 2;
+
+  // FRONT FLAP - pivots at front edge, opens outward
   const frontFlapPivot = new THREE.Group();
   frontFlapPivot.position.set(0, topY, boxD / 2 - wallThickness);
-  const frontFlap = new THREE.Mesh(new THREE.BoxGeometry(flapWidth, flapThickness, flapHeight), flapMat);
-  frontFlap.position.set(0, 0, -flapHeight / 2);
+  
+  const frontFlap = new THREE.Mesh(
+    new THREE.BoxGeometry(mainFlapWidth, flapThickness, mainFlapDepth),
+    flapMat
+  );
+  frontFlap.position.set(0, flapThickness / 2, -mainFlapDepth / 2);
   frontFlapPivot.add(frontFlap);
-  frontFlapPivot.rotation.x = easedOpen * openAngle; // Opens forward/up
+  
+  // Rotate around X axis - positive rotation opens outward (toward viewer)
+  frontFlapPivot.rotation.x = easedOpen * openAngle;
   box.add(frontFlapPivot);
 
-  // BACK FLAP (opens away from viewer)
+  // BACK FLAP - pivots at back edge, opens outward
   const backFlapPivot = new THREE.Group();
   backFlapPivot.position.set(0, topY, -boxD / 2 + wallThickness);
-  const backFlap = new THREE.Mesh(new THREE.BoxGeometry(flapWidth, flapThickness, flapHeight), flapMat);
-  backFlap.position.set(0, 0, flapHeight / 2);
+  
+  const backFlap = new THREE.Mesh(
+    new THREE.BoxGeometry(mainFlapWidth, flapThickness, mainFlapDepth),
+    flapMat
+  );
+  backFlap.position.set(0, flapThickness / 2, mainFlapDepth / 2);
   backFlapPivot.add(backFlap);
-  backFlapPivot.rotation.x = -easedOpen * openAngle; // Opens backward/up
+  
+  // Negative rotation opens outward (away from viewer)
+  backFlapPivot.rotation.x = -easedOpen * openAngle;
   box.add(backFlapPivot);
 
-  // SIDE FLAPS (smaller, open to sides)
-  const sideFlapDepth = boxW / 2 - wallThickness;
-  const sideFlapWidth = boxD - wallThickness * 2 - flapHeight * 2;
+  // Side flaps (left and right - smaller, go under main flaps)
+  const sideFlapWidth = (boxW - wallThickness * 2) / 2;
+  const sideFlapDepth = boxD - wallThickness * 2;
 
-  // Left side flap
+  // LEFT FLAP - pivots at left edge
   const leftFlapPivot = new THREE.Group();
   leftFlapPivot.position.set(-boxW / 2 + wallThickness, topY, 0);
-  const leftFlap = new THREE.Mesh(new THREE.BoxGeometry(sideFlapDepth, flapThickness, Math.max(0.05, sideFlapWidth)), flapMat);
-  leftFlap.position.set(sideFlapDepth / 2, 0, 0);
+  
+  const leftFlap = new THREE.Mesh(
+    new THREE.BoxGeometry(sideFlapWidth, flapThickness, sideFlapDepth),
+    flapMat
+  );
+  leftFlap.position.set(sideFlapWidth / 2, flapThickness / 2, 0);
   leftFlapPivot.add(leftFlap);
-  leftFlapPivot.rotation.z = -easedOpen * openAngle; // Opens left/up
+  
+  // Rotate around Z axis - negative opens outward (to the left)
+  leftFlapPivot.rotation.z = -easedOpen * openAngle;
   box.add(leftFlapPivot);
 
-  // Right side flap
+  // RIGHT FLAP - pivots at right edge
   const rightFlapPivot = new THREE.Group();
   rightFlapPivot.position.set(boxW / 2 - wallThickness, topY, 0);
-  const rightFlap = new THREE.Mesh(new THREE.BoxGeometry(sideFlapDepth, flapThickness, Math.max(0.05, sideFlapWidth)), flapMat);
-  rightFlap.position.set(-sideFlapDepth / 2, 0, 0);
+  
+  const rightFlap = new THREE.Mesh(
+    new THREE.BoxGeometry(sideFlapWidth, flapThickness, sideFlapDepth),
+    flapMat
+  );
+  rightFlap.position.set(-sideFlapWidth / 2, flapThickness / 2, 0);
   rightFlapPivot.add(rightFlap);
-  rightFlapPivot.rotation.z = easedOpen * openAngle; // Opens right/up
+  
+  // Positive rotation opens outward (to the right)
+  rightFlapPivot.rotation.z = easedOpen * openAngle;
   box.add(rightFlapPivot);
 
-  // Tape on top (only visible when closed)
-  if (openAmount < 0.3) {
-    const tape = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.005, boxD * 0.7), tapeMat);
-    tape.position.set(0, topY + 0.003, 0);
+  // Tape strip across top (only visible when mostly closed)
+  if (openAmount < 0.2) {
+    const tapeWidth = 0.06;
+    const tape = new THREE.Mesh(
+      new THREE.BoxGeometry(tapeWidth, 0.003, boxD * 0.8),
+      tapeMat
+    );
+    tape.position.set(0, topY + flapThickness + 0.002, 0);
     box.add(tape);
+
+    // Cross tape
+    const crossTape = new THREE.Mesh(
+      new THREE.BoxGeometry(boxW * 0.6, 0.003, tapeWidth),
+      tapeMat
+    );
+    crossTape.position.set(0, topY + flapThickness + 0.002, 0);
+    box.add(crossTape);
   }
 
-  // Label on front
+  // Label on front wall
   const labelCanvas = document.createElement('canvas');
   labelCanvas.width = 180;
   labelCanvas.height = 120;
@@ -1512,26 +1550,31 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   labelCtx.fillText('FRAGILE', 90, 26);
   labelCtx.fillStyle = '#2c3e50';
   labelCtx.font = 'bold 28px Arial';
-  labelCtx.fillText(label, 90, 68);
+  labelCtx.fillText(label, 90, 75);
+  labelCtx.fillStyle = '#666';
+  labelCtx.font = '12px Arial';
+  labelCtx.fillText('HANDLE WITH CARE', 90, 100);
 
   const labelTex = new THREE.CanvasTexture(labelCanvas);
-  const labelMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.15), new THREE.MeshBasicMaterial({ map: labelTex }));
-  labelMesh.position.set(0, boxH / 2 + wallThickness, boxD / 2 + 0.001);
+  const labelMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.2, 0.13),
+    new THREE.MeshBasicMaterial({ map: labelTex })
+  );
+  labelMesh.position.set(0, wallThickness + boxH / 2, boxD / 2 + 0.001);
   box.add(labelMesh);
 
   // Highlight glow (only when closed)
   if (isHighlighted && openAmount < 0.1) {
     const glow = new THREE.Mesh(
-      new THREE.BoxGeometry(boxW + 0.04, boxH + 0.04, boxD + 0.04),
+      new THREE.BoxGeometry(boxW + 0.04, boxH + 0.1, boxD + 0.04),
       new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 })
     );
-    glow.position.y = boxH / 2;
+    glow.position.y = wallThickness + boxH / 2;
     box.add(glow);
   }
 
   return box;
 }
-
 // ==================== DOMINO ====================
 
 function createDomino(value: string, isHighlighted: boolean): THREE.Group {
@@ -1695,7 +1738,7 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   sign.position.set(0, groundY + 1.02, -0.35);
   dispenser.add(sign);
 
-  // Ticket dimensions - tickets attached together
+  // Ticket dimensions
   const ticketWidth = 0.18;
   const ticketHeight = 0.1;
   const ticketThickness = 0.008;
@@ -1706,60 +1749,69 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   const ticketY = groundY + 0.35;
   const ticketZ = -0.6;
 
-  // Smooth easing function
   const easeInOut = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
-  // Calculate slide offset - ALL tickets move together toward dispenser
+  // Slide animation - ONLY during slide phase
+  const isSliding = animPhase === 'queue-dequeue-slide';
+  const isExiting = animPhase === 'queue-dequeue-exit';
+  
   let slideOffset = 0;
   const slideDistance = totalTicketLength;
 
-  if (animPhase === 'queue-dequeue-slide') {
+  if (isSliding) {
     const easedProgress = easeInOut(animProgress || 0);
     slideOffset = -easedProgress * slideDistance;
-  } else if (animPhase === 'queue-dequeue-exit') {
-    slideOffset = -slideDistance;
   }
+  // NO slide offset during exit - tickets stay in place, only front exits
 
   tickets.forEach((ticket, i) => {
     const isHl = highlightIndex === i;
     const isFront = i === 0;
 
-    if (isFront && animPhase === 'queue-dequeue-exit') {
-      const progress = animProgress || 0;
-      if (progress > 0.95) return;
-    }
-
     const ticketGroup = new THREE.Group();
 
-    let ticketX = ticketStartX + i * totalTicketLength + slideOffset;
+    // Base position - only apply slide offset during slide phase
+    let ticketX = ticketStartX + i * totalTicketLength;
+    if (isSliding) {
+      ticketX += slideOffset;
+    }
+    
     let ticketScale = 1;
     let ticketOpacity = 1;
+    let shouldRender = true;
 
-    if (isFront && animPhase === 'queue-dequeue-exit') {
+    // ONLY the front ticket gets exit animation
+    if (isFront && isExiting) {
       const progress = animProgress || 0;
       const easedProgress = easeInOut(progress);
-      ticketX -= easedProgress * 0.15;
-      ticketScale = 1 - easedProgress * 0.8;
-      ticketOpacity = 1 - easedProgress;
+      
+      // Move into dispenser slot
+      ticketX = ticketStartX - slideDistance - easedProgress * 0.2;
+      ticketScale = Math.max(0.01, 1 - easedProgress * 0.95);
+      ticketOpacity = Math.max(0, 1 - easedProgress);
+      
+      if (progress > 0.95) {
+        shouldRender = false;
+      }
     }
 
-    if (ticketScale <= 0.05) return;
+    if (!shouldRender || ticketScale <= 0.01) return;
 
     ticketGroup.scale.setScalar(ticketScale);
 
     const ticketMat = new THREE.MeshStandardMaterial({
       color: ticket.color,
       roughness: 0.35,
-      emissive: isHl ? '#ffff00' : '#000',
-      emissiveIntensity: isHl ? 0.3 : 0,
+      emissive: isHl && !isExiting ? '#ffff00' : '#000',
+      emissiveIntensity: isHl && !isExiting ? 0.3 : 0,
       transparent: ticketOpacity < 1,
       opacity: ticketOpacity
     });
     const ticketBody = new THREE.Mesh(new THREE.BoxGeometry(ticketWidth, ticketThickness, ticketHeight), ticketMat);
     ticketGroup.add(ticketBody);
 
-    // Connection piece between tickets (NO perforation lines)
-    if (i < tickets.length - 1 && !(isFront && animPhase === 'queue-dequeue-exit')) {
+    // Connection piece between tickets
+    if (i < tickets.length - 1 && !(isFront && isExiting)) {
       const connectorMat = new THREE.MeshStandardMaterial({
         color: ticket.color,
         roughness: 0.4,
@@ -1796,10 +1848,10 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
     ticketLabel.rotation.x = -Math.PI / 2;
     ticketGroup.add(ticketLabel);
 
-    if (isHl && animPhase !== 'queue-dequeue-exit') {
+    if (isHl && !isExiting) {
       const glow = new THREE.Mesh(
         new THREE.BoxGeometry(ticketWidth + 0.015, ticketThickness + 0.01, ticketHeight + 0.015),
-        new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.22 * ticketOpacity })
+        new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.22 })
       );
       ticketGroup.add(glow);
     }
@@ -1810,23 +1862,30 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
 
   // Front/Rear labels
   if (tickets.length > 0) {
-    const frontX = ticketStartX + slideOffset;
+    let frontLabelX = ticketStartX;
+    if (isSliding) {
+      frontLabelX += slideOffset;
+    }
     
-    if (animPhase !== 'queue-dequeue-exit' || (animProgress || 0) < 0.5) {
+    // Don't show front label during exit
+    if (!isExiting) {
       const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
-      frontSprite.position.set(frontX, groundY + 0.2, ticketZ);
+      frontSprite.position.set(frontLabelX, groundY + 0.2, ticketZ);
       frontSprite.scale.set(0.22, 0.08, 1);
       dispenser.add(frontSprite);
     }
 
-    const rearX = ticketStartX + (tickets.length - 1) * totalTicketLength + slideOffset;
+    let rearLabelX = ticketStartX + (tickets.length - 1) * totalTicketLength;
+    if (isSliding) {
+      rearLabelX += slideOffset;
+    }
     const rearSprite = createTextSprite('REAR', '#ff6600', 16);
-    rearSprite.position.set(rearX, groundY + 0.2, ticketZ);
+    rearSprite.position.set(rearLabelX, groundY + 0.2, ticketZ);
     rearSprite.scale.set(0.22, 0.08, 1);
     dispenser.add(rearSprite);
   }
 
-  // Counter (NO RAIL LINES - removed!)
+  // Counter
   const counterWidth = Math.max(1.2, tickets.length * totalTicketLength + 0.6);
   const counter = new THREE.Mesh(
     new THREE.BoxGeometry(counterWidth, 0.04, 0.7),
@@ -1834,9 +1893,6 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   );
   counter.position.set(counterWidth / 2 - 0.3, groundY - 0.02, -0.6);
   dispenser.add(counter);
-
-  // REMOVED: Guide rails (the grey pipes on sides of tickets)
-  // No more topRail and bottomRail
 
   return dispenser;
 }
