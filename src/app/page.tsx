@@ -24,6 +24,7 @@ type LinkedListEnvironment = 'train' | 'people' | 'domino';
 type StackEnvironment = 'books' | 'plates' | 'boxes';
 type QueueEnvironment = 'tollgate' | 'tickets' | 'students';
 type AppMode = 'person' | 'surface' | 'webxr';
+type SelectionMode = 'none' | 'delete' | 'swap-first' | 'swap-second' | 'access' | 'insert';
 
 interface HumanAppearance {
   skinTone: string;
@@ -758,6 +759,142 @@ function createBook(label: string, color: string, isHighlighted: boolean, isOpen
 
   return book;
 }
+
+// ==================== CLIPBOARD (TODO) ====================
+
+function createClipboard(label: string, color: string, isHighlighted: boolean, allTasks?: DataItem[]): THREE.Group {
+  const clipboard = new THREE.Group();
+
+  const boardMat = new THREE.MeshStandardMaterial({
+    color: '#6d4c2a',
+    roughness: 0.65,
+    emissive: isHighlighted ? '#ffff00' : '#000',
+    emissiveIntensity: isHighlighted ? 0.25 : 0
+  });
+  const board = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.5, 0.025), boardMat);
+  clipboard.add(board);
+
+  const edgeMat = new THREE.MeshStandardMaterial({ color: '#5a3d1f', roughness: 0.7 });
+  const topEdge = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.02, 0.03), edgeMat);
+  topEdge.position.y = 0.25;
+  clipboard.add(topEdge);
+
+  const clipMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.9, roughness: 0.2 });
+  const clipBase = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 0.04), clipMat);
+  clipBase.position.set(0, 0.26, 0.02);
+  clipboard.add(clipBase);
+
+  const clipArm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.015, 0.06), clipMat);
+  clipArm.position.set(0, 0.28, 0.04);
+  clipboard.add(clipArm);
+
+  const paperCanvas = document.createElement('canvas');
+  paperCanvas.width = 190;
+  paperCanvas.height = 280;
+  const pctx = paperCanvas.getContext('2d')!;
+
+  pctx.fillStyle = '#fefef6';
+  pctx.fillRect(0, 0, 190, 280);
+
+  pctx.fillStyle = color;
+  pctx.fillRect(0, 0, 190, 40);
+  pctx.fillStyle = '#fff';
+  pctx.font = 'bold 18px Arial';
+  pctx.textAlign = 'center';
+  pctx.fillText('TO-DO LIST', 95, 28);
+
+  pctx.strokeStyle = '#ddd';
+  pctx.lineWidth = 1;
+  for (let y = 60; y < 260; y += 28) {
+    pctx.beginPath();
+    pctx.moveTo(20, y);
+    pctx.lineTo(170, y);
+    pctx.stroke();
+  }
+
+  // Show tasks if provided
+  const items = allTasks ? allTasks.map((t, i) => ({ text: t.label, checked: i < allTasks.length - 1 })) : [
+    { text: label, checked: false },
+    { text: 'Review notes', checked: true },
+    { text: 'Practice code', checked: false },
+    { text: 'Take break', checked: true },
+  ];
+
+  pctx.font = '14px Arial';
+  pctx.textAlign = 'left';
+  items.slice(0, 6).forEach((item, i) => {
+    const y = 55 + i * 28;
+
+    pctx.strokeStyle = '#333';
+    pctx.lineWidth = 2;
+    pctx.strokeRect(22, y - 12, 14, 14);
+
+    if (item.checked) {
+      pctx.strokeStyle = '#27ae60';
+      pctx.lineWidth = 3;
+      pctx.beginPath();
+      pctx.moveTo(24, y - 4);
+      pctx.lineTo(28, y);
+      pctx.lineTo(34, y - 10);
+      pctx.stroke();
+    }
+
+    pctx.fillStyle = item.checked ? '#999' : '#333';
+    pctx.fillText(item.text.substring(0, 12), 44, y);
+
+    if (item.checked) {
+      pctx.strokeStyle = '#999';
+      pctx.lineWidth = 1;
+      pctx.beginPath();
+      pctx.moveTo(44, y - 4);
+      pctx.lineTo(44 + Math.min(pctx.measureText(item.text).width, 80), y - 4);
+      pctx.stroke();
+    }
+  });
+
+  const paperTex = new THREE.CanvasTexture(paperCanvas);
+  const paper = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.46), new THREE.MeshBasicMaterial({ map: paperTex }));
+  paper.position.z = 0.014;
+  clipboard.add(paper);
+
+  const penGroup = new THREE.Group();
+
+  const penBodyMat = new THREE.MeshStandardMaterial({ color: '#1a237e', metalness: 0.3, roughness: 0.5 });
+  const penBody = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 12), penBodyMat);
+  penGroup.add(penBody);
+
+  const gripMat = new THREE.MeshStandardMaterial({ color: '#333', roughness: 0.8 });
+  const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.05, 12), gripMat);
+  grip.position.y = -0.06;
+  penGroup.add(grip);
+
+  const tipMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.9, roughness: 0.1 });
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.01, 0.03, 12), tipMat);
+  tip.position.y = -0.125;
+  tip.rotation.z = Math.PI;
+  penGroup.add(tip);
+
+  const clipPen = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.06, 0.004), tipMat);
+  clipPen.position.set(0.014, 0.06, 0);
+  penGroup.add(clipPen);
+
+  const capTop = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 8), penBodyMat);
+  capTop.position.y = 0.11;
+  penGroup.add(capTop);
+
+  penGroup.position.set(0.22, -0.08, 0.03);
+  penGroup.rotation.z = -0.3;
+  clipboard.add(penGroup);
+
+  if (isHighlighted) {
+    clipboard.add(new THREE.Mesh(
+      new THREE.BoxGeometry(0.42, 0.54, 0.04),
+      new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 })
+    ));
+  }
+
+  return clipboard;
+}
 // ==================== TRAIN CAR ====================
 
 function createTrainCar(isEngine: boolean, color: string, label: string, isHighlighted: boolean): THREE.Group {
@@ -1374,22 +1511,18 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   box.add(bottom);
 
   // === WALLS ===
-  // Front wall
   const frontWall = new THREE.Mesh(new THREE.BoxGeometry(boxW, boxH - wallThickness, wallThickness), cardboardMat);
   frontWall.position.set(0, wallThickness + (boxH - wallThickness) / 2, boxD / 2 - wallThickness / 2);
   box.add(frontWall);
 
-  // Back wall
   const backWall = new THREE.Mesh(new THREE.BoxGeometry(boxW, boxH - wallThickness, wallThickness), cardboardMat);
   backWall.position.set(0, wallThickness + (boxH - wallThickness) / 2, -boxD / 2 + wallThickness / 2);
   box.add(backWall);
 
-  // Left wall
   const leftWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, boxH - wallThickness, boxD - wallThickness * 2), cardboardMat);
   leftWall.position.set(-boxW / 2 + wallThickness / 2, wallThickness + (boxH - wallThickness) / 2, 0);
   box.add(leftWall);
 
-  // Right wall
   const rightWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, boxH - wallThickness, boxD - wallThickness * 2), cardboardMat);
   rightWall.position.set(boxW / 2 - wallThickness / 2, wallThickness + (boxH - wallThickness) / 2, 0);
   box.add(rightWall);
@@ -1409,7 +1542,7 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
     box.add(corner);
   });
 
-  // === TOP FLAPS (Opening from center outward) ===
+  // === TOP FLAPS ===
   const flapHeight = boxD / 2 - wallThickness;
   const flapWidth = boxW - wallThickness * 2;
   const topY = boxH;
@@ -1418,97 +1551,54 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
     ? 2 * openAmount * openAmount
     : 1 - Math.pow(-2 * openAmount + 2, 2) / 2;
 
-  const openAngle = Math.PI * 0.55; // How far flaps open
+  const openAngle = Math.PI * 0.55;
 
-  // === FRONT FLAP (hinged at front edge, opens outward toward front) ===
+  // Front flap
   const frontFlapPivot = new THREE.Group();
   frontFlapPivot.position.set(0, topY, boxD / 2 - wallThickness);
-
-  const frontFlap = new THREE.Mesh(
-    new THREE.BoxGeometry(flapWidth, flapThickness, flapHeight),
-    flapMat
-  );
+  const frontFlap = new THREE.Mesh(new THREE.BoxGeometry(flapWidth, flapThickness, flapHeight), flapMat);
   frontFlap.position.set(0, 0, -flapHeight / 2);
   frontFlapPivot.add(frontFlap);
-
-  // Flap fold line
-  const foldLineMat = new THREE.MeshBasicMaterial({ color: '#a0855b' });
-  const frontFoldLine = new THREE.Mesh(new THREE.BoxGeometry(flapWidth - 0.02, 0.003, 0.003), foldLineMat);
-  frontFoldLine.position.set(0, flapThickness / 2 + 0.001, -0.01);
-  frontFlapPivot.add(frontFoldLine);
-
   frontFlapPivot.rotation.x = easedOpen * openAngle;
   box.add(frontFlapPivot);
 
-  // === BACK FLAP (hinged at back edge, opens outward toward back) ===
+  // Back flap
   const backFlapPivot = new THREE.Group();
   backFlapPivot.position.set(0, topY, -boxD / 2 + wallThickness);
-
-  const backFlap = new THREE.Mesh(
-    new THREE.BoxGeometry(flapWidth, flapThickness, flapHeight),
-    flapMat
-  );
+  const backFlap = new THREE.Mesh(new THREE.BoxGeometry(flapWidth, flapThickness, flapHeight), flapMat);
   backFlap.position.set(0, 0, flapHeight / 2);
   backFlapPivot.add(backFlap);
-
-  const backFoldLine = new THREE.Mesh(new THREE.BoxGeometry(flapWidth - 0.02, 0.003, 0.003), foldLineMat);
-  backFoldLine.position.set(0, flapThickness / 2 + 0.001, 0.01);
-  backFlapPivot.add(backFoldLine);
-
   backFlapPivot.rotation.x = -easedOpen * openAngle;
   box.add(backFlapPivot);
 
-  // === SIDE FLAPS (smaller, hinged at sides) ===
+  // Side flaps
   const sideFlapDepth = boxW / 2 - wallThickness;
   const sideFlapWidth = boxD - wallThickness * 2 - flapHeight * 2;
 
-  // Left side flap
   const leftFlapPivot = new THREE.Group();
   leftFlapPivot.position.set(-boxW / 2 + wallThickness, topY, 0);
-
-  const leftFlap = new THREE.Mesh(
-    new THREE.BoxGeometry(sideFlapDepth, flapThickness, Math.max(0.05, sideFlapWidth)),
-    flapMat
-  );
+  const leftFlap = new THREE.Mesh(new THREE.BoxGeometry(sideFlapDepth, flapThickness, Math.max(0.05, sideFlapWidth)), flapMat);
   leftFlap.position.set(sideFlapDepth / 2, 0, 0);
   leftFlapPivot.add(leftFlap);
-
   leftFlapPivot.rotation.z = -easedOpen * openAngle;
   box.add(leftFlapPivot);
 
-  // Right side flap
   const rightFlapPivot = new THREE.Group();
   rightFlapPivot.position.set(boxW / 2 - wallThickness, topY, 0);
-
-  const rightFlap = new THREE.Mesh(
-    new THREE.BoxGeometry(sideFlapDepth, flapThickness, Math.max(0.05, sideFlapWidth)),
-    flapMat
-  );
+  const rightFlap = new THREE.Mesh(new THREE.BoxGeometry(sideFlapDepth, flapThickness, Math.max(0.05, sideFlapWidth)), flapMat);
   rightFlap.position.set(-sideFlapDepth / 2, 0, 0);
   rightFlapPivot.add(rightFlap);
-
   rightFlapPivot.rotation.z = easedOpen * openAngle;
   box.add(rightFlapPivot);
 
-  // === TAPE (visible when closed) ===
+  // Tape (when closed)
   if (openAmount < 0.3) {
-    const tape = new THREE.Mesh(
-      new THREE.BoxGeometry(0.08, 0.005, boxD * 0.7),
-      tapeMat
-    );
+    const tape = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.005, boxD * 0.7), tapeMat);
     tape.position.set(0, topY + 0.003, 0);
     box.add(tape);
-
-    // Cross tape
-    const crossTape = new THREE.Mesh(
-      new THREE.BoxGeometry(boxW * 0.5, 0.005, 0.04),
-      tapeMat
-    );
-    crossTape.position.set(0, topY + 0.004, 0);
-    box.add(crossTape);
   }
 
-  // === MAIN LABEL ON SIDE ===
+  // Label
   const labelCanvas = document.createElement('canvas');
   labelCanvas.width = 180;
   labelCanvas.height = 120;
@@ -1524,49 +1614,12 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   labelCtx.fillStyle = '#2c3e50';
   labelCtx.font = 'bold 28px Arial';
   labelCtx.fillText(label, 90, 68);
-  labelCtx.strokeStyle = '#e74c3c';
-  labelCtx.lineWidth = 2;
-  labelCtx.beginPath();
-  labelCtx.moveTo(75, 85);
-  labelCtx.lineTo(90, 100);
-  labelCtx.lineTo(105, 85);
-  labelCtx.stroke();
 
   const labelTex = new THREE.CanvasTexture(labelCanvas);
-  const labelMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.22, 0.15),
-    new THREE.MeshBasicMaterial({ map: labelTex })
-  );
+  const labelMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.15), new THREE.MeshBasicMaterial({ map: labelTex }));
   labelMesh.position.set(0, boxH / 2 + wallThickness, boxD / 2 + 0.001);
   box.add(labelMesh);
 
-  // === "THIS WAY UP" arrow on side ===
-  const arrowCanvas = document.createElement('canvas');
-  arrowCanvas.width = 64;
-  arrowCanvas.height = 80;
-  const actx = arrowCanvas.getContext('2d')!;
-  actx.fillStyle = '#2c3e50';
-  actx.beginPath();
-  actx.moveTo(32, 5);
-  actx.lineTo(55, 35);
-  actx.lineTo(42, 35);
-  actx.lineTo(42, 75);
-  actx.lineTo(22, 75);
-  actx.lineTo(22, 35);
-  actx.lineTo(9, 35);
-  actx.closePath();
-  actx.fill();
-
-  const arrowTex = new THREE.CanvasTexture(arrowCanvas);
-  const arrowMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.06, 0.08),
-    new THREE.MeshBasicMaterial({ map: arrowTex, transparent: true })
-  );
-  arrowMesh.position.set(boxW / 2 + 0.001, boxH / 2 + wallThickness, 0);
-  arrowMesh.rotation.y = Math.PI / 2;
-  box.add(arrowMesh);
-
-  // === HIGHLIGHT GLOW ===
   if (isHighlighted && openAmount < 0.1) {
     const glow = new THREE.Mesh(
       new THREE.BoxGeometry(boxW + 0.04, boxH + 0.04, boxD + 0.04),
@@ -1640,11 +1693,6 @@ function createDomino(value: string, isHighlighted: boolean): THREE.Group {
     domino.add(dot);
   });
 
-  const glossMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.08 });
-  const gloss = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.4), glossMat);
-  gloss.position.z = 0.036;
-  domino.add(gloss);
-
   if (isHighlighted) {
     domino.add(new THREE.Mesh(
       new THREE.BoxGeometry(0.26, 0.48, 0.04),
@@ -1655,176 +1703,29 @@ function createDomino(value: string, isHighlighted: boolean): THREE.Group {
   return domino;
 }
 
-// ==================== CLIPBOARD ====================
-
-function createClipboard(label: string, color: string, isHighlighted: boolean): THREE.Group {
-  const clipboard = new THREE.Group();
-
-  const boardMat = new THREE.MeshStandardMaterial({
-    color: '#6d4c2a',
-    roughness: 0.65,
-    emissive: isHighlighted ? '#ffff00' : '#000',
-    emissiveIntensity: isHighlighted ? 0.25 : 0
-  });
-  const board = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.5, 0.025), boardMat);
-  clipboard.add(board);
-
-  const edgeMat = new THREE.MeshStandardMaterial({ color: '#5a3d1f', roughness: 0.7 });
-  const topEdge = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.02, 0.03), edgeMat);
-  topEdge.position.y = 0.25;
-  clipboard.add(topEdge);
-
-  const clipMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.9, roughness: 0.2 });
-  const clipBase = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 0.04), clipMat);
-  clipBase.position.set(0, 0.26, 0.02);
-  clipboard.add(clipBase);
-
-  const clipArm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.015, 0.06), clipMat);
-  clipArm.position.set(0, 0.28, 0.04);
-  clipboard.add(clipArm);
-
-  const paperCanvas = document.createElement('canvas');
-  paperCanvas.width = 190;
-  paperCanvas.height = 280;
-  const pctx = paperCanvas.getContext('2d')!;
-
-  pctx.fillStyle = '#fefef6';
-  pctx.fillRect(0, 0, 190, 280);
-
-  pctx.fillStyle = color;
-  pctx.fillRect(0, 0, 190, 40);
-  pctx.fillStyle = '#fff';
-  pctx.font = 'bold 18px Arial';
-  pctx.textAlign = 'center';
-  pctx.fillText('TO-DO LIST', 95, 28);
-
-  pctx.strokeStyle = '#ddd';
-  pctx.lineWidth = 1;
-  for (let y = 60; y < 260; y += 28) {
-    pctx.beginPath();
-    pctx.moveTo(20, y);
-    pctx.lineTo(170, y);
-    pctx.stroke();
-  }
-
-  const items = [
-    { text: label, checked: false },
-    { text: 'Review notes', checked: true },
-    { text: 'Practice code', checked: false },
-    { text: 'Take break', checked: true },
-  ];
-
-  pctx.font = '14px Arial';
-  pctx.textAlign = 'left';
-  items.forEach((item, i) => {
-    const y = 55 + i * 28;
-
-    pctx.strokeStyle = '#333';
-    pctx.lineWidth = 2;
-    pctx.strokeRect(22, y - 12, 14, 14);
-
-    if (item.checked) {
-      pctx.strokeStyle = '#27ae60';
-      pctx.lineWidth = 3;
-      pctx.beginPath();
-      pctx.moveTo(24, y - 4);
-      pctx.lineTo(28, y);
-      pctx.lineTo(34, y - 10);
-      pctx.stroke();
-    }
-
-    pctx.fillStyle = item.checked ? '#999' : '#333';
-    pctx.fillText(item.text, 44, y);
-
-    if (item.checked) {
-      pctx.strokeStyle = '#999';
-      pctx.lineWidth = 1;
-      pctx.beginPath();
-      pctx.moveTo(44, y - 4);
-      pctx.lineTo(44 + pctx.measureText(item.text).width, y - 4);
-      pctx.stroke();
-    }
-  });
-
-  pctx.fillStyle = '#f39c12';
-  pctx.font = '12px Arial';
-  pctx.fillText('★★★', 150, 55);
-  pctx.fillText('★★', 150, 83);
-  pctx.fillText('★', 150, 111);
-
-  const paperTex = new THREE.CanvasTexture(paperCanvas);
-  const paper = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.46), new THREE.MeshBasicMaterial({ map: paperTex }));
-  paper.position.z = 0.014;
-  clipboard.add(paper);
-
-  const penGroup = new THREE.Group();
-
-  const penBodyMat = new THREE.MeshStandardMaterial({ color: '#1a237e', metalness: 0.3, roughness: 0.5 });
-  const penBody = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 12), penBodyMat);
-  penGroup.add(penBody);
-
-  const gripMat = new THREE.MeshStandardMaterial({ color: '#333', roughness: 0.8 });
-  const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.05, 12), gripMat);
-  grip.position.y = -0.06;
-  penGroup.add(grip);
-
-  const tipMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.9, roughness: 0.1 });
-  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.01, 0.03, 12), tipMat);
-  tip.position.y = -0.125;
-  tip.rotation.z = Math.PI;
-  penGroup.add(tip);
-
-  const clipPen = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.06, 0.004), tipMat);
-  clipPen.position.set(0.014, 0.06, 0);
-  penGroup.add(clipPen);
-
-  const capTop = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 8), penBodyMat);
-  capTop.position.y = 0.11;
-  penGroup.add(capTop);
-
-  penGroup.position.set(0.22, -0.08, 0.03);
-  penGroup.rotation.z = -0.3;
-  clipboard.add(penGroup);
-
-  if (isHighlighted) {
-    clipboard.add(new THREE.Mesh(
-      new THREE.BoxGeometry(0.42, 0.54, 0.04),
-      new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 })
-    ));
-  }
-
-  return clipboard;
-}
-
 // ==================== TICKET DISPENSER (FACING RIGHT, FLAT TICKETS) ====================
 
 function createTicketDispenser(tickets: DataItem[], highlightIndex: number | null, animPhase: string, animProgress: number): THREE.Group {
   const dispenser = new THREE.Group();
   const groundY = 0;
 
-  // === MAIN MACHINE BODY (rotated to face right) ===
+  // Machine body (rotated to face right)
   const machineMat = new THREE.MeshStandardMaterial({ color: '#c0392b', roughness: 0.4, metalness: 0.3 });
   const machineBody = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.9, 0.5), machineMat);
   machineBody.position.set(0, groundY + 0.45, -0.6);
   dispenser.add(machineBody);
 
-  // === MACHINE TOP ===
   const topMat = new THREE.MeshStandardMaterial({ color: '#922b21', roughness: 0.5 });
   const machineTop = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.06, 0.55), topMat);
   machineTop.position.set(0, groundY + 0.93, -0.6);
   dispenser.add(machineTop);
 
-  // === DECORATIVE TRIM ===
   const trimMat = new THREE.MeshStandardMaterial({ color: '#f1c40f', metalness: 0.7, roughness: 0.3 });
   const topTrim = new THREE.Mesh(new THREE.BoxGeometry(0.37, 0.03, 0.52), trimMat);
   topTrim.position.set(0, groundY + 0.91, -0.6);
   dispenser.add(topTrim);
 
-  const bottomTrim = new THREE.Mesh(new THREE.BoxGeometry(0.37, 0.03, 0.52), trimMat);
-  bottomTrim.position.set(0, groundY + 0.03, -0.6);
-  dispenser.add(bottomTrim);
-
-  // === TICKET SLOT (on the right side of machine) ===
+  // Ticket slot on right side
   const slotFrame = new THREE.Mesh(
     new THREE.BoxGeometry(0.08, 0.08, 0.3),
     new THREE.MeshStandardMaterial({ color: '#2c3e50', metalness: 0.5 })
@@ -1839,7 +1740,7 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   slotHole.position.set(0.2, groundY + 0.35, -0.6);
   dispenser.add(slotHole);
 
-  // === DISPLAY SCREEN (on front) ===
+  // Screen on right side
   const screenFrame = new THREE.Mesh(
     new THREE.BoxGeometry(0.03, 0.22, 0.34),
     new THREE.MeshStandardMaterial({ color: '#1a1a1a' })
@@ -1862,26 +1763,20 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   sctx.font = '14px monospace';
   sctx.fillText('IN QUEUE', 85, 95);
   const screenTex = new THREE.CanvasTexture(screenCanvas);
-  const screen = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.3, 0.18),
-    new THREE.MeshBasicMaterial({ map: screenTex })
-  );
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.18), new THREE.MeshBasicMaterial({ map: screenTex }));
   screen.position.set(0.19, groundY + 0.62, -0.6);
   screen.rotation.y = Math.PI / 2;
   dispenser.add(screen);
 
-  // === DECORATIVE LIGHTS ===
+  // Decorative lights
   const lightColors = ['#ff0000', '#00ff00', '#ffff00', '#00ffff'];
   lightColors.forEach((lc, i) => {
-    const light = new THREE.Mesh(
-      new THREE.SphereGeometry(0.018, 8, 8),
-      new THREE.MeshBasicMaterial({ color: lc })
-    );
+    const light = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), new THREE.MeshBasicMaterial({ color: lc }));
     light.position.set(0.18, groundY + 0.82, -0.6 + (i - 1.5) * 0.08);
     dispenser.add(light);
   });
 
-  // === SIGN ON TOP ===
+  // Sign
   const signCanvas = document.createElement('canvas');
   signCanvas.width = 220;
   signCanvas.height = 70;
@@ -1896,21 +1791,17 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   signCtx.textAlign = 'center';
   signCtx.fillText('🎟️ TICKETS', 110, 48);
   const signTex = new THREE.CanvasTexture(signCanvas);
-  const sign = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.44, 0.14),
-    new THREE.MeshBasicMaterial({ map: signTex })
-  );
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.44, 0.14), new THREE.MeshBasicMaterial({ map: signTex }));
   sign.position.set(0, groundY + 1.02, -0.35);
   dispenser.add(sign);
 
-  // === FLAT TICKETS (laying horizontally, attached to dispenser, extending to the right) ===
+  // Flat tickets extending to the right
   const ticketWidth = 0.18;
   const ticketHeight = 0.1;
   const ticketThickness = 0.008;
   const ticketGap = 0.01;
   const totalTicketLength = ticketWidth + ticketGap;
 
-  // Tickets start from the slot and go to the right
   const ticketStartX = 0.28;
   const ticketY = groundY + 0.35;
   const ticketZ = -0.6;
@@ -1925,7 +1816,6 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
     let ticketScale = 1;
     let ticketOpacity = 1;
 
-    // Animation for dequeue - ticket gets pulled into machine
     if (animPhase === 'queue-dequeue-drive' && isFront) {
       const progress = animProgress || 0;
       ticketX = ticketStartX - progress * 0.3;
@@ -1937,7 +1827,6 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
 
     ticketGroup.scale.setScalar(ticketScale);
 
-    // Ticket body (flat, laying down)
     const ticketMat = new THREE.MeshStandardMaterial({
       color: ticket.color,
       roughness: 0.35,
@@ -1949,7 +1838,7 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
     const ticketBody = new THREE.Mesh(new THREE.BoxGeometry(ticketWidth, ticketThickness, ticketHeight), ticketMat);
     ticketGroup.add(ticketBody);
 
-    // Perforation marks (connection to next ticket)
+    // Perforations
     if (i < tickets.length - 1) {
       const perfMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
       for (let p = -3; p <= 3; p++) {
@@ -1959,7 +1848,7 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
       }
     }
 
-    // Ticket label (on top of flat ticket)
+    // Label on top
     const ticketCanvas = document.createElement('canvas');
     ticketCanvas.width = 90;
     ticketCanvas.height = 50;
@@ -1981,26 +1870,6 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
     ticketLabel.rotation.x = -Math.PI / 2;
     ticketGroup.add(ticketLabel);
 
-    // Star for front ticket
-    if (isFront && ticketOpacity > 0.5) {
-      const starCanvas = document.createElement('canvas');
-      starCanvas.width = 32;
-      starCanvas.height = 32;
-      const starCtx = starCanvas.getContext('2d')!;
-      starCtx.fillStyle = '#ffd700';
-      starCtx.font = '24px Arial';
-      starCtx.fillText('★', 4, 24);
-      const starTex = new THREE.CanvasTexture(starCanvas);
-      const star = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.03, 0.03),
-        new THREE.MeshBasicMaterial({ map: starTex, transparent: true })
-      );
-      star.position.set(-ticketWidth / 2 + 0.02, ticketThickness / 2 + 0.002, -ticketHeight / 2 + 0.02);
-      star.rotation.x = -Math.PI / 2;
-      ticketGroup.add(star);
-    }
-
-    // Highlight glow
     if (isHl) {
       const glow = new THREE.Mesh(
         new THREE.BoxGeometry(ticketWidth + 0.015, ticketThickness + 0.01, ticketHeight + 0.015),
@@ -2013,7 +1882,7 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
     dispenser.add(ticketGroup);
   });
 
-  // === FRONT/REAR LABELS ===
+  // Front/Rear labels
   if (tickets.length > 0) {
     const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
     frontSprite.position.set(ticketStartX, groundY + 0.2, ticketZ);
@@ -2026,7 +1895,7 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
     dispenser.add(rearSprite);
   }
 
-  // === COUNTER/TABLE ===
+  // Counter
   const counterWidth = Math.max(1.2, tickets.length * totalTicketLength + 0.6);
   const counter = new THREE.Mesh(
     new THREE.BoxGeometry(counterWidth, 0.04, 0.7),
@@ -2035,16 +1904,14 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   counter.position.set(counterWidth / 2 - 0.3, groundY - 0.02, -0.6);
   dispenser.add(counter);
 
-  // === TICKET GUIDE RAIL ===
+  // Guide rails
   const railMat = new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.6 });
   const railLength = Math.max(0.5, tickets.length * totalTicketLength + 0.2);
   
-  // Top rail
   const topRail = new THREE.Mesh(new THREE.BoxGeometry(railLength, 0.015, 0.015), railMat);
   topRail.position.set(ticketStartX + railLength / 2 - 0.1, ticketY + 0.02, ticketZ - ticketHeight / 2 - 0.015);
   dispenser.add(topRail);
   
-  // Bottom rail
   const bottomRail = new THREE.Mesh(new THREE.BoxGeometry(railLength, 0.015, 0.015), railMat);
   bottomRail.position.set(ticketStartX + railLength / 2 - 0.1, ticketY + 0.02, ticketZ + ticketHeight / 2 + 0.015);
   dispenser.add(bottomRail);
@@ -2148,10 +2015,8 @@ function createSchoolBuilding(): THREE.Group {
   school.add(clockFace);
 
   const stepMat = new THREE.MeshStandardMaterial({ color: '#808080', roughness: 0.7 });
-  const stepWidth = 0.6;
-
   [0.22, 0.12, 0.02].forEach((x, i) => {
-    const step = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.05, stepWidth), stepMat);
+    const step = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.05, 0.6), stepMat);
     step.position.set(x, groundY + 0.025 + i * 0.05, 0);
     school.add(step);
   });
@@ -2504,26 +2369,33 @@ function buildSceneContent(
       group.add(board);
 
     } else if (environment === 'todo') {
-      data.forEach((item, i) => {
-        const isHl = highlightIndex === i || highlightIndex2 === i;
-        const clipboard = createClipboard(item.label, item.color, isHl);
-        clipboard.position.set(startX + i * spacing, isHl ? 0.1 : 0, 0);
-        clipboard.scale.setScalar(0.68);
-        applyItemAnimation(clipboard, i, animPhase || '', animData || {}, 'array', animProgress);
-        group.add(clipboard);
+      // ToDo: Single clipboard showing all tasks as a list
+      const clipboard = createClipboard('Tasks', '#e74c3c', false, data);
+      clipboard.position.set(0, 0, 0);
+      clipboard.scale.setScalar(1.2);
+      group.add(clipboard);
 
-        const idx = createTextSprite(`[${i}]`, isHl ? '#ffff00' : '#ffffff', 20);
-        idx.position.set(startX + i * spacing, -0.42, 0);
-        idx.scale.set(0.22, 0.11, 1);
-        group.add(idx);
-      });
+      // Array visualization below
+      const arrayStr = `array = [${data.map(d => `"${d.label}"`).join(', ')}]`;
+      const arrayLabel = createTextSprite(arrayStr.length > 40 ? arrayStr.substring(0, 37) + '...' : arrayStr, '#00ff00', 14);
+      arrayLabel.position.set(0, -0.42, 0);
+      arrayLabel.scale.set(1.0, 0.12, 1);
+      group.add(arrayLabel);
 
-      const desk = new THREE.Mesh(
-        new THREE.BoxGeometry(data.length * spacing + 0.5, 0.04, 0.45),
-        new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.7 })
-      );
-      desk.position.y = -0.28;
-      group.add(desk);
+      // Show indices below
+      const indexStr = `indices: ${data.map((_, i) => `[${i}]`).join('  ')}`;
+      const indexLabel = createTextSprite(indexStr, '#aaaaaa', 12);
+      indexLabel.position.set(0, -0.52, 0);
+      indexLabel.scale.set(0.9, 0.1, 1);
+      group.add(indexLabel);
+
+      // Highlight animation for appended item
+      if (highlightIndex !== null && highlightIndex < data.length) {
+        const highlightLabel = createTextSprite(`↑ NEW [${highlightIndex}]`, '#ffff00', 16);
+        highlightLabel.position.set(0, -0.62, 0);
+        highlightLabel.scale.set(0.5, 0.1, 1);
+        group.add(highlightLabel);
+      }
     }
 
   // ==================== LINKED LIST ====================
@@ -2544,12 +2416,7 @@ function buildSceneContent(
       });
 
       for (let i = 0; i < data.length - 1; i++) {
-        const arrow = create3DArrow(
-          startX + i * spacing,
-          startX + (i + 1) * spacing,
-          arrowY,
-          false
-        );
+        const arrow = create3DArrow(startX + i * spacing, startX + (i + 1) * spacing, arrowY, false);
         group.add(arrow);
       }
 
@@ -2559,12 +2426,7 @@ function buildSceneContent(
       group.add(nullSprite);
 
       if (data.length > 0) {
-        const lastArrow = create3DArrow(
-          startX + (data.length - 1) * spacing,
-          startX + (data.length - 1) * spacing + spacing * 0.7,
-          arrowY,
-          false
-        );
+        const lastArrow = create3DArrow(startX + (data.length - 1) * spacing, startX + (data.length - 1) * spacing + spacing * 0.7, arrowY, false);
         group.add(lastArrow);
       }
 
@@ -2606,12 +2468,7 @@ function buildSceneContent(
         }
 
         if (i < data.length - 1) {
-          const arrow = create3DArrow(
-            startX + i * spacing,
-            startX + (i + 1) * spacing,
-            arrowY,
-            false
-          );
+          const arrow = create3DArrow(startX + i * spacing, startX + (i + 1) * spacing, arrowY, false);
           group.add(arrow);
         }
       });
@@ -2622,12 +2479,7 @@ function buildSceneContent(
       group.add(nullSprite);
 
       if (data.length > 0) {
-        const lastArrow = create3DArrow(
-          startX + (data.length - 1) * spacing,
-          startX + data.length * spacing,
-          arrowY,
-          false
-        );
+        const lastArrow = create3DArrow(startX + (data.length - 1) * spacing, startX + data.length * spacing, arrowY, false);
         group.add(lastArrow);
       }
 
@@ -2651,12 +2503,7 @@ function buildSceneContent(
         group.add(domino);
 
         if (i < data.length - 1) {
-          const arrow = create3DArrow(
-            startX + i * spacing,
-            startX + (i + 1) * spacing,
-            arrowY,
-            false
-          );
+          const arrow = create3DArrow(startX + i * spacing, startX + (i + 1) * spacing, arrowY, false);
           group.add(arrow);
         }
       });
@@ -2667,12 +2514,7 @@ function buildSceneContent(
       group.add(nullSprite);
 
       if (data.length > 0) {
-        const lastArrow = create3DArrow(
-          startX + (data.length - 1) * spacing,
-          startX + data.length * spacing,
-          arrowY,
-          false
-        );
+        const lastArrow = create3DArrow(startX + (data.length - 1) * spacing, startX + data.length * spacing, arrowY, false);
         group.add(lastArrow);
       }
 
@@ -2764,7 +2606,6 @@ function buildSceneContent(
         }
 
         const cardboardBox = createCardboardBox(item.label, item.color, isHl, openAmount);
-        // Boxes stacked on top of each other, not floating
         cardboardBox.position.set(0, boxBaseY + i * boxSpacing, 0);
         cardboardBox.rotation.y = (i % 2 === 0) ? 0 : 0.03;
         cardboardBox.scale.setScalar(0.78);
@@ -2857,22 +2698,19 @@ function buildSceneContent(
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const isFront = i === 0;
-        
+
         if (item.appearance) {
-          // Calculate walk phase for walking animation
           let walkPhase = 0;
           let extraX = 0;
           let studentScale = 0.55;
           let shouldRender = true;
-          
+
           if (isFront) {
             if (animPhase === 'queue-dequeue-walk') {
-              // Walking toward school with animated legs and arms
               const progress = animProgress || 0;
-              walkPhase = progress * Math.PI * 10; // Fast walk cycle
+              walkPhase = progress * Math.PI * 10;
               extraX = -progress * 1.2;
             } else if (animPhase === 'queue-dequeue-enter') {
-              // Entering school door - continue walking then shrink
               const progress = animProgress || 0;
               walkPhase = Math.PI * 10 + progress * Math.PI * 4;
               extraX = -1.2 - progress * 0.4;
@@ -2885,13 +2723,12 @@ function buildSceneContent(
             const human = createHuman3D(item.appearance, item.label, isHl, false, walkPhase);
             human.position.set(startX + i * spacing + 0.6 + extraX, groundY, 0);
             human.scale.setScalar(studentScale);
-            human.rotation.y = -Math.PI / 2; // Face toward school
-            
-            // Apply other queue animations (not walking ones for front)
+            human.rotation.y = -Math.PI / 2;
+
             if (!(isFront && (animPhase === 'queue-dequeue-walk' || animPhase === 'queue-dequeue-enter'))) {
               applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue', animProgress);
             }
-            
+
             group.add(human);
           }
         }
@@ -2959,6 +2796,11 @@ export default function Home() {
   const [animData, setAnimData] = useState<Record<string, any>>({});
   const [animProgress, setAnimProgress] = useState(1);
 
+  // Selection mode states
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>('none');
+  const [swapFirstIndex, setSwapFirstIndex] = useState<number | null>(null);
+  const [pendingOperation, setPendingOperation] = useState<string>('');
+
   const [appMode, setAppMode] = useState<AppMode>('person');
   const [surfacePosition, setSurfacePosition] = useState<Position | null>(null);
   const [surfacePlaced, setSurfacePlaced] = useState(false);
@@ -2978,6 +2820,7 @@ export default function Home() {
   const xrContainerRef = useRef<HTMLDivElement>(null);
   const animFrameRef = useRef<number | null>(null);
 
+  // Data states
   const [groceryItems, setGroceryItems] = useState<DataItem[]>([
     { id: 1, label: 'Coco Crunch', color: '#8B4513' },
     { id: 2, label: 'Corn Flakes', color: '#f39c12' },
@@ -3093,6 +2936,387 @@ export default function Home() {
   const zoomIn = useCallback(() => setZoomLevel(prev => Math.min(prev + 0.25, 3)), []);
   const zoomOut = useCallback(() => setZoomLevel(prev => Math.max(prev - 0.25, 0.3)), []);
   const resetZoom = useCallback(() => setZoomLevel(1.0), []);
+
+  // ==================== ARRAY OPERATIONS WITH SELECTION ====================
+
+  const startArrayAccess = () => {
+    if (isAnimating || selectionMode !== 'none') return;
+    setSelectionMode('access');
+    setPendingOperation('Select index to ACCESS:');
+    setCodeDisplay(`// O(1) Direct Access\narray[index]`);
+  };
+
+  const selectIndexForAccess = async (index: number) => {
+    setSelectionMode('none');
+    setPendingOperation('');
+    setIsAnimating(true);
+    const data = getArrayData();
+
+    setHighlightIndex(index);
+    setOperationMessage(`Accessing [${index}]...`);
+    setCodeDisplay(`// O(1) Access\n\n// Pseudo Code:\narray = [${data.map(d => `"${d.label}"`).join(', ')}]\nindex = ${index}\nvalue = array[index]\nprint("Accessed:", value)\n\n// Result: "${data[index].label}"`);
+
+    await smoothAnimate(400, 'access-lift', { index });
+    setOperationMessage(`Found: "${data[index].label}"`);
+    await smoothAnimate(600, 'access-bounce', { index });
+    await smoothAnimate(350, 'access-settle', { index });
+
+    await delay(1000);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const startArrayInsert = () => {
+    if (isAnimating || selectionMode !== 'none' || getArrayData().length >= 6) return;
+    setSelectionMode('insert');
+    setPendingOperation('Select index to INSERT at:');
+    setCodeDisplay(`// O(n) Insert\narray.insert(index, value)`);
+  };
+
+  const selectIndexForInsert = async (insertIndex: number) => {
+    setSelectionMode('none');
+    setPendingOperation('');
+    setIsAnimating(true);
+    const data = getArrayData();
+
+    setOperationMessage(`Inserting at [${insertIndex}]...`);
+    setCodeDisplay(`// O(n) Insert - Shift elements\n\n// Before:\narray = [${data.map(d => `"${d.label}"`).join(', ')}]\nindex = ${insertIndex}\n\n// Shift elements right:\nfor i = length-1 down to index:\n  array[i+1] = array[i]\n\narray[index] = "New"\n\n// After: Element inserted at [${insertIndex}]`);
+
+    for (let i = data.length - 1; i >= insertIndex; i--) {
+      setHighlightIndex(i);
+      await delay(200);
+    }
+
+    let newItem: DataItem;
+    if (arrayEnv === 'classroom') {
+      const names = ['Emma', 'Liam', 'Mia', 'Noah', 'Ava', 'Jack'];
+      const skinTones = ['#f5c6a0', '#c68642', '#8d5524'];
+      const hairColors = ['#1a1a1a', '#3d2314', '#2c1810', '#d4a574'];
+      const shirtColors = ['#1abc9c', '#9b59b6', '#e74c3c', '#3498db', '#f39c12'];
+      const genders: ('male' | 'female')[] = ['male', 'female'];
+      const hairStyles: ('short' | 'long')[] = ['short', 'long'];
+      const gender = genders[Math.floor(Math.random() * genders.length)];
+
+      newItem = {
+        id: Date.now(),
+        label: names[Math.floor(Math.random() * names.length)],
+        color: shirtColors[Math.floor(Math.random() * shirtColors.length)],
+        appearance: {
+          skinTone: skinTones[Math.floor(Math.random() * skinTones.length)],
+          shirtColor: shirtColors[Math.floor(Math.random() * shirtColors.length)],
+          pantsColor: '#2c3e50',
+          hairColor: hairColors[Math.floor(Math.random() * hairColors.length)],
+          hairStyle: gender === 'female' ? 'long' : hairStyles[Math.floor(Math.random() * hairStyles.length)],
+          gender: gender
+        }
+      };
+    } else {
+      newItem = { id: Date.now(), label: 'New', color: '#1abc9c' };
+    }
+
+    (setArrayData as any)((prev: DataItem[]) => {
+      const arr = [...prev];
+      arr.splice(insertIndex, 0, newItem);
+      return arr;
+    });
+
+    setHighlightIndex(insertIndex);
+    await smoothAnimate(450, 'insert-drop', { index: insertIndex });
+    await smoothAnimate(350, 'insert-settle', { index: insertIndex });
+    setOperationMessage('Inserted!');
+    await delay(800);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const startArrayDelete = () => {
+    if (isAnimating || selectionMode !== 'none' || getArrayData().length <= 2) return;
+    setSelectionMode('delete');
+    setPendingOperation('Select index to DELETE:');
+    setCodeDisplay(`// O(n) Delete\narray.delete(index)`);
+  };
+
+  const selectIndexForDelete = async (deleteIndex: number) => {
+    setSelectionMode('none');
+    setPendingOperation('');
+    setIsAnimating(true);
+    const data = getArrayData();
+
+    setHighlightIndex(deleteIndex);
+    setOperationMessage(`Deleting [${deleteIndex}]: "${data[deleteIndex].label}"`);
+    setCodeDisplay(`// O(n) Delete - Shift elements\n\n// Before:\narray = [${data.map(d => `"${d.label}"`).join(', ')}]\nindex = ${deleteIndex}\ndeleted = array[index]  // "${data[deleteIndex].label}"\n\n// Shift elements left:\nfor i = index to length-2:\n  array[i] = array[i+1]\n\nlength = length - 1\n\n// Result: "${data[deleteIndex].label}" removed`);
+
+    await smoothAnimate(450, 'delete-lift', { index: deleteIndex });
+    await smoothAnimate(400, 'delete-shrink', { index: deleteIndex });
+    setHighlightIndex(null);
+    (setArrayData as any)((prev: DataItem[]) => prev.filter((_: any, i: number) => i !== deleteIndex));
+    await smoothAnimate(350, 'delete-close', { deleteIndex });
+
+    await delay(500);
+    setAnimPhase(''); setAnimData({});
+    setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const startArraySwap = () => {
+    if (isAnimating || selectionMode !== 'none' || getArrayData().length < 2) return;
+    setSelectionMode('swap-first');
+    setSwapFirstIndex(null);
+    setPendingOperation('Select FIRST index to swap:');
+    setCodeDisplay(`// O(1) Swap\nswap(array[i], array[j])`);
+  };
+
+  const selectIndexForSwap = async (index: number) => {
+    if (selectionMode === 'swap-first') {
+      setSwapFirstIndex(index);
+      setHighlightIndex(index);
+      setSelectionMode('swap-second');
+      setPendingOperation(`Selected [${index}]. Now select SECOND index:`);
+    } else if (selectionMode === 'swap-second' && swapFirstIndex !== null) {
+      if (index === swapFirstIndex) {
+        setOperationMessage('Cannot swap with same index!');
+        await delay(800);
+        setOperationMessage('');
+        return;
+      }
+
+      setSelectionMode('none');
+      setPendingOperation('');
+      setIsAnimating(true);
+
+      const data = getArrayData();
+      const idx1 = swapFirstIndex;
+      const idx2 = index;
+
+      setHighlightIndex(idx1);
+      setHighlightIndex2(idx2);
+      setOperationMessage(`Swapping [${idx1}] ↔ [${idx2}]`);
+      setCodeDisplay(`// O(1) Swap Operation\n\n// Before:\narray = [${data.map(d => `"${d.label}"`).join(', ')}]\ni = ${idx1}  // "${data[idx1].label}"\nj = ${idx2}  // "${data[idx2].label}"\n\n// Swap using temp:\ntemp = array[i]\narray[i] = array[j]\narray[j] = temp\n\n// After: [${idx1}]="${data[idx2].label}", [${idx2}]="${data[idx1].label}"`);
+
+      await smoothAnimate(400, 'swap-lift', { index1: idx1, index2: idx2 });
+      await smoothAnimate(350, 'swap-cross', { index1: idx1, index2: idx2 });
+      (setArrayData as any)((prev: DataItem[]) => { const a = [...prev]; [a[idx1], a[idx2]] = [a[idx2], a[idx1]]; return a; });
+      await smoothAnimate(400, 'swap-drop', { index1: idx1, index2: idx2 });
+
+      await delay(800);
+      setAnimPhase(''); setAnimData({});
+      setHighlightIndex(null); setHighlightIndex2(null);
+      setSwapFirstIndex(null);
+      setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+    }
+  };
+
+  const cancelSelection = () => {
+    setSelectionMode('none');
+    setPendingOperation('');
+    setSwapFirstIndex(null);
+    setHighlightIndex(null);
+    setHighlightIndex2(null);
+    setCodeDisplay('');
+  };
+
+  // ToDo List - Only Append operation
+  const todoAppend = async () => {
+    if (isAnimating || getArrayData().length >= 6) return;
+    setIsAnimating(true);
+
+    const data = getArrayData();
+    const newIndex = data.length;
+    const taskNames = ['Meeting', 'Email', 'Report', 'Call', 'Review', 'Plan'];
+    const taskColors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c'];
+    const newTask = {
+      id: Date.now(),
+      label: taskNames[Math.floor(Math.random() * taskNames.length)],
+      color: taskColors[Math.floor(Math.random() * taskColors.length)]
+    };
+
+    setOperationMessage(`Appending "${newTask.label}"...`);
+    setCodeDisplay(`// O(1) Append Operation\n\n// Current Array:\narray = [${data.map(d => `"${d.label}"`).join(', ')}]\nlength = ${data.length}\n\n// Pseudo Code:\nnew_value = "${newTask.label}"\narray[length] = new_value\nlength = length + 1\n\n// Result:\narray = [${[...data, newTask].map(d => `"${d.label}"`).join(', ')}]\n// New length: ${data.length + 1}`);
+
+    (setArrayData as any)((prev: DataItem[]) => [...prev, newTask]);
+
+    setHighlightIndex(newIndex);
+    await smoothAnimate(450, 'insert-drop', { index: newIndex });
+    await smoothAnimate(350, 'insert-settle', { index: newIndex });
+
+    setOperationMessage(`Appended "${newTask.label}" at index [${newIndex}]`);
+    await delay(1200);
+
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  // ==================== LINKED LIST OPERATIONS ====================
+
+  const linkedListInsertHead = async () => {
+    if (isAnimating || getLinkedListData().length >= 5) return; setIsAnimating(true);
+    setOperationMessage('Inserting at HEAD...');
+    const newItem: DataItem = linkedListEnv === 'people'
+      ? { id: Date.now(), label: 'New', color: '#1abc9c', appearance: { skinTone: '#f5c6a0', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#3d2314', hairStyle: 'short', gender: 'male' } }
+      : { id: Date.now(), label: 'New', color: '#1abc9c' };
+    (setLinkedListData as any)((prev: DataItem[]) => [newItem, ...prev]);
+    setHighlightIndex(0);
+    await smoothAnimate(450, 'll-insert-head', { index: 0 });
+    await smoothAnimate(350, 'll-insert-head-settle', { index: 0 });
+    setOperationMessage('Inserted at HEAD!'); await delay(700);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const linkedListInsertTail = async () => {
+    if (isAnimating || getLinkedListData().length >= 5) return; setIsAnimating(true);
+    const data = getLinkedListData();
+    setOperationMessage('Traversing to TAIL...');
+    for (let i = 0; i < data.length; i++) {
+      setHighlightIndex(i);
+      await smoothAnimate(300, 'll-traverse', { index: i });
+    }
+    const newItem: DataItem = linkedListEnv === 'people'
+      ? { id: Date.now(), label: 'Last', color: '#e74c3c', appearance: { skinTone: '#8d5524', shirtColor: '#e74c3c', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } }
+      : { id: Date.now(), label: 'New', color: '#e74c3c' };
+    (setLinkedListData as any)((prev: DataItem[]) => [...prev, newItem]);
+    setHighlightIndex(data.length);
+    await smoothAnimate(450, 'll-insert-tail', { index: data.length });
+    await smoothAnimate(350, 'll-insert-tail-settle', { index: data.length });
+    setOperationMessage('Inserted at TAIL!'); await delay(700);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const linkedListDeleteHead = async () => {
+    if (isAnimating || getLinkedListData().length <= 2) return; setIsAnimating(true);
+    setHighlightIndex(0);
+    setOperationMessage('Deleting HEAD...');
+    await smoothAnimate(450, 'll-delete-lift', { index: 0 });
+    await smoothAnimate(400, 'll-delete-shrink', { index: 0 });
+    (setLinkedListData as any)((prev: DataItem[]) => prev.slice(1));
+    await delay(300);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const linkedListTraverse = async () => {
+    if (isAnimating) return; setIsAnimating(true);
+    const data = getLinkedListData();
+    for (let i = 0; i < data.length; i++) {
+      setHighlightIndex(i);
+      setOperationMessage(`Visiting: ${data[i].label}`);
+      await smoothAnimate(400, 'll-traverse', { index: i });
+    }
+    setOperationMessage(`Done! ${data.length} nodes`); await delay(700);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  // ==================== STACK OPERATIONS ====================
+
+  const stackPush = async () => {
+    if (isAnimating || getStackData().length >= 5) return; setIsAnimating(true);
+    const data = getStackData();
+    const labels = stackEnv === 'books' ? ['Physics', 'English', 'Art'] : stackEnv === 'plates' ? [`Plate ${data.length + 1}`] : [`Box ${String.fromCharCode(65 + data.length)}`];
+    const colors = stackEnv === 'books' ? ['#9b59b6', '#e74c3c', '#1abc9c'] : ['#7f8c8d'];
+    const newItem = { id: Date.now(), label: labels[Math.floor(Math.random() * labels.length)], color: colors[Math.floor(Math.random() * colors.length)] };
+    setOperationMessage(`Pushing "${newItem.label}"...`);
+    (setStackData as any)((prev: DataItem[]) => [...prev, newItem]);
+    setHighlightIndex(data.length);
+    await smoothAnimate(450, 'stack-push-drop', { index: data.length });
+    await smoothAnimate(350, 'stack-push-settle', { index: data.length });
+    setOperationMessage('Pushed!'); await delay(600);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const stackPop = async () => {
+    if (isAnimating || getStackData().length <= 1) return; setIsAnimating(true);
+    const data = getStackData(), topItem = data[data.length - 1];
+    setHighlightIndex(data.length - 1);
+    setOperationMessage(`Popping "${topItem.label}"...`);
+    await smoothAnimate(400, 'stack-pop-lift', { index: data.length - 1 });
+    await smoothAnimate(400, 'stack-pop-fly', { index: data.length - 1 });
+    (setStackData as any)((prev: DataItem[]) => prev.slice(0, -1));
+    await delay(300);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const stackPeek = async () => {
+    if (isAnimating || getStackData().length === 0) return; setIsAnimating(true);
+    const data = getStackData(), topItem = data[data.length - 1];
+    setHighlightIndex(data.length - 1);
+    setOperationMessage(`Peeking TOP...`);
+    setCodeDisplay(`// O(1)\nstack.peek()`);
+    await smoothAnimate(600, 'stack-peek-lift', { index: data.length - 1 });
+    setOperationMessage(`TOP: "${topItem.label}"`);
+    await smoothAnimate(1500, 'stack-peek-open', { index: data.length - 1 });
+    await delay(800);
+    await smoothAnimate(600, 'stack-peek-settle', { index: data.length - 1 });
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  // ==================== QUEUE OPERATIONS ====================
+
+  const queueEnqueue = async () => {
+    if (isAnimating || getQueueData().length >= 5) return; setIsAnimating(true);
+    const data = getQueueData();
+    const newItem: DataItem = queueEnv === 'students'
+      ? { id: Date.now(), label: `Stu ${data.length + 1}`, color: '#1abc9c', appearance: { skinTone: '#f5c6a0', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#3d2314', hairStyle: 'short', gender: 'male' } }
+      : queueEnv === 'tollgate'
+        ? { id: Date.now(), label: `NEW-${Math.floor(Math.random() * 900) + 100}`, color: '#1abc9c' }
+        : { id: Date.now(), label: `T-00${data.length + 1}`, color: '#1abc9c' };
+    setOperationMessage(`Enqueue: "${newItem.label}"...`);
+    (setQueueData as any)((prev: DataItem[]) => [...prev, newItem]);
+    setHighlightIndex(data.length);
+    await smoothAnimate(500, 'queue-enqueue-enter', { index: data.length });
+    await smoothAnimate(350, 'queue-enqueue-settle', { index: data.length });
+    setOperationMessage('Enqueued!'); await delay(600);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const queueDequeue = async () => {
+    if (isAnimating || getQueueData().length <= 1) return; setIsAnimating(true);
+    const frontItem = getQueueData()[0];
+    setHighlightIndex(0);
+    setOperationMessage(`Dequeue: "${frontItem.label}"...`);
+    setCodeDisplay(`// O(1) FIFO\nqueue.dequeue()`);
+
+    if (queueEnv === 'tollgate') {
+      setOperationMessage('Gate opening...');
+      await smoothAnimate(1000, 'queue-dequeue-gate-open', { index: 0 });
+      setOperationMessage(`${frontItem.label} passing through...`);
+      await smoothAnimate(1200, 'queue-dequeue-drive', { index: 0 });
+      (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
+      setOperationMessage('Gate closing...');
+      await smoothAnimate(800, 'queue-dequeue-gate-close', { index: -1 });
+    } else if (queueEnv === 'students') {
+      setOperationMessage(`${frontItem.label} walking to school...`);
+      await smoothAnimate(1500, 'queue-dequeue-walk', { index: 0 });
+      setOperationMessage(`${frontItem.label} entering school...`);
+      await smoothAnimate(1000, 'queue-dequeue-enter', { index: 0 });
+      (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
+    } else {
+      setOperationMessage(`Processing ${frontItem.label}...`);
+      await smoothAnimate(1200, 'queue-dequeue-drive', { index: 0 });
+      (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
+    }
+
+    await delay(200);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  const queueFront = async () => {
+    if (isAnimating || getQueueData().length === 0) return; setIsAnimating(true);
+    const frontItem = getQueueData()[0];
+    setHighlightIndex(0);
+    setOperationMessage(`FRONT: "${frontItem.label}"`);
+    await smoothAnimate(1000, 'queue-front-peek', { index: 0 });
+    await delay(500);
+    setAnimPhase(''); setAnimData({});
+    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
+  };
+
+  // ==================== CAMERA & WEBXR SETUP ====================
 
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
     try {
@@ -3222,10 +3446,7 @@ export default function Home() {
       const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 100);
       xrCameraRef.current = camera;
       const group = new THREE.Group(); group.visible = false; scene.add(group); xrGroupRef.current = group;
-      const reticle = new THREE.Mesh(
-        new THREE.RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2),
-        new THREE.MeshBasicMaterial({ color: 0x00ff00 })
-      );
+      const reticle = new THREE.Mesh(new THREE.RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
       reticle.matrixAutoUpdate = false; reticle.visible = false; scene.add(reticle); xrReticleRef.current = reticle;
       const viewerSpace = await session.requestReferenceSpace('viewer');
       const hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
@@ -3316,282 +3537,6 @@ export default function Home() {
   const showVisualization = appMode === 'person' ? !!detectedPerson : appMode === 'surface' ? surfacePlaced : false;
   const showControls = showVisualization || (appMode === 'webxr' && webxrPlaced);
 
-  // Array operations
-  const arrayAccess = async () => {
-    if (isAnimating) return; setIsAnimating(true);
-    const data = getArrayData(), index = Math.floor(Math.random() * data.length);
-    setHighlightIndex(index);
-    setOperationMessage(`Accessing [${index}]...`);
-    setCodeDisplay(`// O(1) Access\narray[${index}]`);
-    await smoothAnimate(400, 'access-lift', { index });
-    setOperationMessage(`Found: "${data[index].label}"`);
-    await smoothAnimate(600, 'access-bounce', { index });
-    await smoothAnimate(350, 'access-settle', { index });
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const arrayInsert = async () => {
-    if (isAnimating || getArrayData().length >= 6) return;
-    setIsAnimating(true);
-    const data = getArrayData();
-    const insertIndex = Math.floor(Math.random() * (data.length + 1));
-    setOperationMessage(`Inserting at [${insertIndex}]...`);
-    setCodeDisplay(`// O(n) Insert`);
-    
-    for (let i = data.length - 1; i >= insertIndex; i--) {
-      setHighlightIndex(i);
-      await delay(200);
-    }
-    
-    let newItem: DataItem;
-    if (arrayEnv === 'classroom') {
-      const names = ['Emma', 'Liam', 'Mia', 'Noah', 'Ava', 'Jack'];
-      const skinTones = ['#f5c6a0', '#c68642', '#8d5524'];
-      const hairColors = ['#1a1a1a', '#3d2314', '#2c1810', '#d4a574'];
-      const shirtColors = ['#1abc9c', '#9b59b6', '#e74c3c', '#3498db', '#f39c12'];
-      const genders: ('male' | 'female')[] = ['male', 'female'];
-      const hairStyles: ('short' | 'long')[] = ['short', 'long'];
-      const gender = genders[Math.floor(Math.random() * genders.length)];
-      
-      newItem = {
-        id: Date.now(),
-        label: names[Math.floor(Math.random() * names.length)],
-        color: shirtColors[Math.floor(Math.random() * shirtColors.length)],
-        appearance: {
-          skinTone: skinTones[Math.floor(Math.random() * skinTones.length)],
-          shirtColor: shirtColors[Math.floor(Math.random() * shirtColors.length)],
-          pantsColor: '#2c3e50',
-          hairColor: hairColors[Math.floor(Math.random() * hairColors.length)],
-          hairStyle: gender === 'female' ? 'long' : hairStyles[Math.floor(Math.random() * hairStyles.length)],
-          gender: gender
-        }
-      };
-    } else {
-      newItem = { id: Date.now(), label: 'New', color: '#1abc9c' };
-    }
-    
-    (setArrayData as any)((prev: DataItem[]) => {
-      const arr = [...prev];
-      arr.splice(insertIndex, 0, newItem);
-      return arr;
-    });
-    
-    setHighlightIndex(insertIndex);
-    await smoothAnimate(450, 'insert-drop', { index: insertIndex });
-    await smoothAnimate(350, 'insert-settle', { index: insertIndex });
-    setOperationMessage('Inserted!');
-    await delay(600);
-    setAnimPhase('');
-    setAnimData({});
-    setHighlightIndex(null);
-    setOperationMessage('');
-    setCodeDisplay('');
-    setIsAnimating(false);
-  };
-
-  const arrayDelete = async () => {
-    if (isAnimating || getArrayData().length <= 2) return; setIsAnimating(true);
-    const data = getArrayData(), deleteIndex = Math.floor(Math.random() * data.length);
-    setHighlightIndex(deleteIndex);
-    setOperationMessage(`Deleting [${deleteIndex}]`);
-    setCodeDisplay(`// O(n) Delete`);
-    await smoothAnimate(450, 'delete-lift', { index: deleteIndex });
-    await smoothAnimate(400, 'delete-shrink', { index: deleteIndex });
-    setHighlightIndex(null);
-    (setArrayData as any)((prev: DataItem[]) => prev.filter((_: any, i: number) => i !== deleteIndex));
-    await smoothAnimate(350, 'delete-close', { deleteIndex });
-    setAnimPhase(''); setAnimData({});
-    setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const arraySwap = async () => {
-    if (isAnimating) return; setIsAnimating(true);
-    const data = getArrayData();
-    const idx1 = Math.floor(Math.random() * data.length);
-    let idx2 = Math.floor(Math.random() * data.length);
-    while (idx2 === idx1) idx2 = Math.floor(Math.random() * data.length);
-    setHighlightIndex(idx1); setHighlightIndex2(idx2);
-    setOperationMessage(`Swapping [${idx1}] ↔ [${idx2}]`);
-    await smoothAnimate(400, 'swap-lift', { index1: idx1, index2: idx2 });
-    await smoothAnimate(350, 'swap-cross', { index1: idx1, index2: idx2 });
-    (setArrayData as any)((prev: DataItem[]) => { const a = [...prev]; [a[idx1], a[idx2]] = [a[idx2], a[idx1]]; return a; });
-    await smoothAnimate(400, 'swap-drop', { index1: idx1, index2: idx2 });
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setHighlightIndex2(null);
-    setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  // Linked list operations
-  const linkedListInsertHead = async () => {
-    if (isAnimating || getLinkedListData().length >= 5) return; setIsAnimating(true);
-    setOperationMessage('Inserting at HEAD...');
-    const newItem: DataItem = linkedListEnv === 'people'
-      ? { id: Date.now(), label: 'New', color: '#1abc9c', appearance: { skinTone: '#f5c6a0', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#3d2314', hairStyle: 'short', gender: 'male' } }
-      : { id: Date.now(), label: 'New', color: '#1abc9c' };
-    (setLinkedListData as any)((prev: DataItem[]) => [newItem, ...prev]);
-    setHighlightIndex(0);
-    await smoothAnimate(450, 'll-insert-head', { index: 0 });
-    await smoothAnimate(350, 'll-insert-head-settle', { index: 0 });
-    setOperationMessage('Inserted at HEAD!'); await delay(700);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const linkedListInsertTail = async () => {
-    if (isAnimating || getLinkedListData().length >= 5) return; setIsAnimating(true);
-    const data = getLinkedListData();
-    setOperationMessage('Traversing to TAIL...');
-    for (let i = 0; i < data.length; i++) {
-      setHighlightIndex(i);
-      await smoothAnimate(300, 'll-traverse', { index: i });
-    }
-    const newItem: DataItem = linkedListEnv === 'people'
-      ? { id: Date.now(), label: 'Last', color: '#e74c3c', appearance: { skinTone: '#8d5524', shirtColor: '#e74c3c', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } }
-      : { id: Date.now(), label: 'New', color: '#e74c3c' };
-    (setLinkedListData as any)((prev: DataItem[]) => [...prev, newItem]);
-    setHighlightIndex(data.length);
-    await smoothAnimate(450, 'll-insert-tail', { index: data.length });
-    await smoothAnimate(350, 'll-insert-tail-settle', { index: data.length });
-    setOperationMessage('Inserted at TAIL!'); await delay(700);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const linkedListDeleteHead = async () => {
-    if (isAnimating || getLinkedListData().length <= 2) return; setIsAnimating(true);
-    setHighlightIndex(0);
-    setOperationMessage('Deleting HEAD...');
-    await smoothAnimate(450, 'll-delete-lift', { index: 0 });
-    await smoothAnimate(400, 'll-delete-shrink', { index: 0 });
-    (setLinkedListData as any)((prev: DataItem[]) => prev.slice(1));
-    await delay(300);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const linkedListTraverse = async () => {
-    if (isAnimating) return; setIsAnimating(true);
-    const data = getLinkedListData();
-    for (let i = 0; i < data.length; i++) {
-      setHighlightIndex(i);
-      setOperationMessage(`Visiting: ${data[i].label}`);
-      await smoothAnimate(400, 'll-traverse', { index: i });
-    }
-    setOperationMessage(`Done! ${data.length} nodes`); await delay(700);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  // Stack operations
-  const stackPush = async () => {
-    if (isAnimating || getStackData().length >= 5) return; setIsAnimating(true);
-    const data = getStackData();
-    const labels = stackEnv === 'books' ? ['Physics', 'English', 'Art'] : stackEnv === 'plates' ? [`Plate ${data.length + 1}`] : [`Box ${String.fromCharCode(65 + data.length)}`];
-    const colors = stackEnv === 'books' ? ['#9b59b6', '#e74c3c', '#1abc9c'] : ['#7f8c8d'];
-    const newItem = { id: Date.now(), label: labels[Math.floor(Math.random() * labels.length)], color: colors[Math.floor(Math.random() * colors.length)] };
-    setOperationMessage(`Pushing "${newItem.label}"...`);
-    (setStackData as any)((prev: DataItem[]) => [...prev, newItem]);
-    setHighlightIndex(data.length);
-    await smoothAnimate(450, 'stack-push-drop', { index: data.length });
-    await smoothAnimate(350, 'stack-push-settle', { index: data.length });
-    setOperationMessage('Pushed!'); await delay(600);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const stackPop = async () => {
-    if (isAnimating || getStackData().length <= 1) return; setIsAnimating(true);
-    const data = getStackData(), topItem = data[data.length - 1];
-    setHighlightIndex(data.length - 1);
-    setOperationMessage(`Popping "${topItem.label}"...`);
-    await smoothAnimate(400, 'stack-pop-lift', { index: data.length - 1 });
-    await smoothAnimate(400, 'stack-pop-fly', { index: data.length - 1 });
-    (setStackData as any)((prev: DataItem[]) => prev.slice(0, -1));
-    await delay(300);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const stackPeek = async () => {
-    if (isAnimating || getStackData().length === 0) return; setIsAnimating(true);
-    const data = getStackData(), topItem = data[data.length - 1];
-    setHighlightIndex(data.length - 1);
-    setOperationMessage(`Peeking TOP...`);
-    setCodeDisplay(`// O(1)\nstack.peek()`);
-    await smoothAnimate(600, 'stack-peek-lift', { index: data.length - 1 });
-    setOperationMessage(`TOP: "${topItem.label}"`);
-    await smoothAnimate(1500, 'stack-peek-open', { index: data.length - 1 });
-    await delay(800);
-    await smoothAnimate(600, 'stack-peek-settle', { index: data.length - 1 });
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  // Queue operations
-  const queueEnqueue = async () => {
-    if (isAnimating || getQueueData().length >= 5) return; setIsAnimating(true);
-    const data = getQueueData();
-    const newItem: DataItem = queueEnv === 'students'
-      ? { id: Date.now(), label: `Stu ${data.length + 1}`, color: '#1abc9c', appearance: { skinTone: '#f5c6a0', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#3d2314', hairStyle: 'short', gender: 'male' } }
-      : queueEnv === 'tollgate'
-        ? { id: Date.now(), label: `NEW-${Math.floor(Math.random() * 900) + 100}`, color: '#1abc9c' }
-        : { id: Date.now(), label: `T-00${data.length + 1}`, color: '#1abc9c' };
-    setOperationMessage(`Enqueue: "${newItem.label}"...`);
-    (setQueueData as any)((prev: DataItem[]) => [...prev, newItem]);
-    setHighlightIndex(data.length);
-    await smoothAnimate(500, 'queue-enqueue-enter', { index: data.length });
-    await smoothAnimate(350, 'queue-enqueue-settle', { index: data.length });
-    setOperationMessage('Enqueued!'); await delay(600);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const queueDequeue = async () => {
-    if (isAnimating || getQueueData().length <= 1) return; setIsAnimating(true);
-    const frontItem = getQueueData()[0];
-    setHighlightIndex(0);
-    setOperationMessage(`Dequeue: "${frontItem.label}"...`);
-    setCodeDisplay(`// O(1) FIFO\nqueue.dequeue()`);
-
-    if (queueEnv === 'tollgate') {
-      setOperationMessage('Gate opening...');
-      await smoothAnimate(1000, 'queue-dequeue-gate-open', { index: 0 });
-      setOperationMessage(`${frontItem.label} passing through...`);
-      await smoothAnimate(1200, 'queue-dequeue-drive', { index: 0 });
-      (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
-      setOperationMessage('Gate closing...');
-      await smoothAnimate(800, 'queue-dequeue-gate-close', { index: -1 });
-    } else if (queueEnv === 'students') {
-      // Student walks toward school with animated legs
-      setOperationMessage(`${frontItem.label} walking to school...`);
-      await smoothAnimate(1500, 'queue-dequeue-walk', { index: 0 });
-      setOperationMessage(`${frontItem.label} entering school...`);
-      await smoothAnimate(1000, 'queue-dequeue-enter', { index: 0 });
-      (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
-    } else {
-      // Tickets
-      setOperationMessage(`Processing ${frontItem.label}...`);
-      await smoothAnimate(1200, 'queue-dequeue-drive', { index: 0 });
-      (setQueueData as any)((prev: DataItem[]) => prev.slice(1));
-    }
-
-    await delay(200);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
-  const queueFront = async () => {
-    if (isAnimating || getQueueData().length === 0) return; setIsAnimating(true);
-    const frontItem = getQueueData()[0];
-    setHighlightIndex(0);
-    setOperationMessage(`FRONT: "${frontItem.label}"`);
-    await smoothAnimate(1000, 'queue-front-peek', { index: 0 });
-    await delay(500);
-    setAnimPhase(''); setAnimData({});
-    setHighlightIndex(null); setOperationMessage(''); setCodeDisplay(''); setIsAnimating(false);
-  };
-
   if (error) return (
     <div style={{ width: '100vw', height: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
       <div style={{ fontSize: 80 }}>📷</div>
@@ -3657,7 +3602,7 @@ export default function Home() {
 
         <div style={{ position: 'absolute', top: 48, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 4, background: 'rgba(0,0,0,0.8)', padding: 4, borderRadius: 25 }}>
           {(['array', 'linkedlist', 'stack', 'queue'] as DataStructure[]).map(s => (
-            <button key={s} onClick={() => { if (!isAnimating) { setCurrentStructure(s); if (appMode === 'surface') { setSurfacePlaced(false); setSurfacePosition(null); } } }}
+            <button key={s} onClick={() => { if (!isAnimating && selectionMode === 'none') { setCurrentStructure(s); cancelSelection(); if (appMode === 'surface') { setSurfacePlaced(false); setSurfacePosition(null); } } }}
               style={{ padding: '8px 12px', fontSize: 11, border: 'none', borderRadius: 20, background: currentStructure === s ? '#667eea' : 'transparent', color: 'white', opacity: currentStructure === s ? 1 : 0.6 }}>
               {{ array: '📊', linkedlist: '🔗', stack: '📚', queue: '🚗' }[s]}{currentStructure === s && ' ' + { array: 'Array', linkedlist: 'List', stack: 'Stack', queue: 'Queue' }[s]}
             </button>
@@ -3667,7 +3612,7 @@ export default function Home() {
         {showControls && (
           <div style={{ position: 'absolute', top: 90, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 4, background: 'rgba(0,0,0,0.7)', padding: 4, borderRadius: 20 }}>
             {envTabs.map(e => (
-              <button key={e.id} onClick={() => !isAnimating && (setCurrentEnv as any)(e.id)}
+              <button key={e.id} onClick={() => !isAnimating && selectionMode === 'none' && (setCurrentEnv as any)(e.id)}
                 style={{ padding: '6px 12px', fontSize: 11, border: 'none', borderRadius: 15, background: currentEnvId === e.id ? '#00b894' : 'transparent', color: 'white', opacity: currentEnvId === e.id ? 1 : 0.6 }}>
                 {e.icon} {e.label}
               </button>
@@ -3676,7 +3621,13 @@ export default function Home() {
         )}
 
         {operationMessage && <div style={{ position: 'absolute', top: 128, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.9)', color: '#0f0', padding: '10px 20px', borderRadius: 15, fontSize: 14, border: '1px solid #0f0', whiteSpace: 'nowrap' }}>⚡ {operationMessage}</div>}
-        {codeDisplay && <div style={{ position: 'absolute', top: 168, left: '50%', transform: 'translateX(-50%)', background: '#1e1e1e', color: '#0f0', padding: '10px 15px', borderRadius: 10, fontSize: 10, fontFamily: 'monospace', whiteSpace: 'pre-wrap', border: '1px solid #444' }}>{codeDisplay}</div>}
+        
+        {codeDisplay && (
+          <div style={{ position: 'absolute', top: 168, left: '50%', transform: 'translateX(-50%)', background: '#1e1e1e', color: '#0f0', padding: '12px 16px', borderRadius: 10, fontSize: 10, fontFamily: 'monospace', whiteSpace: 'pre-wrap', border: '1px solid #444', maxWidth: '90%', maxHeight: 160, overflow: 'auto', lineHeight: 1.4 }}>
+            {codeDisplay}
+          </div>
+        )}
+        
         {webxrActive && <button onClick={stopWebXR} style={{ position: 'absolute', top: 10, right: 10, padding: '10px 18px', background: '#e74c3c', color: 'white', border: 'none', borderRadius: 20, fontSize: 13, fontWeight: 'bold', zIndex: 300 }}>✕ Exit AR</button>}
       </div>
 
@@ -3692,30 +3643,102 @@ export default function Home() {
               <button onClick={resetWebXRPlacement} style={{ padding: '8px 20px', fontSize: 12, fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, background: 'rgba(255,255,255,0.1)', color: 'white' }}>📍 Reposition</button>
             </div>
           )}
+          
           <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
             {currentStructure === 'array' && (<>
-              <OpBtn onClick={arrayAccess} disabled={isAnimating} color="#f39c12" label="📍 Access" />
-              <OpBtn onClick={arrayInsert} disabled={isAnimating || getArrayData().length >= 6} color="#2ecc71" label="➕ Insert" />
-              <OpBtn onClick={arrayDelete} disabled={isAnimating || getArrayData().length <= 2} color="#e74c3c" label="➖ Delete" />
-              <OpBtn onClick={arraySwap} disabled={isAnimating} color="#9b59b6" label="🔀 Swap" />
+              {/* Selection Mode UI */}
+              {selectionMode !== 'none' && (
+                <div style={{ width: '100%', marginBottom: 10 }}>
+                  <div style={{ textAlign: 'center', color: '#ffff00', marginBottom: 8, fontSize: 14, fontWeight: 'bold' }}>
+                    {pendingOperation}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    {getArrayData().map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          if (selectionMode === 'access') selectIndexForAccess(i);
+                          else if (selectionMode === 'insert') selectIndexForInsert(i);
+                          else if (selectionMode === 'delete') selectIndexForDelete(i);
+                          else if (selectionMode === 'swap-first' || selectionMode === 'swap-second') selectIndexForSwap(i);
+                        }}
+                        style={{
+                          width: 44, height: 44,
+                          borderRadius: '50%',
+                          border: (highlightIndex === i || swapFirstIndex === i) ? '3px solid #ffff00' : '2px solid rgba(255,255,255,0.5)',
+                          background: (highlightIndex === i || swapFirstIndex === i) ? '#ffff00' : 'rgba(255,255,255,0.15)',
+                          color: (highlightIndex === i || swapFirstIndex === i) ? '#000' : '#fff',
+                          fontSize: 16, fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        [{i}]
+                      </button>
+                    ))}
+                    {selectionMode === 'insert' && (
+                      <button
+                        onClick={() => selectIndexForInsert(getArrayData().length)}
+                        style={{
+                          width: 44, height: 44,
+                          borderRadius: '50%',
+                          border: '2px dashed rgba(255,255,255,0.5)',
+                          background: 'rgba(46, 204, 113, 0.3)',
+                          color: '#2ecc71',
+                          fontSize: 14, fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        [{getArrayData().length}]
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ textAlign: 'center', marginTop: 8 }}>
+                    <button onClick={cancelSelection} style={{
+                      padding: '8px 20px', fontSize: 12, fontWeight: 'bold',
+                      border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20,
+                      background: 'rgba(231, 76, 60, 0.3)', color: '#fff', cursor: 'pointer'
+                    }}>✕ Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Normal operation buttons */}
+              {selectionMode === 'none' && (
+                <>
+                  {arrayEnv === 'todo' ? (
+                    <OpBtn onClick={todoAppend} disabled={isAnimating || getArrayData().length >= 6} color="#2ecc71" label="➕ Append" />
+                  ) : (
+                    <>
+                      <OpBtn onClick={startArrayAccess} disabled={isAnimating} color="#f39c12" label="📍 Access" />
+                      <OpBtn onClick={startArrayInsert} disabled={isAnimating || getArrayData().length >= 6} color="#2ecc71" label="➕ Insert" />
+                      <OpBtn onClick={startArrayDelete} disabled={isAnimating || getArrayData().length <= 2} color="#e74c3c" label="➖ Delete" />
+                      <OpBtn onClick={startArraySwap} disabled={isAnimating || getArrayData().length < 2} color="#9b59b6" label="🔀 Swap" />
+                    </>
+                  )}
+                </>
+              )}
             </>)}
+            
             {currentStructure === 'linkedlist' && (<>
               <OpBtn onClick={linkedListInsertHead} disabled={isAnimating || getLinkedListData().length >= 5} color="#2ecc71" label="⬅️ +Head" />
               <OpBtn onClick={linkedListInsertTail} disabled={isAnimating || getLinkedListData().length >= 5} color="#3498db" label="➡️ +Tail" />
               <OpBtn onClick={linkedListDeleteHead} disabled={isAnimating || getLinkedListData().length <= 2} color="#e74c3c" label="🗑️ -Head" />
               <OpBtn onClick={linkedListTraverse} disabled={isAnimating} color="#9b59b6" label="🔍 Traverse" />
             </>)}
+            
             {currentStructure === 'stack' && (<>
               <OpBtn onClick={stackPush} disabled={isAnimating || getStackData().length >= 5} color="#2ecc71" label="⬆️ Push" />
               <OpBtn onClick={stackPop} disabled={isAnimating || getStackData().length <= 1} color="#e74c3c" label="⬇️ Pop" />
               <OpBtn onClick={stackPeek} disabled={isAnimating} color="#f39c12" label="👁️ Peek" />
             </>)}
+            
             {currentStructure === 'queue' && (<>
               <OpBtn onClick={queueEnqueue} disabled={isAnimating || getQueueData().length >= 5} color="#2ecc71" label="➕ Enqueue" />
               <OpBtn onClick={queueDequeue} disabled={isAnimating || getQueueData().length <= 1} color="#e74c3c" label="➖ Dequeue" />
               <OpBtn onClick={queueFront} disabled={isAnimating} color="#f39c12" label="👁️ Front" />
             </>)}
           </div>
+          
           <div style={{ textAlign: 'center', marginTop: 10, color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>
             Size: {currentData.length}
           </div>
