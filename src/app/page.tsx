@@ -3711,35 +3711,79 @@ export default function Home() {
     startTutorial(steps);
   };
 
-  const linkedListTraverseTutorial = () => {
-    if (isAnimating || tutorialActive) return;
-    
-    const data = getLinkedListData();
-    const traverseSteps: TutorialStep[] = data.map((item, i) => ({
-      title: `📍 Node ${i}`,
-      description: `Visiting: "${item.label}"\n\nprint(current.data)\ncurrent = current.next`,
+const linkedListTraverseTutorial = () => {
+  if (isAnimating || tutorialActive) return;
+  
+  const data = getLinkedListData();
+  
+  const steps: TutorialStep[] = [
+    // Introduction - Node-pointer relationships
+    {
+      title: "🔗 Linked List Structure",
+      description: "A linked list is made of NODES.\n\nEach node contains:\n• DATA (the value)\n• POINTER (link to next node)\n\nNodes are NOT stored side-by-side in memory!",
+    },
+    {
+      title: "📍 Non-Contiguous Memory",
+      description: "Unlike arrays, nodes can be ANYWHERE in memory!\n\nThey're connected only by pointers.\nThis is why we call it 'non-contiguous'.\n\nNo index access - must follow links!",
+    },
+    {
+      title: "👑 Head Pointer",
+      description: "The HEAD pointer marks the START.\n\nhead → first node\n\nWithout head, we lose the entire list!\nIt's our only entry point.",
+      highlightIndex: 0,
+      animPhase: 'll-traverse',
+      animDuration: 600,
+    },
+  ];
+
+  // Sequential traversal steps
+  data.forEach((item, i) => {
+    steps.push({
+      title: `🔍 Traversing Node ${i}`,
+      description: `current = "${item.label}"\n\n` +
+        `Reading: current.data\n` +
+        `Next: current.next ${i < data.length - 1 ? `→ "${data[i + 1]?.label}"` : '→ NULL'}\n\n` +
+        `We MUST visit nodes in order!\nCannot skip or jump.`,
       highlightIndex: i,
       animPhase: 'll-traverse',
       animDuration: 500,
-    }));
-    
-    const steps: TutorialStep[] = [
-      {
-        title: "🔍 Traverse List",
-        description: "Visit every node from HEAD to TAIL.\n\ncurrent = head\nwhile (current != null):",
-      },
-      ...traverseSteps,
-      {
-        title: "🏁 Reached End",
-        description: `current = NULL\n\nTraversal complete!\nVisited ${data.length} nodes.`,
-      },
-      {
-        title: "📚 Key Points",
-        description: `Traversal = O(n)\n\n• Must visit every node\n• Can't skip nodes\n• Used for search, print, count\n• Linear time complexity`,
-      },
-    ];
-    startTutorial(steps);
-  };
+    });
+  });
+
+  steps.push(
+    // Tail pointer concept
+    {
+      title: "🔚 Tail & NULL",
+      description: `Last node's pointer = NULL\n\nThis marks the END of the list.\n\nOptional: Keep a TAIL pointer for O(1) access to end.\nWithout it: must traverse to find tail.`,
+      highlightIndex: data.length - 1,
+    },
+    // Pointer redirection concept
+    {
+      title: "🔄 Pointer Redirection",
+      description: "To INSERT a node:\n\n1. Create new node\n2. newNode.next = target.next\n3. target.next = newNode\n\nJust change pointers!\nNo shifting like arrays.",
+    },
+    {
+      title: "✂️ Deleting Nodes",
+      description: "To DELETE a node:\n\n1. Find previous node\n2. previous.next = current.next\n3. Free current node\n\nRedirect pointer to 'skip' the node!",
+    },
+    // Dynamic memory advantage
+    {
+      title: "💾 Dynamic Memory",
+      description: "Linked List advantages:\n\n✓ Insert/Delete anywhere: O(1)*\n✓ No fixed size\n✓ No wasted space\n✓ Grows/shrinks as needed\n\n*After finding the position",
+    },
+    // Reversing concept
+    {
+      title: "🔃 Reversing Links",
+      description: "To REVERSE a linked list:\n\nprev = NULL\nwhile (current != NULL):\n  next = current.next\n  current.next = prev\n  prev = current\n  current = next\n\nFlip all pointers!",
+    },
+    // Summary
+    {
+      title: "📊 Complexity Summary",
+      description: "Access by index: O(n) - must traverse\nSearch: O(n) - must traverse\nInsert at head: O(1)\nInsert at tail: O(1) with tail pointer\nInsert middle: O(n) find + O(1) insert\nDelete: O(n) find + O(1) remove",
+    },
+  );
+
+  startTutorial(steps);
+};
 
   // ==================== STACK TUTORIALS ====================
 
@@ -4415,12 +4459,9 @@ export default function Home() {
               )}
             </>)}
             
-            {currentStructure === 'linkedlist' && (<>
-              <OpBtn onClick={linkedListInsertHeadTutorial} disabled={isAnimating || getLinkedListData().length >= 5} color="#2ecc71" label="⬅️ +Head" />
-              <OpBtn onClick={linkedListInsertTailTutorial} disabled={isAnimating || getLinkedListData().length >= 5} color="#3498db" label="➡️ +Tail" />
-              <OpBtn onClick={linkedListDeleteHeadTutorial} disabled={isAnimating || getLinkedListData().length <= 2} color="#e74c3c" label="🗑️ -Head" />
-              <OpBtn onClick={linkedListTraverseTutorial} disabled={isAnimating} color="#9b59b6" label="🔍 Traverse" />
-            </>)}
+{currentStructure === 'linkedlist' && (
+  <OpBtn onClick={linkedListTraverseTutorial} disabled={isAnimating} color="#9b59b6" label="🔍 Traverse & Learn" />
+)}
             
             {currentStructure === 'stack' && (<>
               <OpBtn onClick={stackPushTutorial} disabled={isAnimating || getStackData().length >= 5} color="#2ecc71" label="⬆️ Push" />
