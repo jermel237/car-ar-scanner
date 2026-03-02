@@ -2049,7 +2049,6 @@ function buildSceneContent(
         // Items on this row
         const rowStartIdx = row * itemsPerRow;
         const rowItems = data.slice(rowStartIdx, rowStartIdx + itemsPerRow);
-        const rowStartX = -((Math.max(rowItems.length, 1) - 1) * itemSpacing) / 2;
         
         rowItems.forEach((item, i) => {
           const actualIndex = rowStartIdx + i;
@@ -2069,7 +2068,8 @@ function buildSceneContent(
           group.add(idx);
         });
       }
-    }
+
+    } else if (environment === 'classroom') {
 
     } else if (environment === 'classroom') {
       const roomWidth = 2.8;
