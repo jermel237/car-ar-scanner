@@ -3163,29 +3163,9 @@ function buildSceneContent(
         group.add(grass);
       });
     }
-
-      if (data.length > 0) {
-        const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
-        frontSprite.position.set(startX + 0.6, groundY - 0.18, 0);
-        frontSprite.scale.set(0.26, 0.09, 1);
-        group.add(frontSprite);
-
-        const rearSprite = createTextSprite('REAR', '#ff6600', 16);
-        rearSprite.position.set(startX + (data.length - 1) * spacing + 0.6, groundY - 0.18, 0);
-        rearSprite.scale.set(0.26, 0.09, 1);
-        group.add(rearSprite);
-      }
-
-      const pathway = new THREE.Mesh(
-        new THREE.PlaneGeometry(Math.max(2.5, data.length * spacing + 2.5), 0.5),
-        new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
-      );
-      pathway.rotation.x = -Math.PI / 2;
-      pathway.position.set(0.3, groundY - 0.01, 0);
-      group.add(pathway);
-    }
   }
 }
+// ==================== HOME COMPONENT ====================
 // ==================== HOME COMPONENT ====================
 
 export default function Home() {
