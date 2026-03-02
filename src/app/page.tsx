@@ -1594,186 +1594,69 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   return dispenser;
 }
 
-// ==================== UNIVERSITY BUILDING (FACING RIGHT) ====================
+// ==================== SCHOOL BUILDING ====================
 
 function createSchoolBuilding(): THREE.Group {
-  const university = new THREE.Group();
+  const school = new THREE.Group();
   const groundY = 0;
 
-  const mainBuildingMat = new THREE.MeshStandardMaterial({ color: '#8B4513', roughness: 0.7 });
-  const mainBuilding = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.4, 1.2), mainBuildingMat);
-  mainBuilding.position.set(0, groundY + 0.7, -0.8);
-  university.add(mainBuilding);
+  const brickMat = new THREE.MeshStandardMaterial({ color: '#a0522d', roughness: 0.8 });
+  const mainBuilding = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 1.6), brickMat);
+  mainBuilding.position.set(-0.5, groundY + 0.6, 0);
+  school.add(mainBuilding);
 
-  const stoneTrimMat = new THREE.MeshStandardMaterial({ color: '#d4c4a8', roughness: 0.6 });
-  
-  const foundation = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.1, 1.3), stoneTrimMat);
-  foundation.position.set(0, groundY + 0.05, -0.8);
-  university.add(foundation);
-
-  const topTrim = new THREE.Mesh(new THREE.BoxGeometry(2.05, 0.08, 1.25), stoneTrimMat);
-  topTrim.position.set(0, groundY + 1.44, -0.8);
-  university.add(topTrim);
-
-  const cornice = new THREE.Mesh(new THREE.BoxGeometry(2.08, 0.05, 1.28), new THREE.MeshStandardMaterial({ color: '#c9b896', roughness: 0.5 }));
-  cornice.position.set(0, groundY + 1.38, -0.8);
-  university.add(cornice);
-
-  const porticoMat = new THREE.MeshStandardMaterial({ color: '#e8dcc8', roughness: 0.4, metalness: 0.1 });
-  
-  const porticoRoof = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.6), porticoMat);
-  porticoRoof.position.set(1.04, groundY + 0.95, -0.8);
-  university.add(porticoRoof);
-
-  const columnMat = new THREE.MeshStandardMaterial({ color: '#f5f0e6', roughness: 0.3, metalness: 0.05 });
-  [[-0.2, -0.27], [-0.2, -0.03], [0.2, -0.27], [0.2, -0.03]].forEach(([z, xOffset]) => {
-    const column = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.65, 12), columnMat);
-    column.position.set(1.0 + xOffset * 0.5, groundY + 0.45, -0.8 + z);
-    university.add(column);
-
-    const capital = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.04, 0.1), columnMat);
-    capital.position.set(1.0 + xOffset * 0.5, groundY + 0.79, -0.8 + z);
-    university.add(capital);
-
-    const base = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.03, 0.1), columnMat);
-    base.position.set(1.0 + xOffset * 0.5, groundY + 0.115, -0.8 + z);
-    university.add(base);
-  });
-
-  const stepMat = new THREE.MeshStandardMaterial({ color: '#c9c0b0', roughness: 0.6 });
-  for (let i = 0; i < 4; i++) {
-    const step = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.5 + i * 0.06, 0.45 + i * 0.08), stepMat);
-    step.position.set(1.05 + i * 0.025, groundY + 0.0125 + i * 0.025, -0.8);
-    university.add(step);
-  }
-
-  const doorFrameMat = new THREE.MeshStandardMaterial({ color: '#2c1810', roughness: 0.5 });
-  const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.55, 0.35), doorFrameMat);
-  doorFrame.position.set(1.01, groundY + 0.375, -0.8);
-  university.add(doorFrame);
+  const entranceMat = new THREE.MeshStandardMaterial({ color: '#8b4513', roughness: 0.6 });
+  const entrance = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.7, 0.5), entranceMat);
+  entrance.position.set(-0.12, groundY + 0.35, 0);
+  school.add(entrance);
 
   const doorMat = new THREE.MeshStandardMaterial({ color: '#4a2c2a', roughness: 0.6 });
-  [-0.08, 0.08].forEach(offsetZ => {
-    const door = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.5, 0.14), doorMat);
-    door.position.set(1.02, groundY + 0.35, -0.8 + offsetZ);
-    university.add(door);
-
-    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.04, 0.01), new THREE.MeshStandardMaterial({ color: '#d4af37', metalness: 0.8 }));
-    handle.position.set(1.03, groundY + 0.35, -0.8 + offsetZ + (offsetZ > 0 ? -0.04 : 0.04));
-    university.add(handle);
+  [-0.12, 0.12].forEach(offsetZ => {
+    const door = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.55, 0.18), doorMat);
+    door.position.set(0.02, groundY + 0.275, offsetZ);
+    school.add(door);
   });
 
-  const windowMat = new THREE.MeshStandardMaterial({ color: '#87ceeb', metalness: 0.4, roughness: 0.1, transparent: true, opacity: 0.8 });
+  const windowMat = new THREE.MeshStandardMaterial({ color: '#87ceeb', metalness: 0.4, roughness: 0.1 });
   const windowFrameMat = new THREE.MeshStandardMaterial({ color: '#f5f5f5', roughness: 0.5 });
 
-  const windowRows = [0.35, 0.7, 1.05];
-  const windowCols = [-0.35, -0.55, 0.35, 0.55];
-
-  windowRows.forEach(wy => {
-    windowCols.forEach(wz => {
-      const frame = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.22, 0.16), windowFrameMat);
-      frame.position.set(1.01, groundY + wy, -0.8 + wz);
-      university.add(frame);
-
-      const glass = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.18, 0.12), windowMat);
-      glass.position.set(1.02, groundY + wy, -0.8 + wz);
-      university.add(glass);
-
-      const sill = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.015, 0.18), stoneTrimMat);
-      sill.position.set(1.03, groundY + wy - 0.11, -0.8 + wz);
-      university.add(sill);
+  [-0.55, -0.35, 0.35, 0.55].forEach(wz => {
+    [0.35, 0.65, 0.95].forEach(wy => {
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.18, 0.14), windowFrameMat);
+      frame.position.set(-0.18, groundY + wy, wz);
+      school.add(frame);
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.15, 0.11), windowMat);
+      glass.position.set(-0.17, groundY + wy, wz);
+      school.add(glass);
     });
   });
 
-  const roofMat = new THREE.MeshStandardMaterial({ color: '#2c3e50', roughness: 0.6 });
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(2.08, 0.1, 1.28), roofMat);
-  roof.position.set(0, groundY + 1.5, -0.8);
-  university.add(roof);
-
-  const towerMat = new THREE.MeshStandardMaterial({ color: '#8B4513', roughness: 0.7 });
-  const tower = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.35, 0.25), towerMat);
-  tower.position.set(0, groundY + 1.625, -0.8);
-  university.add(tower);
-
-  const towerRoofGeo = new THREE.ConeGeometry(0.18, 0.2, 4);
-  const towerRoof = new THREE.Mesh(towerRoofGeo, roofMat);
-  towerRoof.position.set(0, groundY + 1.9, -0.8);
-  towerRoof.rotation.y = Math.PI / 4;
-  university.add(towerRoof);
-
-  const clockCanvas = document.createElement('canvas');
-  clockCanvas.width = 64;
-  clockCanvas.height = 64;
-  const cctx = clockCanvas.getContext('2d')!;
-  cctx.fillStyle = '#fff';
-  cctx.beginPath();
-  cctx.arc(32, 32, 28, 0, Math.PI * 2);
-  cctx.fill();
-  cctx.strokeStyle = '#333';
-  cctx.lineWidth = 3;
-  cctx.stroke();
-  cctx.fillStyle = '#333';
-  cctx.font = 'bold 10px Arial';
-  cctx.textAlign = 'center';
-  cctx.fillText('12', 32, 14);
-  cctx.fillText('3', 54, 35);
-  cctx.fillText('6', 32, 58);
-  cctx.fillText('9', 10, 35);
-  cctx.beginPath();
-  cctx.moveTo(32, 32);
-  cctx.lineTo(32, 14);
-  cctx.moveTo(32, 32);
-  cctx.lineTo(48, 32);
-  cctx.stroke();
-  const clockTex = new THREE.CanvasTexture(clockCanvas);
-  const clock = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.12), new THREE.MeshBasicMaterial({ map: clockTex }));
-  clock.position.set(0.13, groundY + 1.65, -0.8);
-  clock.rotation.y = Math.PI / 2;
-  university.add(clock);
+  const roofMat = new THREE.MeshStandardMaterial({ color: '#4a4a4a', roughness: 0.6 });
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.08, 1.7), roofMat);
+  roof.position.set(-0.5, groundY + 1.24, 0);
+  school.add(roof);
 
   const signCanvas = document.createElement('canvas');
-  signCanvas.width = 200;
-  signCanvas.height = 60;
-  const sctx = signCanvas.getContext('2d')!;
-  sctx.fillStyle = '#1a5276';
-  sctx.fillRect(0, 0, 200, 60);
-  sctx.strokeStyle = '#d4af37';
-  sctx.lineWidth = 3;
-  sctx.strokeRect(3, 3, 194, 54);
-  sctx.fillStyle = '#fff';
-  sctx.font = 'bold 16px serif';
-  sctx.textAlign = 'center';
-  sctx.fillText('DS UNIVERSITY', 100, 38);
+  signCanvas.width = 80;
+  signCanvas.height = 280;
+  const schCtx = signCanvas.getContext('2d')!;
+  schCtx.fillStyle = '#1a5276';
+  schCtx.fillRect(0, 0, 80, 280);
+  schCtx.save();
+  schCtx.translate(40, 140);
+  schCtx.rotate(-Math.PI / 2);
+  schCtx.fillStyle = '#fff';
+  schCtx.font = 'bold 22px serif';
+  schCtx.textAlign = 'center';
+  schCtx.fillText('DS ACADEMY', 0, 8);
+  schCtx.restore();
   const signTex = new THREE.CanvasTexture(signCanvas);
-  const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 0.1), new THREE.MeshBasicMaterial({ map: signTex }));
-  signMesh.position.set(1.05, groundY + 0.88, -0.8);
+  const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.7), new THREE.MeshBasicMaterial({ map: signTex }));
+  signMesh.position.set(-0.08, groundY + 0.85, 0.55);
   signMesh.rotation.y = Math.PI / 2;
-  university.add(signMesh);
+  school.add(signMesh);
 
-  const lampMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', metalness: 0.7 });
-  [-0.35, 0.35].forEach(z => {
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.4, 8), lampMat);
-    post.position.set(1.2, groundY + 0.2, -0.8 + z);
-    university.add(post);
-
-    const lampHead = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.04, 0.06), lampMat);
-    lampHead.position.set(1.2, groundY + 0.42, -0.8 + z);
-    university.add(lampHead);
-
-    const light = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.025, 0.04), new THREE.MeshBasicMaterial({ color: '#ffffcc' }));
-    light.position.set(1.2, groundY + 0.395, -0.8 + z);
-    university.add(light);
-  });
-
-  const bushMat = new THREE.MeshStandardMaterial({ color: '#228B22', roughness: 0.9 });
-  [-0.25, 0.25].forEach(z => {
-    const bush = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), bushMat);
-    bush.position.set(1.15, groundY + 0.06, -0.8 + z);
-    bush.scale.y = 0.7;
-    university.add(bush);
-  });
-
-  return university;
+  return school;
 }
 
 // ==================== CARDBOARD BOX (ONLY LEFT/RIGHT FLAPS) ====================
@@ -2079,12 +1962,14 @@ function buildSceneContent(
       const rowSpacing = 0.55;
       const itemSpacing = 0.38;
       
-      const numRows = Math.max(1, Math.ceil(data.length / itemsPerRow));
+      // ALWAYS show at least 2 rows of shelves
+      const numRows = Math.max(2, Math.ceil(data.length / itemsPerRow));
       const shelfWidth = itemsPerRow * itemSpacing + 0.4;
       
       const metalMat = new THREE.MeshStandardMaterial({ color: '#666666', metalness: 0.8, roughness: 0.3 });
       const shelfBoardMat = new THREE.MeshStandardMaterial({ color: '#d0d0d0', metalness: 0.3, roughness: 0.5 });
       
+      // Vertical posts (ALWAYS SHOWN)
       [-shelfWidth/2 - 0.05, shelfWidth/2 + 0.05].forEach(x => {
         const post = new THREE.Mesh(new THREE.BoxGeometry(0.04, numRows * rowSpacing + 0.3, 0.04), metalMat);
         post.position.set(x, (numRows * rowSpacing) / 2 - 0.1, -0.15);
@@ -2095,6 +1980,7 @@ function buildSceneContent(
         group.add(postFront);
       });
       
+      // Back panel (ALWAYS SHOWN)
       const backPanel = new THREE.Mesh(
         new THREE.PlaneGeometry(shelfWidth + 0.2, numRows * rowSpacing + 0.4),
         new THREE.MeshStandardMaterial({ color: '#f5f5f5', side: THREE.DoubleSide, roughness: 0.9 })
@@ -2102,6 +1988,7 @@ function buildSceneContent(
       backPanel.position.set(0, (numRows * rowSpacing) / 2, -0.18);
       group.add(backPanel);
       
+      // Floor (ALWAYS SHOWN)
       const floor = new THREE.Mesh(
         new THREE.PlaneGeometry(shelfWidth + 1, 1.5),
         new THREE.MeshStandardMaterial({ color: '#e0e0e0', side: THREE.DoubleSide, roughness: 0.8 })
@@ -2110,6 +1997,7 @@ function buildSceneContent(
       floor.position.y = groundY - 0.02;
       group.add(floor);
       
+      // Sign (ALWAYS SHOWN)
       const signCanvas = document.createElement('canvas');
       signCanvas.width = 200;
       signCanvas.height = 60;
@@ -2125,41 +2013,63 @@ function buildSceneContent(
       signMesh.position.set(0, numRows * rowSpacing + 0.25, -0.15);
       group.add(signMesh);
       
+      // Create ALL shelf rows (ALWAYS at least 2 rows)
       for (let row = 0; row < numRows; row++) {
         const shelfY = groundY + 0.08 + row * rowSpacing;
         
+        // Shelf board (ALWAYS SHOWN for each row)
         const shelfBoard = new THREE.Mesh(new THREE.BoxGeometry(shelfWidth, 0.02, 0.35), shelfBoardMat);
         shelfBoard.position.set(0, shelfY, 0);
         group.add(shelfBoard);
         
+        // Lip (ALWAYS SHOWN)
         const lip = new THREE.Mesh(new THREE.BoxGeometry(shelfWidth, 0.04, 0.015), metalMat);
         lip.position.set(0, shelfY + 0.02, 0.17);
         group.add(lip);
         
+        // Price rail (ALWAYS SHOWN)
         const priceRail = new THREE.Mesh(new THREE.BoxGeometry(shelfWidth - 0.1, 0.025, 0.008), new THREE.MeshStandardMaterial({ color: '#333333' }));
         priceRail.position.set(0, shelfY + 0.035, 0.175);
         group.add(priceRail);
+
+        // Index labels for empty slots (show where items CAN go)
+        for (let slot = 0; slot < itemsPerRow; slot++) {
+          const actualIndex = row * itemsPerRow + slot;
+          const slotX = -((itemsPerRow - 1) * itemSpacing) / 2 + slot * itemSpacing;
+          
+          // Show faded index for empty slots
+          if (actualIndex >= data.length) {
+            const emptyIdx = createTextSprite(`[${actualIndex}]`, '#555555', 14);
+            emptyIdx.position.set(slotX, shelfY - 0.08, 0.2);
+            emptyIdx.scale.set(0.18, 0.09, 1);
+            group.add(emptyIdx);
+          }
+        }
         
+        // Items on this row
         const rowStartIdx = row * itemsPerRow;
         const rowItems = data.slice(rowStartIdx, rowStartIdx + itemsPerRow);
-        const rowStartX = -((rowItems.length - 1) * itemSpacing) / 2;
+        const rowStartX = -((Math.max(rowItems.length, 1) - 1) * itemSpacing) / 2;
         
         rowItems.forEach((item, i) => {
           const actualIndex = rowStartIdx + i;
           const isHl = highlightIndex === actualIndex || highlightIndex2 === actualIndex;
+          const itemX = -((itemsPerRow - 1) * itemSpacing) / 2 + i * itemSpacing;
+          
           const cerealLabels = ['Coco Crunch', 'Corn Flakes', 'Froot Loops', 'Cheerios', 'Frosted', 'Granola'];
           const product = createGroceryBox(item.color, cerealLabels[actualIndex % cerealLabels.length] || item.label, isHl);
-          product.position.set(rowStartX + i * itemSpacing, shelfY + 0.08, 0);
+          product.position.set(itemX, shelfY + 0.08, 0);
           if (isHl) product.position.y += 0.06;
           applyItemAnimation(product, actualIndex, animPhase || '', animData || {}, 'array', animProgress);
           group.add(product);
 
           const idx = createTextSprite(`[${actualIndex}]`, isHl ? '#ffff00' : '#ffffff', 18);
-          idx.position.set(rowStartX + i * itemSpacing, shelfY - 0.08, 0.2);
+          idx.position.set(itemX, shelfY - 0.08, 0.2);
           idx.scale.set(0.22, 0.11, 1);
           group.add(idx);
         });
       }
+    }
 
     } else if (environment === 'classroom') {
       const roomWidth = 2.8;
@@ -2350,51 +2260,144 @@ function buildSceneContent(
       });
 
     } else if (environment === 'todo') {
-      const floorY = groundY - 0.15;
+      const floorY = groundY - 0.25;
+      const scale = 0.65;
+      const deskSpacing = 0.65;
 
-      const deskMat = new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.7 });
-      const desk = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.04, 1.2), deskMat);
-      desk.position.y = floorY;
-      group.add(desk);
+      // Floor
+      const floorMat = new THREE.MeshStandardMaterial({ color: '#c4a882', roughness: 0.7 });
+      const floorWidth = Math.max(2.5, data.length * deskSpacing + 1);
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(floorWidth, 1.5), floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = floorY;
+      group.add(floor);
 
-      const legMat = new THREE.MeshStandardMaterial({ color: '#4a3728', roughness: 0.8 });
-      [[-0.7, -0.4], [-0.7, 0.4], [0.7, -0.4], [0.7, 0.4]].forEach(([x, z]) => {
-        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.4, 0.05), legMat);
-        leg.position.set(x, floorY - 0.22, z);
-        group.add(leg);
-      });
+      // Back wall
+      const wallMat = new THREE.MeshStandardMaterial({ color: '#f5f0e6', roughness: 0.9 });
+      const backWall = new THREE.Mesh(new THREE.PlaneGeometry(floorWidth, 1.0), wallMat);
+      backWall.position.set(0, floorY + 0.5, -0.75);
+      group.add(backWall);
 
-      const tablet = createTablet(data, highlightIndex);
-      tablet.position.set(0, floorY + 0.03, 0);
-      tablet.rotation.x = 0.15;
-      tablet.scale.setScalar(1.2);
-      group.add(tablet);
+      // Board/Sign on wall
+      const boardCanvas = document.createElement('canvas');
+      boardCanvas.width = 300;
+      boardCanvas.height = 120;
+      const bctx = boardCanvas.getContext('2d')!;
+      bctx.fillStyle = '#ffffff';
+      bctx.fillRect(0, 0, 300, 120);
+      bctx.fillStyle = '#e74c3c';
+      bctx.fillRect(0, 0, 300, 35);
+      bctx.fillStyle = '#fff';
+      bctx.font = 'bold 24px Arial';
+      bctx.textAlign = 'center';
+      bctx.fillText('📝 TO-DO LIST', 150, 26);
+      bctx.fillStyle = '#333';
+      bctx.font = '16px Arial';
+      bctx.fillText(`Active Tasks: ${data.length}`, 150, 65);
+      bctx.fillStyle = '#666';
+      bctx.font = '14px Arial';
+      bctx.fillText('Complete your tasks!', 150, 95);
+      const boardTex = new THREE.CanvasTexture(boardCanvas);
+      const boardMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.24), new THREE.MeshBasicMaterial({ map: boardTex }));
+      boardMesh.position.set(0, floorY + 0.7, -0.74);
+      group.add(boardMesh);
 
-      const mugMat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.4 });
-      const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.035, 0.08, 16), mugMat);
-      mug.position.set(0.6, floorY + 0.06, -0.3);
-      group.add(mug);
-      
-      const mugHandle = new THREE.Mesh(new THREE.TorusGeometry(0.02, 0.006, 8, 12, Math.PI), mugMat);
-      mugHandle.rotation.z = Math.PI / 2;
-      mugHandle.rotation.y = Math.PI / 2;
-      mugHandle.position.set(0.64, floorY + 0.06, -0.3);
-      group.add(mugHandle);
+      // Desks with tablets - one row (always show at least 4 desk spots)
+      const numDesks = Math.max(4, data.length);
+      const rowStartX = -((numDesks - 1) * deskSpacing) / 2;
 
-      const holderMat = new THREE.MeshStandardMaterial({ color: '#2c3e50', roughness: 0.5 });
-      const holder = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.1, 12), holderMat);
-      holder.position.set(-0.6, floorY + 0.07, -0.25);
-      group.add(holder);
+      for (let i = 0; i < numDesks; i++) {
+        const posX = rowStartX + i * deskSpacing;
 
-      const pencilColors = ['#f1c40f', '#e74c3c', '#3498db'];
-      pencilColors.forEach((pc, i) => {
-        const pencil = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.12, 6), new THREE.MeshStandardMaterial({ color: pc }));
-        pencil.position.set(-0.6 + (i - 1) * 0.015, floorY + 0.13, -0.25);
-        pencil.rotation.z = (i - 1) * 0.1;
-        group.add(pencil);
+        // Desk
+        const desk = createDesk(0);
+        desk.position.set(posX, floorY + 0.28, 0);
+        desk.scale.setScalar(scale);
+        group.add(desk);
+
+        // Index label (always show desk numbers)
+        const idx = createTextSprite(`[${i}]`, '#888888', 16);
+        idx.position.set(posX, floorY + 0.08, 0.25);
+        idx.scale.set(0.18, 0.09, 1);
+        group.add(idx);
+      }
+
+      // Tablets on desks (only where data exists)
+      data.forEach((item, i) => {
+        const isHl = highlightIndex === i || highlightIndex2 === i;
+        const posX = rowStartX + i * deskSpacing;
+
+        // Tablet on desk
+        const tabletGroup = new THREE.Group();
+        
+        const tabletWidth = 0.25;
+        const tabletHeight = 0.18;
+        const tabletDepth = 0.01;
+
+        // Tablet body
+        const tabletMat = new THREE.MeshStandardMaterial({ 
+          color: '#1a1a2e', 
+          roughness: 0.3, 
+          metalness: 0.5,
+          emissive: isHl ? '#ffff00' : '#000',
+          emissiveIntensity: isHl ? 0.2 : 0
+        });
+        const tabletBody = new THREE.Mesh(new THREE.BoxGeometry(tabletWidth, tabletDepth, tabletHeight), tabletMat);
+        tabletGroup.add(tabletBody);
+
+        // Screen
+        const screenCanvas = document.createElement('canvas');
+        screenCanvas.width = 150;
+        screenCanvas.height = 100;
+        const sctx = screenCanvas.getContext('2d')!;
+        sctx.fillStyle = '#1e272e';
+        sctx.fillRect(0, 0, 150, 100);
+        sctx.fillStyle = item.color;
+        sctx.fillRect(0, 0, 150, 22);
+        sctx.fillStyle = '#fff';
+        sctx.font = 'bold 12px Arial';
+        sctx.textAlign = 'center';
+        sctx.fillText('TASK', 75, 15);
+        sctx.fillStyle = isHl ? '#ffff00' : '#fff';
+        sctx.font = 'bold 20px Arial';
+        sctx.fillText(item.label, 75, 55);
+        sctx.fillStyle = '#666';
+        sctx.font = '10px Arial';
+        sctx.fillText(`Index: [${i}]`, 75, 80);
+
+        const screenTex = new THREE.CanvasTexture(screenCanvas);
+        const screen = new THREE.Mesh(
+          new THREE.PlaneGeometry(tabletWidth - 0.02, tabletHeight - 0.02),
+          new THREE.MeshBasicMaterial({ map: screenTex })
+        );
+        screen.rotation.x = -Math.PI / 2;
+        screen.position.y = tabletDepth / 2 + 0.001;
+        tabletGroup.add(screen);
+
+        // Highlight glow
+        if (isHl) {
+          const glow = new THREE.Mesh(
+            new THREE.BoxGeometry(tabletWidth + 0.03, tabletDepth + 0.02, tabletHeight + 0.03),
+            new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.15 })
+          );
+          tabletGroup.add(glow);
+        }
+
+        tabletGroup.position.set(posX, floorY + 0.32, 0);
+        tabletGroup.rotation.x = 0.2;
+        
+        applyItemAnimation(tabletGroup, i, animPhase || '', animData || {}, 'array', animProgress);
+        group.add(tabletGroup);
+
+        // Update index label to highlighted color if needed
+        if (isHl) {
+          const hlIdx = createTextSprite(`[${i}]`, '#ffff00', 18);
+          hlIdx.position.set(posX, floorY + 0.08, 0.25);
+          hlIdx.scale.set(0.2, 0.1, 1);
+          group.add(hlIdx);
+        }
       });
     }
-
   // ==================== LINKED LIST ====================
   } else if (structure === 'linkedlist') {
     if (environment === 'train') {
@@ -2549,134 +2552,98 @@ function buildSceneContent(
       group.add(desk);
 
     } else if (environment === 'plates') {
-      const plateThickness = 0.025;
-      const plateRadius = 0.2;
-      const plateGap = 0.008;
-      const baseY = groundY + 0.1;
+      const plateThickness = 0.02;
+      const plateRadius = 0.18;
+      const plateGap = 0.003;
+      const baseY = groundY - 0.1;
 
-      const metalMat = new THREE.MeshStandardMaterial({ color: '#888888', metalness: 0.8, roughness: 0.3 });
-
-      const basePlatform = new THREE.Mesh(
-        new THREE.BoxGeometry(0.7, 0.05, 0.5),
-        new THREE.MeshStandardMaterial({ color: '#2c3e50', metalness: 0.4, roughness: 0.5 })
-      );
-      basePlatform.position.y = baseY - 0.1;
-      group.add(basePlatform);
-
-      const housingRadius = 0.25;
-      const housingHeight = 0.45;
+      // Simple plate dispenser stand
+      const standMat = new THREE.MeshStandardMaterial({ color: '#555555', metalness: 0.6, roughness: 0.4 });
       
-      const outerCylinder = new THREE.Mesh(
-        new THREE.CylinderGeometry(housingRadius, housingRadius + 0.02, housingHeight, 32, 1, true),
-        metalMat
-      );
-      outerCylinder.position.y = baseY + housingHeight / 2 - 0.05;
-      group.add(outerCylinder);
+      // Base
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.28, 0.04, 32), standMat);
+      base.position.y = baseY;
+      group.add(base);
 
-      const topRim = new THREE.Mesh(new THREE.TorusGeometry(housingRadius, 0.018, 8, 32), metalMat);
-      topRim.rotation.x = Math.PI / 2;
-      topRim.position.y = baseY + housingHeight - 0.05;
-      group.add(topRim);
+      // Center pole
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.1, 16), standMat);
+      pole.position.y = baseY + 0.07;
+      group.add(pole);
 
-      const bottomRim = new THREE.Mesh(new THREE.TorusGeometry(housingRadius + 0.01, 0.015, 8, 32), metalMat);
-      bottomRim.rotation.x = Math.PI / 2;
-      bottomRim.position.y = baseY - 0.03;
-      group.add(bottomRim);
+      // Spring base plate
+      const springBase = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.015, 32), standMat);
+      springBase.position.y = baseY + 0.12;
+      group.add(springBase);
 
-      const legMat = new THREE.MeshStandardMaterial({ color: '#555555', metalness: 0.6 });
-      const legPositions: [number, number][] = [[-0.2, 0.15], [0.2, 0.15], [-0.2, -0.15], [0.2, -0.15]];
-      legPositions.forEach(([x, z]) => {
-        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 0.35, 8), legMat);
-        leg.position.set(x, baseY - 0.28, z);
-        group.add(leg);
-        
-        const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.02, 12), legMat);
-        foot.position.set(x, baseY - 0.46, z);
-        group.add(foot);
-      });
-
-      const counterMat = new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.4, roughness: 0.4 });
-      const counter = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.06, 0.8), counterMat);
-      counter.position.y = baseY - 0.5;
+      // Counter/table
+      const counterMat = new THREE.MeshStandardMaterial({ color: '#7f8c8d', metalness: 0.3, roughness: 0.5 });
+      const counter = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.8), counterMat);
+      counter.position.y = baseY - 0.05;
       group.add(counter);
-      
-      const counterFront = new THREE.Mesh(
-        new THREE.BoxGeometry(1.5, 0.35, 0.05),
-        new THREE.MeshStandardMaterial({ color: '#5d6d7e', roughness: 0.6 })
-      );
-      counterFront.position.set(0, baseY - 0.65, 0.38);
-      group.add(counterFront);
 
+      // Stack plates
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const isTop = i === data.length - 1;
         
-        const plateY = baseY + i * (plateThickness + plateGap);
+        const plateY = baseY + 0.14 + i * (plateThickness + plateGap);
         
         const plateGroup = new THREE.Group();
         
+        // Simple white plate
         const plateMat = new THREE.MeshStandardMaterial({
-          color: '#fafafa',
-          roughness: 0.15,
+          color: '#ffffff',
+          roughness: 0.2,
           metalness: 0.05,
           emissive: isHl ? '#ffff00' : '#000',
-          emissiveIntensity: isHl ? 0.25 : 0
+          emissiveIntensity: isHl ? 0.3 : 0
         });
         
-        const plateBase = new THREE.Mesh(
-          new THREE.CylinderGeometry(plateRadius * 0.95, plateRadius * 0.85, plateThickness * 0.4, 32),
+        // Plate body - simple cylinder
+        const plate = new THREE.Mesh(
+          new THREE.CylinderGeometry(plateRadius, plateRadius - 0.01, plateThickness, 32),
           plateMat
         );
-        plateBase.position.y = -plateThickness * 0.3;
-        plateGroup.add(plateBase);
-        
-        const plateTop = new THREE.Mesh(
-          new THREE.CylinderGeometry(plateRadius, plateRadius * 0.95, plateThickness * 0.6, 32),
-          plateMat
+        plateGroup.add(plate);
+
+        // Slight rim on top
+        const rimMat = new THREE.MeshStandardMaterial({ color: '#f0f0f0', roughness: 0.3 });
+        const rim = new THREE.Mesh(
+          new THREE.TorusGeometry(plateRadius - 0.005, 0.005, 8, 32),
+          rimMat
         );
-        plateGroup.add(plateTop);
-        
-        const rimMat = new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.2, metalness: 0.1 });
-        const rim = new THREE.Mesh(new THREE.TorusGeometry(plateRadius - 0.008, 0.012, 8, 32), rimMat);
         rim.rotation.x = Math.PI / 2;
-        rim.position.y = plateThickness * 0.3;
+        rim.position.y = plateThickness / 2;
         plateGroup.add(rim);
         
-        const innerRing = new THREE.Mesh(
-          new THREE.TorusGeometry(plateRadius * 0.5, 0.004, 8, 32),
-          new THREE.MeshStandardMaterial({ color: '#e0e0e0', roughness: 0.3 })
-        );
-        innerRing.rotation.x = Math.PI / 2;
-        innerRing.position.y = plateThickness * 0.31;
-        plateGroup.add(innerRing);
-        
+        // Animations
         let animY = 0;
         let animScale = 1;
         
         if (isTop && animPhase === 'stack-pop-lift') {
-          animY = 0.18 * (animProgress || 0);
+          animY = 0.15 * (animProgress || 0);
         } else if (isTop && animPhase === 'stack-pop-fly') {
           const p = animProgress || 0;
-          animY = 0.18 + 0.5 * p;
+          animY = 0.15 + 0.4 * p;
           animScale = Math.max(0.01, 1 - p);
-          plateGroup.rotation.z = p * 2.5;
+          plateGroup.rotation.z = p * 2;
         } else if (isTop && animPhase === 'stack-peek-lift') {
-          animY = 0.12 * (animProgress || 0);
+          animY = 0.1 * (animProgress || 0);
         } else if (isTop && animPhase === 'stack-push-drop') {
           const p = animProgress || 0;
-          animY = 0.4 * (1 - p);
+          animY = 0.35 * (1 - p);
           animScale = 0.7 + 0.3 * p;
         } else if (isTop && animPhase === 'stack-push-settle') {
           animY = 0.05 * (1 - (animProgress || 0));
-          animScale = 1 + 0.05 * (1 - (animProgress || 0));
         }
         
         plateGroup.position.y = plateY + animY;
         plateGroup.scale.setScalar(animScale);
         
+        // Highlight glow
         if (isHl && animPhase !== 'stack-pop-fly') {
           const glow = new THREE.Mesh(
-            new THREE.CylinderGeometry(plateRadius + 0.025, plateRadius + 0.025, plateThickness + 0.02, 32),
+            new THREE.CylinderGeometry(plateRadius + 0.02, plateRadius + 0.02, plateThickness + 0.01, 32),
             new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.2 })
           );
           plateGroup.add(glow);
@@ -2685,71 +2652,31 @@ function buildSceneContent(
         group.add(plateGroup);
       });
 
+      // TOP label
       if (data.length > 0) {
-        const topY = baseY + (data.length - 1) * (plateThickness + plateGap) + 0.08;
+        const topY = baseY + 0.14 + (data.length - 1) * (plateThickness + plateGap) + 0.06;
         const topSprite = createTextSprite('← TOP', '#ff0000', 20);
-        topSprite.position.set(0.45, topY, 0);
-        topSprite.scale.set(0.32, 0.12, 1);
+        topSprite.position.set(0.4, topY, 0);
+        topSprite.scale.set(0.3, 0.1, 1);
         group.add(topSprite);
       }
 
+      // Sign
       const signCanvas = document.createElement('canvas');
-      signCanvas.width = 140;
-      signCanvas.height = 60;
+      signCanvas.width = 120;
+      signCanvas.height = 50;
       const sctx = signCanvas.getContext('2d')!;
       sctx.fillStyle = '#2c3e50';
-      sctx.fillRect(0, 0, 140, 60);
+      sctx.fillRect(0, 0, 120, 50);
       sctx.fillStyle = '#fff';
-      sctx.font = 'bold 18px Arial';
+      sctx.font = 'bold 16px Arial';
       sctx.textAlign = 'center';
-      sctx.fillText('🍽️ PLATES', 70, 38);
+      sctx.fillText('🍽️ PLATES', 60, 32);
       const signTex = new THREE.CanvasTexture(signCanvas);
-      const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 0.1), new THREE.MeshBasicMaterial({ map: signTex }));
-      sign.position.set(0, baseY + housingHeight + 0.05, housingRadius + 0.01);
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.09), new THREE.MeshBasicMaterial({ map: signTex }));
+      sign.position.set(0, baseY + 0.35, 0.3);
       group.add(sign);
-
-    } else if (environment === 'boxes') {
-      const boxSpacing = 0.36;
-      const boxBaseY = 0;
-
-      data.forEach((item, i) => {
-        const isHl = highlightIndex === i;
-        const isTop = i === data.length - 1;
-
-        let openAmount = 0;
-        if (isTop) {
-          if (animPhase === 'stack-peek-lift') {
-            openAmount = 0;
-          } else if (animPhase === 'stack-peek-open') {
-            openAmount = animProgress || 0;
-          } else if (animPhase === 'stack-peek-settle') {
-            openAmount = 1 - (animProgress || 0);
-          }
-        }
-
-        const cardboardBox = createCardboardBox(item.label, item.color, isHl, openAmount);
-        cardboardBox.position.set(0, boxBaseY + i * boxSpacing, 0);
-        cardboardBox.rotation.y = (i % 2 === 0) ? 0 : 0.03;
-        cardboardBox.scale.setScalar(0.78);
-        applyItemAnimation(cardboardBox, i, animPhase || '', animData || {}, 'stack', animProgress);
-        group.add(cardboardBox);
-
-        if (isTop) {
-          const topSprite = createTextSprite('← TOP', '#ff0000', 22);
-          topSprite.position.set(0.55, boxBaseY + i * boxSpacing + 0.15, 0);
-          topSprite.scale.set(0.32, 0.11, 1);
-          group.add(topSprite);
-        }
-      });
-
-      const pallet = new THREE.Mesh(
-        new THREE.BoxGeometry(0.8, 0.055, 0.6),
-        new THREE.MeshStandardMaterial({ color: '#a0522d', roughness: 0.9 })
-      );
-      pallet.position.y = boxBaseY - 0.03;
-      group.add(pallet);
     }
-
   // ==================== QUEUE ====================
   } else if (structure === 'queue') {
     let gateOpenAmount = 0;
@@ -2802,8 +2729,9 @@ function buildSceneContent(
 
     } else if (environment === 'students') {
       const schoolBuilding = createSchoolBuilding();
-      schoolBuilding.position.set(startX - 1.0, groundY, 0);
-      schoolBuilding.scale.setScalar(0.45);
+      schoolBuilding.position.set(startX - 0.8, groundY, 0);
+      schoolBuilding.scale.setScalar(0.5);
+      schoolBuilding.rotation.y = Math.PI / 2; // Rotate 90 degrees to face students
       group.add(schoolBuilding);
 
       data.forEach((item, i) => {
