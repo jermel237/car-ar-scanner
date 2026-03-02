@@ -4282,46 +4282,86 @@ export default function Home() {
         {webxrActive && <button onClick={stopWebXR} style={{ position: 'absolute', top: 10, right: 10, padding: '10px 18px', background: '#e74c3c', color: 'white', border: 'none', borderRadius: 20, fontSize: 13, fontWeight: 'bold', zIndex: 300 }}>✕ Exit AR</button>}
       </div>
 
-      {/* Tutorial Step Display */}
-      {tutorialActive && tutorialText && (
-        <div style={{ position: 'fixed', bottom: 100, left: '50%', transform: 'translateX(-50%)', width: '90%', maxWidth: 400, zIndex: 200 }}>
-          <div style={{ background: 'linear-gradient(135deg, rgba(30,30,60,0.98), rgba(20,20,40,0.98))', borderRadius: 20, padding: 20, border: '2px solid #667eea', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <span style={{ background: '#667eea', color: 'white', padding: '4px 12px', borderRadius: 12, fontSize: 12, fontWeight: 'bold' }}>
-                {tutorialText.step} of {tutorialSteps.length}
-              </span>
-              <button onClick={endTutorial} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '4px 12px', borderRadius: 12, fontSize: 12, cursor: 'pointer' }}>
-                ✕ Skip
-              </button>
-            </div>
-            <h3 style={{ color: '#00ff88', margin: '0 0 10px 0', fontSize: 18 }}>{tutorialText.title}</h3>
-            <p style={{ color: '#ffffff', margin: '0 0 16px 0', fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{tutorialText.description}</p>
-            <button 
-              onClick={nextStep} 
-              disabled={stepAnimating}
-              style={{ 
-                width: '100%', 
-                padding: '14px 24px', 
-                background: stepAnimating ? '#555' : 'linear-gradient(135deg, #667eea, #764ba2)', 
-                border: 'none', 
-                borderRadius: 12, 
-                color: 'white', 
-                fontSize: 16, 
-                fontWeight: 'bold', 
-                cursor: stepAnimating ? 'not-allowed' : 'pointer',
-                transition: 'all 0.3s'
-              }}>
-              {stepAnimating ? '⏳ Animating...' : currentStepIndex >= tutorialSteps.length - 1 ? '✓ Finish' : 'Next Step →'}
-            </button>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 12 }}>
-              {tutorialSteps.map((_, i) => (
-                <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i <= currentStepIndex ? '#667eea' : 'rgba(255,255,255,0.3)' }} />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
+{/* Tutorial Step Display - Minimal Controls */}
+{tutorialActive && (
+  <div style={{ 
+    position: 'fixed', 
+    bottom: 100, 
+    left: '50%', 
+    transform: 'translateX(-50%)', 
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    background: 'rgba(0,0,0,0.7)',
+    padding: '10px 20px',
+    borderRadius: 30,
+    border: '1px solid rgba(255,255,255,0.2)',
+    zIndex: 200 
+  }}>
+    {/* Step indicator */}
+    <span style={{ 
+      color: 'rgba(255,255,255,0.8)', 
+      fontSize: 12, 
+      fontWeight: 'bold',
+      minWidth: 50
+    }}>
+      {currentStepIndex + 1}/{tutorialSteps.length}
+    </span>
+    
+    {/* Progress dots */}
+    <div style={{ display: 'flex', gap: 4 }}>
+      {tutorialSteps.map((_, i) => (
+        <div 
+          key={i} 
+          style={{ 
+            width: 6, 
+            height: 6, 
+            borderRadius: '50%', 
+            background: i <= currentStepIndex ? '#667eea' : 'rgba(255,255,255,0.3)',
+            transition: 'background 0.3s'
+          }} 
+        />
+      ))}
+    </div>
+    
+    {/* Skip button */}
+    <button 
+      onClick={endTutorial} 
+      style={{ 
+        padding: '10px 20px', 
+        background: 'rgba(255,255,255,0.1)', 
+        border: '1px solid rgba(255,255,255,0.3)', 
+        borderRadius: 20, 
+        color: 'white', 
+        fontSize: 14, 
+        fontWeight: 'bold',
+        cursor: 'pointer' 
+      }}
+    >
+      Skip
+    </button>
+    
+    {/* Next button */}
+    <button 
+      onClick={nextStep} 
+      disabled={stepAnimating}
+      style={{ 
+        padding: '10px 24px', 
+        background: stepAnimating ? '#555' : 'linear-gradient(135deg, #667eea, #764ba2)', 
+        border: 'none', 
+        borderRadius: 20, 
+        color: 'white', 
+        fontSize: 14, 
+        fontWeight: 'bold', 
+        cursor: stepAnimating ? 'not-allowed' : 'pointer',
+        opacity: stepAnimating ? 0.7 : 1,
+        transition: 'all 0.3s'
+      }}
+    >
+      {stepAnimating ? '⏳' : currentStepIndex >= tutorialSteps.length - 1 ? '✓ Done' : 'Next →'}
+    </button>
+  </div>
+)}
       {showControls && !tutorialActive && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '20px 10px 30px', background: 'linear-gradient(to top, rgba(0,0,0,0.95), transparent)', zIndex: 100 }}>
           {(appMode === 'surface' && surfacePlaced) && (
