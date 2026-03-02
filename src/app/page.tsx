@@ -1824,113 +1824,123 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   return dispenser;
 }
 
-// ==================== UNIVERSITY BUILDING ====================
+// ==================== UNIVERSITY BUILDING (FACING RIGHT) ====================
 
 function createUniversityBuilding(): THREE.Group {
   const university = new THREE.Group();
   const groundY = 0;
 
+  // Main building
   const mainBuildingMat = new THREE.MeshStandardMaterial({ color: '#8B4513', roughness: 0.7 });
-  const mainBuilding = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.4, 2.0), mainBuildingMat);
-  mainBuilding.position.set(-0.8, groundY + 0.7, 0);
+  const mainBuilding = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.4, 1.2), mainBuildingMat);
+  mainBuilding.position.set(0, groundY + 0.7, -0.8);
   university.add(mainBuilding);
 
   const stoneTrimMat = new THREE.MeshStandardMaterial({ color: '#d4c4a8', roughness: 0.6 });
   
-  const foundation = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.1, 2.1), stoneTrimMat);
-  foundation.position.set(-0.8, groundY + 0.05, 0);
+  const foundation = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.1, 1.3), stoneTrimMat);
+  foundation.position.set(0, groundY + 0.05, -0.8);
   university.add(foundation);
 
-  const topTrim = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.08, 2.05), stoneTrimMat);
-  topTrim.position.set(-0.8, groundY + 1.44, 0);
+  const topTrim = new THREE.Mesh(new THREE.BoxGeometry(2.05, 0.08, 1.25), stoneTrimMat);
+  topTrim.position.set(0, groundY + 1.44, -0.8);
   university.add(topTrim);
 
-  const cornice = new THREE.Mesh(new THREE.BoxGeometry(1.28, 0.05, 2.08), new THREE.MeshStandardMaterial({ color: '#c9b896', roughness: 0.5 }));
-  cornice.position.set(-0.8, groundY + 1.38, 0);
+  const cornice = new THREE.Mesh(new THREE.BoxGeometry(2.08, 0.05, 1.28), new THREE.MeshStandardMaterial({ color: '#c9b896', roughness: 0.5 }));
+  cornice.position.set(0, groundY + 1.38, -0.8);
   university.add(cornice);
 
+  // Portico (entrance facing right - positive X)
   const porticoMat = new THREE.MeshStandardMaterial({ color: '#e8dcc8', roughness: 0.4, metalness: 0.1 });
   
-  const porticoRoof = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.6), porticoMat);
-  porticoRoof.position.set(-0.15, groundY + 0.95, 0);
+  const porticoRoof = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.6), porticoMat);
+  porticoRoof.position.set(1.04, groundY + 0.95, -0.8);
   university.add(porticoRoof);
 
+  // Columns (facing right)
   const columnMat = new THREE.MeshStandardMaterial({ color: '#f5f0e6', roughness: 0.3, metalness: 0.05 });
-  [[-0.27, -0.2], [-0.27, 0.2], [-0.03, -0.2], [-0.03, 0.2]].forEach(([x, z]) => {
+  [[-0.2, -0.27], [-0.2, -0.03], [0.2, -0.27], [0.2, -0.03]].forEach(([z, xOffset]) => {
     const column = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.65, 12), columnMat);
-    column.position.set(x, groundY + 0.45, z);
+    column.position.set(1.0 + xOffset * 0.5, groundY + 0.45, -0.8 + z);
     university.add(column);
 
     const capital = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.04, 0.1), columnMat);
-    capital.position.set(x, groundY + 0.79, z);
+    capital.position.set(1.0 + xOffset * 0.5, groundY + 0.79, -0.8 + z);
     university.add(capital);
 
     const base = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.03, 0.1), columnMat);
-    base.position.set(x, groundY + 0.115, z);
+    base.position.set(1.0 + xOffset * 0.5, groundY + 0.115, -0.8 + z);
     university.add(base);
   });
 
+  // Steps (facing right)
   const stepMat = new THREE.MeshStandardMaterial({ color: '#c9c0b0', roughness: 0.6 });
   for (let i = 0; i < 4; i++) {
-    const step = new THREE.Mesh(new THREE.BoxGeometry(0.45 + i * 0.08, 0.025, 0.5 + i * 0.06), stepMat);
-    step.position.set(-0.05 + i * 0.04, groundY + 0.0125 + i * 0.025, 0);
+    const step = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.5 + i * 0.06, 0.45 + i * 0.08), stepMat);
+    step.position.set(1.05 + i * 0.025, groundY + 0.0125 + i * 0.025, -0.8);
     university.add(step);
   }
 
+  // Doors (facing right)
   const doorFrameMat = new THREE.MeshStandardMaterial({ color: '#2c1810', roughness: 0.5 });
   const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.55, 0.35), doorFrameMat);
-  doorFrame.position.set(0.01, groundY + 0.375, 0);
+  doorFrame.position.set(1.01, groundY + 0.375, -0.8);
   university.add(doorFrame);
 
   const doorMat = new THREE.MeshStandardMaterial({ color: '#4a2c2a', roughness: 0.6 });
   [-0.08, 0.08].forEach(offsetZ => {
     const door = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.5, 0.14), doorMat);
-    door.position.set(0.02, groundY + 0.35, offsetZ);
+    door.position.set(1.02, groundY + 0.35, -0.8 + offsetZ);
     university.add(door);
 
     const handle = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.04, 0.01), new THREE.MeshStandardMaterial({ color: '#d4af37', metalness: 0.8 }));
-    handle.position.set(0.03, groundY + 0.35, offsetZ + (offsetZ > 0 ? -0.04 : 0.04));
+    handle.position.set(1.03, groundY + 0.35, -0.8 + offsetZ + (offsetZ > 0 ? -0.04 : 0.04));
     university.add(handle);
   });
 
+  // Windows (on the front face - facing right)
   const windowMat = new THREE.MeshStandardMaterial({ color: '#87ceeb', metalness: 0.4, roughness: 0.1, transparent: true, opacity: 0.8 });
   const windowFrameMat = new THREE.MeshStandardMaterial({ color: '#f5f5f5', roughness: 0.5 });
 
   const windowRows = [0.35, 0.7, 1.05];
-  const windowCols = [-0.7, -0.5, 0.5, 0.7];
+  const windowCols = [-0.35, -0.55, 0.35, 0.55];
 
   windowRows.forEach(wy => {
     windowCols.forEach(wz => {
+      // Front windows (facing right)
       const frame = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.22, 0.16), windowFrameMat);
-      frame.position.set(-0.18, groundY + wy, wz);
+      frame.position.set(1.01, groundY + wy, -0.8 + wz);
       university.add(frame);
 
       const glass = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.18, 0.12), windowMat);
-      glass.position.set(-0.17, groundY + wy, wz);
+      glass.position.set(1.02, groundY + wy, -0.8 + wz);
       university.add(glass);
 
       const sill = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.015, 0.18), stoneTrimMat);
-      sill.position.set(-0.16, groundY + wy - 0.11, wz);
+      sill.position.set(1.03, groundY + wy - 0.11, -0.8 + wz);
       university.add(sill);
     });
   });
 
+  // Roof
   const roofMat = new THREE.MeshStandardMaterial({ color: '#2c3e50', roughness: 0.6 });
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(1.28, 0.1, 2.08), roofMat);
-  roof.position.set(-0.8, groundY + 1.5, 0);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(2.08, 0.1, 1.28), roofMat);
+  roof.position.set(0, groundY + 1.5, -0.8);
   university.add(roof);
 
+  // Clock tower
   const towerMat = new THREE.MeshStandardMaterial({ color: '#8B4513', roughness: 0.7 });
   const tower = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.35, 0.25), towerMat);
-  tower.position.set(-0.8, groundY + 1.625, 0);
+  tower.position.set(0, groundY + 1.625, -0.8);
   university.add(tower);
 
   const towerRoofGeo = new THREE.ConeGeometry(0.18, 0.2, 4);
   const towerRoof = new THREE.Mesh(towerRoofGeo, roofMat);
-  towerRoof.position.set(-0.8, groundY + 1.9, 0);
+  towerRoof.position.set(0, groundY + 1.9, -0.8);
   towerRoof.rotation.y = Math.PI / 4;
   university.add(towerRoof);
 
+  // Clock (facing right)
   const clockCanvas = document.createElement('canvas');
   clockCanvas.width = 64;
   clockCanvas.height = 64;
@@ -1957,9 +1967,11 @@ function createUniversityBuilding(): THREE.Group {
   cctx.stroke();
   const clockTex = new THREE.CanvasTexture(clockCanvas);
   const clock = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.12), new THREE.MeshBasicMaterial({ map: clockTex }));
-  clock.position.set(-0.67, groundY + 1.65, 0);
+  clock.position.set(0.13, groundY + 1.65, -0.8);
+  clock.rotation.y = Math.PI / 2;
   university.add(clock);
 
+  // University sign (facing right)
   const signCanvas = document.createElement('canvas');
   signCanvas.width = 200;
   signCanvas.height = 60;
@@ -1975,28 +1987,31 @@ function createUniversityBuilding(): THREE.Group {
   sctx.fillText('DS UNIVERSITY', 100, 38);
   const signTex = new THREE.CanvasTexture(signCanvas);
   const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 0.1), new THREE.MeshBasicMaterial({ map: signTex }));
-  signMesh.position.set(-0.14, groundY + 0.88, 0);
+  signMesh.position.set(1.05, groundY + 0.88, -0.8);
+  signMesh.rotation.y = Math.PI / 2;
   university.add(signMesh);
 
+  // Lamp posts (near entrance)
   const lampMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', metalness: 0.7 });
-  [-0.5, 0.5].forEach(z => {
+  [-0.35, 0.35].forEach(z => {
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.4, 8), lampMat);
-    post.position.set(0.15, groundY + 0.2, z);
+    post.position.set(1.2, groundY + 0.2, -0.8 + z);
     university.add(post);
 
     const lampHead = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.04, 0.06), lampMat);
-    lampHead.position.set(0.15, groundY + 0.42, z);
+    lampHead.position.set(1.2, groundY + 0.42, -0.8 + z);
     university.add(lampHead);
 
     const light = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.025, 0.04), new THREE.MeshBasicMaterial({ color: '#ffffcc' }));
-    light.position.set(0.15, groundY + 0.395, z);
+    light.position.set(1.2, groundY + 0.395, -0.8 + z);
     university.add(light);
   });
 
+  // Bushes (near entrance)
   const bushMat = new THREE.MeshStandardMaterial({ color: '#228B22', roughness: 0.9 });
-  [-0.4, 0.4].forEach(z => {
+  [-0.25, 0.25].forEach(z => {
     const bush = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), bushMat);
-    bush.position.set(0.1, groundY + 0.06, z);
+    bush.position.set(1.15, groundY + 0.06, -0.8 + z);
     bush.scale.y = 0.7;
     university.add(bush);
   });
@@ -2902,10 +2917,11 @@ function buildSceneContent(
       const ticketDispenserGroup = createTicketDispenser(data, highlightIndex, animPhase || '', animProgress || 0);
       group.add(ticketDispenserGroup);
 
-    } else if (environment === 'students') {
+        } else if (environment === 'students') {
       const schoolBuilding = createUniversityBuilding();
-      schoolBuilding.position.set(startX - 0.5, groundY, 0);
-      schoolBuilding.scale.setScalar(0.5);
+      schoolBuilding.position.set(startX - 1.0, groundY, 0);
+      schoolBuilding.scale.setScalar(0.45);
+      schoolBuilding.rotation.y = 0; // Already facing right
       group.add(schoolBuilding);
 
       data.forEach((item, i) => {
