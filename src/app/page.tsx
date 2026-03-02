@@ -1744,7 +1744,7 @@ function createSchoolBuilding(): THREE.Group {
   entrance.position.set(0, groundY + entranceHeight / 2, 0);
   school.add(entrance);
 
-  // Flat roof above entrance (no triangle)
+  // Flat roof above entrance
   const entranceRoof = new THREE.Mesh(
     new THREE.BoxGeometry(entranceDepth + 0.15, 0.1, entranceWidth + 0.2),
     concreteMat
@@ -1795,21 +1795,19 @@ function createSchoolBuilding(): THREE.Group {
 
   // Door frame
   const bigFrame = new THREE.Mesh(
-    new THREE.BoxGeometry(0.04, doorHeight + 0.1, doorWidth * 2 + doorGap + 0.08),
+    new THREE.BoxGeometry(0.04, doorHeight + 0.12, doorWidth * 2 + doorGap + 0.1),
     new THREE.MeshStandardMaterial({ color: '#3e2723', roughness: 0.5 })
   );
-  bigFrame.position.set(0.19, groundY + doorHeight / 2 + 0.05, 0);
+  bigFrame.position.set(0.19, groundY + doorHeight / 2 + 0.06, 0);
   school.add(bigFrame);
 
-  // Arch above doors
-  const arch = new THREE.Mesh(
-    new THREE.TorusGeometry(0.24, 0.03, 8, 16, Math.PI),
+  // Door header (simple rectangle instead of arch)
+  const doorHeader = new THREE.Mesh(
+    new THREE.BoxGeometry(0.05, 0.08, doorWidth * 2 + doorGap + 0.12),
     new THREE.MeshStandardMaterial({ color: '#3e2723', roughness: 0.5 })
   );
-  arch.position.set(0.19, groundY + doorHeight + 0.05, 0);
-  arch.rotation.y = Math.PI / 2;
-  arch.rotation.x = Math.PI / 2;
-  school.add(arch);
+  doorHeader.position.set(0.19, groundY + doorHeight + 0.08, 0);
+  school.add(doorHeader);
 
   // Left door
   const leftDoor = new THREE.Mesh(
@@ -1929,7 +1927,7 @@ function createSchoolBuilding(): THREE.Group {
   spire.position.set(-0.4, groundY + mainBuildingHeight + towerHeight + 0.4, 0);
   school.add(spire);
 
-  // Clock
+  // Clock - FIXED position and rotation to face students
   const clockCanvas = document.createElement('canvas');
   clockCanvas.width = 128;
   clockCanvas.height = 128;
@@ -1972,8 +1970,9 @@ function createSchoolBuilding(): THREE.Group {
     new THREE.CircleGeometry(0.1, 32),
     new THREE.MeshBasicMaterial({ map: clockTex })
   );
-  clock.position.set(-0.265, groundY + mainBuildingHeight + towerHeight / 2 + 0.1, 0);
-  clock.rotation.y = Math.PI / 2;
+  // Clock on front of tower facing RIGHT (toward students)
+  clock.position.set(-0.25, groundY + mainBuildingHeight + towerHeight / 2 + 0.1, 0);
+  clock.rotation.y = -Math.PI / 2; // Face toward positive X (right)
   school.add(clock);
 
   // Main roof
@@ -2013,8 +2012,8 @@ function createSchoolBuilding(): THREE.Group {
     new THREE.PlaneGeometry(0.7, 0.14),
     new THREE.MeshBasicMaterial({ map: signTex })
   );
-  signMesh.position.set(0.02, groundY + entranceHeight + 0.18, 0);
-  signMesh.rotation.y = Math.PI / 2;
+  signMesh.position.set(0.18, groundY + entranceHeight + 0.2, 0);
+  signMesh.rotation.y = -Math.PI / 2; // Face toward students
   school.add(signMesh);
 
   // Side wings
@@ -2044,7 +2043,7 @@ function createSchoolBuilding(): THREE.Group {
     });
   });
 
-  // Philippine Flag - FIXED: flag attached to pole
+  // Philippine Flag - attached to pole properly
   const createPhilippineFlag = (posZ: number) => {
     const flagGroup = new THREE.Group();
 
@@ -2138,7 +2137,7 @@ function createSchoolBuilding(): THREE.Group {
 
     const flagTex = new THREE.CanvasTexture(flagCanvas);
     
-    // Flag with wave effect
+    // Flag with wave effect - attached to pole
     const flagWidth = 0.28;
     const flagHeight = 0.14;
     const flagGeo = new THREE.PlaneGeometry(flagWidth, flagHeight, 8, 1);
@@ -2153,8 +2152,9 @@ function createSchoolBuilding(): THREE.Group {
       flagGeo,
       new THREE.MeshStandardMaterial({ map: flagTex, side: THREE.DoubleSide, roughness: 0.8 })
     );
-    // FLAG ATTACHED TO POLE: positioned so left edge touches pole
-    flagMesh.position.set(flagWidth / 2, 1.08, 0);
+    // Flag attached to pole - left edge at pole, extends to the right
+    flagMesh.position.set(flagWidth / 2 + 0.02, 1.1, 0);
+    flagMesh.rotation.y = -Math.PI / 2; // Face same direction as school
     flagGroup.add(flagMesh);
 
     flagGroup.position.set(0.35, groundY, posZ);
