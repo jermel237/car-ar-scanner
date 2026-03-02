@@ -2353,7 +2353,8 @@ function buildSceneContent(
   environment: string,
   animPhase?: string,
   animData?: Record<string, any>,
-  animProgress?: number
+  animProgress?: number,
+  tutorialText?: { title: string; description: string; step: string } | null
 ): void {
   while (group.children.length > 0) {
     const child = group.children[0];
@@ -2371,6 +2372,17 @@ function buildSceneContent(
   const spacing = structure === 'linkedlist' ? 1.1 : structure === 'queue' ? 1.0 : 0.85;
   const startX = -((data.length - 1) * spacing) / 2;
   const groundY = 0;
+
+  // Add 3D Tutorial Text Box if provided (KEPT - shows in 3D scene)
+  if (tutorialText) {
+    const textBox = create3DTextBox(
+      tutorialText.title,
+      tutorialText.description,
+      tutorialText.step,
+      new THREE.Vector3(0, structure === 'stack' ? 1.8 : 1.2, 0)
+    );
+    group.add(textBox);
+  }
 
   // ==================== ARRAY ====================
   if (structure === 'array') {
@@ -2480,7 +2492,7 @@ function buildSceneContent(
       group.add(board);
 
     } else if (environment === 'todo') {
-      // ToDo List - Just clipboard showing all tasks (same as before)
+      // ToDo List - Just clipboard showing 4 tasks (same as original)
       const clipboard = createClipboard('Tasks', '#e74c3c', highlightIndex !== null, data);
       clipboard.position.set(0, 0, 0);
       clipboard.scale.setScalar(1.2);
@@ -2686,13 +2698,9 @@ function buildSceneContent(
 
         let openAmount = 0;
         if (isTop) {
-          if (animPhase === 'stack-peek-lift') {
-            openAmount = 0;
-          } else if (animPhase === 'stack-peek-open') {
-            openAmount = animProgress || 0;
-          } else if (animPhase === 'stack-peek-settle') {
-            openAmount = 1 - (animProgress || 0);
-          }
+          if (animPhase === 'stack-peek-lift') openAmount = 0;
+          else if (animPhase === 'stack-peek-open') openAmount = animProgress || 0;
+          else if (animPhase === 'stack-peek-settle') openAmount = 1 - (animProgress || 0);
         }
 
         const cardboardBox = createCardboardBox(item.label, item.color, isHl, openAmount);
@@ -2722,13 +2730,9 @@ function buildSceneContent(
   } else if (structure === 'queue') {
     if (environment === 'tollgate') {
       let gateOpenAmount = 0;
-      if (animPhase === 'queue-dequeue-gate-open') {
-        gateOpenAmount = animProgress || 0;
-      } else if (animPhase === 'queue-dequeue-drive') {
-        gateOpenAmount = 1;
-      } else if (animPhase === 'queue-dequeue-gate-close') {
-        gateOpenAmount = 1 - (animProgress || 0);
-      }
+      if (animPhase === 'queue-dequeue-gate-open') gateOpenAmount = animProgress || 0;
+      else if (animPhase === 'queue-dequeue-drive') gateOpenAmount = 1;
+      else if (animPhase === 'queue-dequeue-gate-close') gateOpenAmount = 1 - (animProgress || 0);
 
       const tollBooth = createTollBooth(gateOpenAmount);
       tollBooth.position.set(startX - 0.3, groundY, 0);
@@ -2754,10 +2758,7 @@ function buildSceneContent(
       rearSprite.scale.set(0.28, 0.1, 1);
       group.add(rearSprite);
 
-      const road = new THREE.Mesh(
-        new THREE.PlaneGeometry(data.length * spacing + 3.0, 0.7),
-        new THREE.MeshStandardMaterial({ color: '#34495e', side: THREE.DoubleSide })
-      );
+      const road = new THREE.Mesh(new THREE.PlaneGeometry(data.length * spacing + 3.0, 0.7), new THREE.MeshStandardMaterial({ color: '#34495e', side: THREE.DoubleSide }));
       road.rotation.x = -Math.PI / 2;
       road.position.y = groundY - 0.01;
       group.add(road);
@@ -2790,22 +2791,19 @@ function buildSceneContent(
         const isFront = i === 0;
 
         if (item.appearance) {
-          let walkPhase = 0;
-          let extraX = 0;
-          let studentScale = 0.55;
-          let shouldRender = true;
+          let walkPhase = 0, extraX = 0, studentScale = 0.55, shouldRender = true;
 
           if (isFront) {
             if (animPhase === 'queue-dequeue-walk') {
-              const progress = animProgress || 0;
-              walkPhase = progress * Math.PI * 10;
-              extraX = -progress * 1.2;
+              const p = animProgress || 0;
+              walkPhase = p * Math.PI * 10;
+              extraX = -p * 1.2;
             } else if (animPhase === 'queue-dequeue-enter') {
-              const progress = animProgress || 0;
-              walkPhase = Math.PI * 10 + progress * Math.PI * 4;
-              extraX = -1.2 - progress * 0.4;
-              studentScale = 0.55 * Math.max(0.01, 1 - progress * 0.95);
-              if (progress > 0.95) shouldRender = false;
+              const p = animProgress || 0;
+              walkPhase = Math.PI * 10 + p * Math.PI * 4;
+              extraX = -1.2 - p * 0.4;
+              studentScale = 0.55 * Math.max(0.01, 1 - p * 0.95);
+              if (p > 0.95) shouldRender = false;
             }
           }
 
@@ -2814,11 +2812,9 @@ function buildSceneContent(
             human.position.set(startX + i * spacing + 0.6 + extraX, groundY, 0);
             human.scale.setScalar(studentScale);
             human.rotation.y = -Math.PI / 2;
-
             if (!(isFront && (animPhase === 'queue-dequeue-walk' || animPhase === 'queue-dequeue-enter'))) {
               applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue', animProgress);
             }
-
             group.add(human);
           }
         }
@@ -2836,10 +2832,7 @@ function buildSceneContent(
         group.add(rearSprite);
       }
 
-      const pathway = new THREE.Mesh(
-        new THREE.PlaneGeometry(data.length * spacing + 2.5, 0.5),
-        new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
-      );
+      const pathway = new THREE.Mesh(new THREE.PlaneGeometry(data.length * spacing + 2.5, 0.5), new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide }));
       pathway.rotation.x = -Math.PI / 2;
       pathway.position.set(0.3, groundY - 0.01, 0);
       group.add(pathway);
@@ -2884,11 +2877,12 @@ export default function Home() {
   const [animData, setAnimData] = useState<Record<string, any>>({});
   const [animProgress, setAnimProgress] = useState(1);
 
-  // Step-by-step state (no text display)
+  // Step-by-step state
   const [tutorialActive, setTutorialActive] = useState(false);
   const [tutorialSteps, setTutorialSteps] = useState<TutorialStep[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [stepAnimating, setStepAnimating] = useState(false);
+  const [tutorialText, setTutorialText] = useState<{ title: string; description: string; step: string } | null>(null);
 
   const [selectionMode, setSelectionMode] = useState<SelectionMode>('none');
   const [swapFirstIndex, setSwapFirstIndex] = useState<number | null>(null);
@@ -3000,11 +2994,8 @@ export default function Home() {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
         setAnimProgress(progress);
-        if (progress < 1) {
-          animFrameRef.current = requestAnimationFrame(animate);
-        } else {
-          resolve();
-        }
+        if (progress < 1) animFrameRef.current = requestAnimationFrame(animate);
+        else resolve();
       };
       animFrameRef.current = requestAnimationFrame(animate);
     });
@@ -3027,73 +3018,44 @@ export default function Home() {
   const zoomOut = useCallback(() => setZoomLevel(prev => Math.max(prev - 0.25, 0.3)), []);
   const resetZoom = useCallback(() => setZoomLevel(1.0), []);
 
-  // Generate new item based on environment
   const generateNewItem = (): DataItem => {
     if (arrayEnv === 'classroom') {
-      const names = ['Emma', 'Liam', 'Mia', 'Noah', 'Ava', 'Jack', 'Zoe', 'Leo'];
+      const names = ['Emma', 'Liam', 'Mia', 'Noah', 'Ava', 'Jack'];
       const skinTones = ['#f5c6a0', '#c68642', '#8d5524'];
-      const hairColors = ['#1a1a1a', '#3d2314', '#2c1810', '#d4a574'];
-      const shirtColors = ['#1abc9c', '#9b59b6', '#e74c3c', '#3498db', '#f39c12', '#2ecc71'];
+      const hairColors = ['#1a1a1a', '#3d2314', '#2c1810'];
+      const shirtColors = ['#1abc9c', '#9b59b6', '#e74c3c', '#3498db', '#f39c12'];
       const genders: ('male' | 'female')[] = ['male', 'female'];
       const gender = genders[Math.floor(Math.random() * genders.length)];
-      return {
-        id: Date.now(),
-        label: names[Math.floor(Math.random() * names.length)],
-        color: shirtColors[Math.floor(Math.random() * shirtColors.length)],
-        appearance: {
-          skinTone: skinTones[Math.floor(Math.random() * skinTones.length)],
-          shirtColor: shirtColors[Math.floor(Math.random() * shirtColors.length)],
-          pantsColor: '#2c3e50',
-          hairColor: hairColors[Math.floor(Math.random() * hairColors.length)],
-          hairStyle: gender === 'female' ? 'long' : (['short', 'short', 'bald'] as const)[Math.floor(Math.random() * 3)],
-          gender: gender
-        }
-      };
+      return { id: Date.now(), label: names[Math.floor(Math.random() * names.length)], color: shirtColors[Math.floor(Math.random() * shirtColors.length)], appearance: { skinTone: skinTones[Math.floor(Math.random() * skinTones.length)], shirtColor: shirtColors[Math.floor(Math.random() * shirtColors.length)], pantsColor: '#2c3e50', hairColor: hairColors[Math.floor(Math.random() * hairColors.length)], hairStyle: gender === 'female' ? 'long' : 'short', gender } };
     } else if (arrayEnv === 'todo') {
-      const taskNames = ['Meeting', 'Email', 'Report', 'Call', 'Review', 'Plan', 'Debug', 'Test'];
-      const taskColors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22'];
-      return {
-        id: Date.now(),
-        label: taskNames[Math.floor(Math.random() * taskNames.length)],
-        color: taskColors[Math.floor(Math.random() * taskColors.length)]
-      };
+      const taskNames = ['Meeting', 'Email', 'Report', 'Call', 'Review', 'Plan'];
+      const taskColors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c'];
+      return { id: Date.now(), label: taskNames[Math.floor(Math.random() * taskNames.length)], color: taskColors[Math.floor(Math.random() * taskColors.length)] };
     } else {
-      const cerealNames = ['Granola', 'Muesli', 'Bran', 'Oats', 'Wheat'];
-      const cerealColors = ['#8B4513', '#D2691E', '#CD853F', '#DEB887', '#F4A460'];
-      return {
-        id: Date.now(),
-        label: cerealNames[Math.floor(Math.random() * cerealNames.length)],
-        color: cerealColors[Math.floor(Math.random() * cerealColors.length)]
-      };
+      const cerealNames = ['Granola', 'Muesli', 'Bran', 'Oats'];
+      const cerealColors = ['#8B4513', '#D2691E', '#CD853F', '#DEB887'];
+      return { id: Date.now(), label: cerealNames[Math.floor(Math.random() * cerealNames.length)], color: cerealColors[Math.floor(Math.random() * cerealColors.length)] };
     }
   };
 
-  // ==================== STEP FUNCTIONS (NO TEXT) ====================
+  // ==================== TUTORIAL STEP FUNCTIONS ====================
 
   const runTutorialStep = async (step: TutorialStep) => {
     setStepAnimating(true);
+    // Update 3D text display
+    setTutorialText({ title: step.title || '', description: step.description || '', step: `Step ${currentStepIndex + 1}` });
     
-    if (step.highlightIndex !== undefined) {
-      setHighlightIndex(step.highlightIndex);
-    }
-    if (step.highlightIndex2 !== undefined) {
-      setHighlightIndex2(step.highlightIndex2);
-    }
-    
-    if (step.action) {
-      step.action();
-    }
-    
+    if (step.highlightIndex !== undefined) setHighlightIndex(step.highlightIndex);
+    if (step.highlightIndex2 !== undefined) setHighlightIndex2(step.highlightIndex2);
+    if (step.action) step.action();
     if (step.animPhase && step.animDuration) {
       await smoothAnimate(step.animDuration, step.animPhase, { index: step.highlightIndex, index1: step.highlightIndex, index2: step.highlightIndex2 });
     }
-    
     setStepAnimating(false);
   };
 
   const nextStep = async () => {
     if (stepAnimating) return;
-    
     if (currentStepIndex < tutorialSteps.length - 1) {
       const nextIdx = currentStepIndex + 1;
       setCurrentStepIndex(nextIdx);
@@ -3107,6 +3069,7 @@ export default function Home() {
     setTutorialActive(false);
     setTutorialSteps([]);
     setCurrentStepIndex(0);
+    setTutorialText(null);
     setHighlightIndex(null);
     setHighlightIndex2(null);
     setAnimPhase('');
@@ -3127,65 +3090,51 @@ export default function Home() {
 
   const arrayAppendVsInsert = () => {
     if (isAnimating || tutorialActive || getArrayData().length >= 5) return;
-    
     const data = getArrayData();
     const newItem = generateNewItem();
     const insertIndex = Math.floor(data.length / 2);
     const newItem2 = generateNewItem();
     
     const steps: TutorialStep[] = [
-      { highlightIndex: data.length },
-      { highlightIndex: data.length, animPhase: 'insert-drop', animDuration: 600, action: () => (setArrayData as any)((prev: DataItem[]) => [...prev, newItem]) },
-      { highlightIndex: data.length, animPhase: 'insert-settle', animDuration: 400 },
-      { highlightIndex: insertIndex },
+      { title: '📚 Append vs Insert', description: `Comparing O(1) append vs O(n) insert with shifting.`, highlightIndex: data.length },
+      { title: '⚡ Append O(1)', description: `Adding to END - no shifting needed!`, highlightIndex: data.length, animPhase: 'insert-drop', animDuration: 600, action: () => (setArrayData as any)((prev: DataItem[]) => [...prev, newItem]) },
+      { title: '✅ Appended!', description: `Direct placement at array[${data.length}]`, highlightIndex: data.length, animPhase: 'insert-settle', animDuration: 400 },
+      { title: '🔄 Now Insert', description: `Insert at [${insertIndex}] requires shifting!`, highlightIndex: insertIndex },
     ];
-    
-    for (let i = data.length; i > insertIndex; i--) {
-      steps.push({ highlightIndex: i, animPhase: 'access-lift', animDuration: 250 });
-    }
-    
-    steps.push(
-      { highlightIndex: insertIndex, animPhase: 'insert-drop', animDuration: 600, action: () => (setArrayData as any)((prev: DataItem[]) => { const arr = [...prev]; arr.splice(insertIndex, 0, newItem2); return arr; }) },
-      { highlightIndex: insertIndex, animPhase: 'insert-settle', animDuration: 400 }
-    );
-    
+    for (let i = data.length; i > insertIndex; i--) steps.push({ title: `↗️ Shift [${i}]`, description: `Moving element right`, highlightIndex: i, animPhase: 'access-lift', animDuration: 200 });
+    steps.push({ title: '📦 Place Element', description: `Insert at [${insertIndex}]`, highlightIndex: insertIndex, animPhase: 'insert-drop', animDuration: 600, action: () => (setArrayData as any)((prev: DataItem[]) => { const a = [...prev]; a.splice(insertIndex, 0, newItem2); return a; }) });
+    steps.push({ title: '📊 Summary', description: `Append: O(1)\nInsert: O(n) shifts`, highlightIndex: insertIndex, animPhase: 'insert-settle', animDuration: 400 });
     startTutorial(steps);
   };
 
   const arrayInsert = (insertIndex: number) => {
     const data = getArrayData();
     const newItem = generateNewItem();
-    
-    const steps: TutorialStep[] = [{ highlightIndex: insertIndex }];
-    
-    for (let i = data.length - 1; i >= insertIndex; i--) {
-      steps.push({ highlightIndex: i, animPhase: 'access-lift', animDuration: 250 });
-    }
-    
-    steps.push(
-      { highlightIndex: insertIndex, animPhase: 'insert-drop', animDuration: 600, action: () => (setArrayData as any)((prev: DataItem[]) => { const arr = [...prev]; arr.splice(insertIndex, 0, newItem); return arr; }) },
-      { highlightIndex: insertIndex, animPhase: 'insert-settle', animDuration: 400 }
-    );
-    
+    const steps: TutorialStep[] = [{ title: '➕ Insert', description: `Insert at [${insertIndex}], shifting elements right`, highlightIndex: insertIndex }];
+    for (let i = data.length - 1; i >= insertIndex; i--) steps.push({ title: `↗️ Shift [${i}]`, description: `Moving right`, highlightIndex: i, animPhase: 'access-lift', animDuration: 200 });
+    steps.push({ title: '📦 Place', description: `array[${insertIndex}] = new`, highlightIndex: insertIndex, animPhase: 'insert-drop', animDuration: 600, action: () => (setArrayData as any)((prev: DataItem[]) => { const a = [...prev]; a.splice(insertIndex, 0, newItem); return a; }) });
+    steps.push({ title: '✅ Done', description: `Inserted at [${insertIndex}]! O(n) time.`, highlightIndex: insertIndex, animPhase: 'insert-settle', animDuration: 400 });
     startTutorial(steps);
   };
 
   const arrayDelete = (deleteIndex: number) => {
+    const data = getArrayData();
     const steps: TutorialStep[] = [
-      { highlightIndex: deleteIndex },
-      { highlightIndex: deleteIndex, animPhase: 'delete-lift', animDuration: 600 },
-      { highlightIndex: deleteIndex, animPhase: 'delete-shrink', animDuration: 600 },
-      { animPhase: 'delete-close', animDuration: 500, action: () => (setArrayData as any)((prev: DataItem[]) => prev.filter((_: any, i: number) => i !== deleteIndex)) }
+      { title: '🗑️ Delete', description: `Remove [${deleteIndex}] = "${data[deleteIndex]?.label}"`, highlightIndex: deleteIndex },
+      { title: '💨 Remove', description: `Lifting element out`, highlightIndex: deleteIndex, animPhase: 'delete-lift', animDuration: 600 },
+      { title: '✨ Gone', description: `Element removed, shifting left`, highlightIndex: deleteIndex, animPhase: 'delete-shrink', animDuration: 600 },
+      { title: '✅ Done', description: `Deleted! Elements shifted. O(n)`, animPhase: 'delete-close', animDuration: 500, action: () => (setArrayData as any)((prev: DataItem[]) => prev.filter((_: any, i: number) => i !== deleteIndex)) }
     ];
     startTutorial(steps);
   };
 
   const arraySwap = (idx1: number, idx2: number) => {
+    const data = getArrayData();
     const steps: TutorialStep[] = [
-      { highlightIndex: idx1, highlightIndex2: idx2 },
-      { highlightIndex: idx1, highlightIndex2: idx2, animPhase: 'swap-lift', animDuration: 500 },
-      { highlightIndex: idx1, highlightIndex2: idx2, animPhase: 'swap-cross', animDuration: 500 },
-      { highlightIndex: idx1, highlightIndex2: idx2, animPhase: 'swap-drop', animDuration: 500, action: () => (setArrayData as any)((prev: DataItem[]) => { const arr = [...prev]; [arr[idx1], arr[idx2]] = [arr[idx2], arr[idx1]]; return arr; }) }
+      { title: '🔀 Swap', description: `Swap [${idx1}] ↔ [${idx2}]`, highlightIndex: idx1, highlightIndex2: idx2 },
+      { title: '📦 temp = a[i]', description: `Save "${data[idx1]?.label}"`, highlightIndex: idx1, highlightIndex2: idx2, animPhase: 'swap-lift', animDuration: 500 },
+      { title: '↔️ Exchange', description: `a[i] = a[j], a[j] = temp`, highlightIndex: idx1, highlightIndex2: idx2, animPhase: 'swap-cross', animDuration: 500 },
+      { title: '✅ Swapped!', description: `O(1) - just 3 operations!`, highlightIndex: idx1, highlightIndex2: idx2, animPhase: 'swap-drop', animDuration: 500, action: () => (setArrayData as any)((prev: DataItem[]) => { const a = [...prev]; [a[idx1], a[idx2]] = [a[idx2], a[idx1]]; return a; }) }
     ];
     startTutorial(steps);
   };
@@ -3194,16 +3143,14 @@ export default function Home() {
     if (isAnimating || tutorialActive || getArrayData().length >= 6) return;
     const data = getArrayData();
     const newItem = generateNewItem();
-    
     const steps: TutorialStep[] = [
-      { highlightIndex: data.length, action: () => (setArrayData as any)((prev: DataItem[]) => [...prev, newItem]) },
-      { highlightIndex: data.length, animPhase: 'insert-drop', animDuration: 600 },
-      { highlightIndex: data.length, animPhase: 'insert-settle', animDuration: 400 }
+      { title: '➕ Append', description: `Add "${newItem.label}" to end`, highlightIndex: data.length, action: () => (setArrayData as any)((prev: DataItem[]) => [...prev, newItem]) },
+      { title: '⚡ Direct', description: `Place at [${data.length}]`, highlightIndex: data.length, animPhase: 'insert-drop', animDuration: 600 },
+      { title: '✅ Done!', description: `O(1) - no shifting!`, highlightIndex: data.length, animPhase: 'insert-settle', animDuration: 400 }
     ];
     startTutorial(steps);
   };
 
-  // Selection handlers
   const startAppendVsInsert = () => { if (!isAnimating && selectionMode === 'none' && !tutorialActive && getArrayData().length < 5) arrayAppendVsInsert(); };
   const startArrayInsert = () => { if (!isAnimating && selectionMode === 'none' && !tutorialActive && getArrayData().length < 6) { setSelectionMode('insert'); setPendingOperation('Select index:'); } };
   const startArrayDelete = () => { if (!isAnimating && selectionMode === 'none' && !tutorialActive && getArrayData().length > 2) { setSelectionMode('delete'); setPendingOperation('Select index:'); } };
@@ -3219,18 +3166,15 @@ export default function Home() {
 
   const cancelSelection = () => { setSelectionMode('none'); setPendingOperation(''); setSwapFirstIndex(null); setHighlightIndex(null); setHighlightIndex2(null); };
 
-  // ==================== LINKED LIST OPERATIONS ====================
+  // ==================== LINKED LIST ====================
 
   const linkedListInsertHead = () => {
     if (isAnimating || tutorialActive || getLinkedListData().length >= 5) return;
-    const newItem: DataItem = linkedListEnv === 'people'
-      ? { id: Date.now(), label: 'New', color: '#1abc9c', appearance: { skinTone: '#f5c6a0', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#3d2314', hairStyle: 'short', gender: 'male' } }
-      : { id: Date.now(), label: 'New', color: '#1abc9c' };
-    
+    const newItem: DataItem = linkedListEnv === 'people' ? { id: Date.now(), label: 'New', color: '#1abc9c', appearance: { skinTone: '#f5c6a0', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#3d2314', hairStyle: 'short', gender: 'male' } } : { id: Date.now(), label: 'New', color: '#1abc9c' };
     const steps: TutorialStep[] = [
-      { action: () => (setLinkedListData as any)((prev: DataItem[]) => [newItem, ...prev]) },
-      { highlightIndex: 0, animPhase: 'll-insert-head', animDuration: 600 },
-      { highlightIndex: 0, animPhase: 'll-insert-head-settle', animDuration: 400 }
+      { title: '⬅️ +Head', description: 'Insert at beginning', action: () => (setLinkedListData as any)((prev: DataItem[]) => [newItem, ...prev]) },
+      { title: '🔗 Link', description: 'newNode.next = head', highlightIndex: 0, animPhase: 'll-insert-head', animDuration: 600 },
+      { title: '✅ Done!', description: 'O(1) - just pointer update!', highlightIndex: 0, animPhase: 'll-insert-head-settle', animDuration: 400 }
     ];
     startTutorial(steps);
   };
@@ -3238,24 +3182,21 @@ export default function Home() {
   const linkedListInsertTail = () => {
     if (isAnimating || tutorialActive || getLinkedListData().length >= 5) return;
     const data = getLinkedListData();
-    const newItem: DataItem = linkedListEnv === 'people'
-      ? { id: Date.now(), label: 'Last', color: '#e74c3c', appearance: { skinTone: '#8d5524', shirtColor: '#e74c3c', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } }
-      : { id: Date.now(), label: 'New', color: '#e74c3c' };
-    
-    const steps: TutorialStep[] = data.map((_, i) => ({ highlightIndex: i, animPhase: 'll-traverse', animDuration: 400 }));
-    steps.push(
-      { highlightIndex: data.length, action: () => (setLinkedListData as any)((prev: DataItem[]) => [...prev, newItem]), animPhase: 'll-insert-tail', animDuration: 600 },
-      { highlightIndex: data.length, animPhase: 'll-insert-tail-settle', animDuration: 400 }
-    );
+    const newItem: DataItem = linkedListEnv === 'people' ? { id: Date.now(), label: 'Last', color: '#e74c3c', appearance: { skinTone: '#8d5524', shirtColor: '#e74c3c', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } } : { id: Date.now(), label: 'New', color: '#e74c3c' };
+    const steps: TutorialStep[] = [{ title: '➡️ +Tail', description: 'Traverse to find tail' }];
+    data.forEach((_, i) => steps.push({ title: `🔍 Node ${i}`, description: i === data.length - 1 ? 'Found tail!' : 'Keep going...', highlightIndex: i, animPhase: 'll-traverse', animDuration: 350 }));
+    steps.push({ title: '🔗 Link', description: 'tail.next = newNode', highlightIndex: data.length, action: () => (setLinkedListData as any)((prev: DataItem[]) => [...prev, newItem]), animPhase: 'll-insert-tail', animDuration: 600 });
+    steps.push({ title: '✅ Done!', description: `O(n) - traversed ${data.length} nodes`, highlightIndex: data.length, animPhase: 'll-insert-tail-settle', animDuration: 400 });
     startTutorial(steps);
   };
 
   const linkedListDeleteHead = () => {
     if (isAnimating || tutorialActive || getLinkedListData().length <= 2) return;
+    const data = getLinkedListData();
     const steps: TutorialStep[] = [
-      { highlightIndex: 0 },
-      { highlightIndex: 0, animPhase: 'll-delete-lift', animDuration: 600 },
-      { highlightIndex: 0, animPhase: 'll-delete-shrink', animDuration: 600, action: () => (setLinkedListData as any)((prev: DataItem[]) => prev.slice(1)) }
+      { title: '🗑️ -Head', description: `Remove "${data[0]?.label}"`, highlightIndex: 0 },
+      { title: '💨 Remove', description: 'head = head.next', highlightIndex: 0, animPhase: 'll-delete-lift', animDuration: 600 },
+      { title: '✅ Done!', description: 'O(1) - just pointer update!', highlightIndex: 0, animPhase: 'll-delete-shrink', animDuration: 600, action: () => (setLinkedListData as any)((prev: DataItem[]) => prev.slice(1)) }
     ];
     startTutorial(steps);
   };
@@ -3263,23 +3204,23 @@ export default function Home() {
   const linkedListTraverse = () => {
     if (isAnimating || tutorialActive) return;
     const data = getLinkedListData();
-    const steps: TutorialStep[] = data.map((_, i) => ({ highlightIndex: i, animPhase: 'll-traverse', animDuration: 500 }));
+    const steps: TutorialStep[] = [{ title: '🔍 Traverse', description: 'Visit all nodes' }];
+    data.forEach((item, i) => steps.push({ title: `📍 Node ${i}`, description: `"${item.label}"`, highlightIndex: i, animPhase: 'll-traverse', animDuration: 450 }));
+    steps.push({ title: '✅ Done!', description: `O(n) - visited ${data.length} nodes` });
     startTutorial(steps);
   };
 
-  // ==================== STACK OPERATIONS ====================
+  // ==================== STACK ====================
 
   const stackPush = () => {
     if (isAnimating || tutorialActive || getStackData().length >= 5) return;
     const data = getStackData();
-    const labels = stackEnv === 'books' ? ['Physics', 'English', 'Art', 'Music'] : stackEnv === 'plates' ? [`Plate ${data.length + 1}`] : [`Box ${String.fromCharCode(65 + data.length)}`];
-    const colors = stackEnv === 'books' ? ['#9b59b6', '#e74c3c', '#1abc9c', '#3498db'] : ['#7f8c8d'];
-    const newItem = { id: Date.now(), label: labels[Math.floor(Math.random() * labels.length)], color: colors[Math.floor(Math.random() * colors.length)] };
-    
+    const labels = stackEnv === 'books' ? ['Physics', 'English', 'Art'] : stackEnv === 'plates' ? [`Plate ${data.length + 1}`] : [`Box ${String.fromCharCode(65 + data.length)}`];
+    const newItem = { id: Date.now(), label: labels[0], color: '#9b59b6' };
     const steps: TutorialStep[] = [
-      { action: () => (setStackData as any)((prev: DataItem[]) => [...prev, newItem]) },
-      { highlightIndex: data.length, animPhase: 'stack-push-drop', animDuration: 600 },
-      { highlightIndex: data.length, animPhase: 'stack-push-settle', animDuration: 400 }
+      { title: '⬆️ Push', description: `Push "${newItem.label}"`, action: () => (setStackData as any)((prev: DataItem[]) => [...prev, newItem]) },
+      { title: '📦 Place', description: 'Add to TOP', highlightIndex: data.length, animPhase: 'stack-push-drop', animDuration: 600 },
+      { title: '✅ Done!', description: 'O(1) - always at top!', highlightIndex: data.length, animPhase: 'stack-push-settle', animDuration: 400 }
     ];
     startTutorial(steps);
   };
@@ -3288,9 +3229,9 @@ export default function Home() {
     if (isAnimating || tutorialActive || getStackData().length <= 1) return;
     const data = getStackData();
     const steps: TutorialStep[] = [
-      { highlightIndex: data.length - 1 },
-      { highlightIndex: data.length - 1, animPhase: 'stack-pop-lift', animDuration: 500 },
-      { highlightIndex: data.length - 1, animPhase: 'stack-pop-fly', animDuration: 600, action: () => (setStackData as any)((prev: DataItem[]) => prev.slice(0, -1)) }
+      { title: '⬇️ Pop', description: `Remove "${data[data.length - 1]?.label}"`, highlightIndex: data.length - 1 },
+      { title: '💨 Remove', description: 'Take from TOP', highlightIndex: data.length - 1, animPhase: 'stack-pop-lift', animDuration: 500 },
+      { title: '✅ Done!', description: 'O(1) - LIFO!', highlightIndex: data.length - 1, animPhase: 'stack-pop-fly', animDuration: 600, action: () => (setStackData as any)((prev: DataItem[]) => prev.slice(0, -1)) }
     ];
     startTutorial(steps);
   };
@@ -3299,126 +3240,72 @@ export default function Home() {
     if (isAnimating || tutorialActive || getStackData().length === 0) return;
     const data = getStackData();
     const steps: TutorialStep[] = [
-      { highlightIndex: data.length - 1 },
-      { highlightIndex: data.length - 1, animPhase: 'stack-peek-lift', animDuration: 800 },
-      { highlightIndex: data.length - 1, animPhase: 'stack-peek-open', animDuration: 1500 },
-      { animPhase: 'stack-peek-settle', animDuration: 500 }
+      { title: '👁️ Peek', description: 'Look at TOP', highlightIndex: data.length - 1 },
+      { title: '🔍 Viewing', description: `TOP = "${data[data.length - 1]?.label}"`, highlightIndex: data.length - 1, animPhase: 'stack-peek-lift', animDuration: 800 },
+      { title: '📖 Reading', description: 'Element stays in place', highlightIndex: data.length - 1, animPhase: 'stack-peek-open', animDuration: 1500 },
+      { title: '✅ Done!', description: 'O(1) - just check top!', animPhase: 'stack-peek-settle', animDuration: 500 }
     ];
     startTutorial(steps);
   };
 
-  // ==================== QUEUE OPERATIONS ====================
+  // ==================== QUEUE ====================
 
   const queueEnqueue = () => {
     if (isAnimating || tutorialActive || getQueueData().length >= 5) return;
     const data = getQueueData();
-    const newItem: DataItem = queueEnv === 'students'
-      ? { id: Date.now(), label: `Stu ${data.length + 1}`, color: '#1abc9c', appearance: { skinTone: '#f5c6a0', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#3d2314', hairStyle: 'short', gender: 'male' } }
-      : queueEnv === 'tollgate'
-        ? { id: Date.now(), label: `NEW-${Math.floor(Math.random() * 900) + 100}`, color: '#1abc9c' }
-        : { id: Date.now(), label: `T-00${data.length + 1}`, color: '#1abc9c' };
-    
+    const newItem: DataItem = queueEnv === 'students' ? { id: Date.now(), label: `Stu ${data.length + 1}`, color: '#1abc9c', appearance: { skinTone: '#f5c6a0', shirtColor: '#1abc9c', pantsColor: '#2c3e50', hairColor: '#3d2314', hairStyle: 'short', gender: 'male' } } : queueEnv === 'tollgate' ? { id: Date.now(), label: `NEW-${Math.floor(Math.random() * 900) + 100}`, color: '#1abc9c' } : { id: Date.now(), label: `T-00${data.length + 1}`, color: '#1abc9c' };
     const steps: TutorialStep[] = [
-      { action: () => (setQueueData as any)((prev: DataItem[]) => [...prev, newItem]) },
-      { highlightIndex: data.length, animPhase: 'queue-enqueue-enter', animDuration: 700 },
-      { highlightIndex: data.length, animPhase: 'queue-enqueue-settle', animDuration: 400 }
+      { title: '➕ Enqueue', description: `Add "${newItem.label}" to rear`, action: () => (setQueueData as any)((prev: DataItem[]) => [...prev, newItem]) },
+      { title: '🚶 Join', description: 'Join back of line', highlightIndex: data.length, animPhase: 'queue-enqueue-enter', animDuration: 700 },
+      { title: '✅ Done!', description: 'O(1) - add to rear!', highlightIndex: data.length, animPhase: 'queue-enqueue-settle', animDuration: 400 }
     ];
     startTutorial(steps);
   };
 
   const queueDequeue = () => {
     if (isAnimating || tutorialActive || getQueueData().length <= 1) return;
+    const data = getQueueData();
     const steps: TutorialStep[] = [
-      { highlightIndex: 0 },
-      { highlightIndex: 0, animPhase: queueEnv === 'tollgate' ? 'queue-dequeue-gate-open' : 'queue-dequeue-walk', animDuration: queueEnv === 'tollgate' ? 1000 : 1500 },
-      { highlightIndex: 0, animPhase: queueEnv === 'tollgate' ? 'queue-dequeue-drive' : 'queue-dequeue-enter', animDuration: 1200, action: () => (setQueueData as any)((prev: DataItem[]) => prev.slice(1)) }
+      { title: '➖ Dequeue', description: `Remove "${data[0]?.label}"`, highlightIndex: 0 },
+      { title: '🚶 Leave', description: 'Front exits', highlightIndex: 0, animPhase: queueEnv === 'tollgate' ? 'queue-dequeue-gate-open' : 'queue-dequeue-walk', animDuration: queueEnv === 'tollgate' ? 1000 : 1500 },
+      { title: '✅ Done!', description: 'O(1) - FIFO!', highlightIndex: 0, animPhase: queueEnv === 'tollgate' ? 'queue-dequeue-drive' : 'queue-dequeue-enter', animDuration: 1200, action: () => (setQueueData as any)((prev: DataItem[]) => prev.slice(1)) }
     ];
     startTutorial(steps);
   };
 
   const queueFront = () => {
     if (isAnimating || tutorialActive || getQueueData().length === 0) return;
+    const data = getQueueData();
     const steps: TutorialStep[] = [
-      { highlightIndex: 0 },
-      { highlightIndex: 0, animPhase: 'queue-front-peek', animDuration: 1200 }
+      { title: '👁️ Front', description: 'Peek at front', highlightIndex: 0 },
+      { title: '🔍 Viewing', description: `FRONT = "${data[0]?.label}"`, highlightIndex: 0, animPhase: 'queue-front-peek', animDuration: 1200 },
+      { title: '✅ Done!', description: 'O(1) - stays in queue!' }
     ];
     startTutorial(steps);
   };
 
-  // ==================== CAMERA & WEBXR ====================
+  // ==================== CAMERA / WEBXR ====================
 
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
-    try {
-      if (stream) stream.getTracks().forEach(track => track.stop());
-      const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
-      if (videoRef.current) { videoRef.current.srcObject = newStream; await new Promise<void>(r => { if (videoRef.current) videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); r(); }; }); }
-      setStream(newStream);
-    } catch (err) { throw new Error('Cannot access camera.'); }
+    try { if (stream) stream.getTracks().forEach(t => t.stop()); const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }); if (videoRef.current) { videoRef.current.srcObject = s; await new Promise<void>(r => { if (videoRef.current) videoRef.current.onloadedmetadata = () => { videoRef.current?.play(); r(); }; }); } setStream(s); } catch { throw new Error('Cannot access camera.'); }
   }, [stream]);
 
   const switchCamera = async () => { const f = cameraFacing === 'environment' ? 'user' : 'environment'; setCameraFacing(f); try { await startCamera(f); } catch (e) { console.error(e); } };
 
-  const loadModel = async () => {
-    setLoadingText('Loading AI...');
-    const tf = await import('@tensorflow/tfjs'); await tf.ready(); await tf.setBackend('webgl');
-    setLoadingText('Loading detector...');
-    const cocoSsd = await import('@tensorflow-models/coco-ssd');
-    return await cocoSsd.load({ base: 'lite_mobilenet_v2' });
-  };
+  const loadModel = async () => { setLoadingText('Loading AI...'); const tf = await import('@tensorflow/tfjs'); await tf.ready(); await tf.setBackend('webgl'); setLoadingText('Loading detector...'); const cocoSsd = await import('@tensorflow-models/coco-ssd'); return await cocoSsd.load({ base: 'lite_mobilenet_v2' }); };
 
-  useEffect(() => {
-    const init = async () => { try { setLoadingText('Starting camera...'); await startCamera('environment'); const m = await loadModel(); setModel(m); setIsLoading(false); } catch (e: any) { setError(e.message); setIsLoading(false); } };
-    init();
-    return () => { if (stream) stream.getTracks().forEach(t => t.stop()); if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current); };
-  }, []);
+  useEffect(() => { const init = async () => { try { setLoadingText('Starting camera...'); await startCamera('environment'); const m = await loadModel(); setModel(m); setIsLoading(false); } catch (e: any) { setError(e.message); setIsLoading(false); } }; init(); return () => { if (stream) stream.getTracks().forEach(t => t.stop()); if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current); }; }, []);
 
-  useEffect(() => {
-    if (!model || !videoRef.current || !canvasRef.current || appMode !== 'person') return;
-    let animId: number, running = true, last = 0;
-    const detect = async () => {
-      if (!running || !videoRef.current || !canvasRef.current) return;
-      const now = Date.now(); if (now - last < 100) { animId = requestAnimationFrame(detect); return; } last = now;
-      const v = videoRef.current, c = canvasRef.current; if (v.readyState !== 4) { animId = requestAnimationFrame(detect); return; }
-      c.width = v.videoWidth; c.height = v.videoHeight;
-      try { const p = await model.detect(v); const h = p.filter((x: any) => x.class === 'person' && x.score > 0.5);
-        if (h.length > 0) { const [x, y, w, ht] = h[0].bbox; const sx = window.innerWidth / c.width, sy = window.innerHeight / c.height;
-          setDetectedPerson({ bbox: h[0].bbox, class: h[0].class, score: h[0].score }); setPersonPosition({ x: x * sx, y: y * sy, width: w * sx, height: ht * sy }); }
-        else { setDetectedPerson(null); setPersonPosition(null); } } catch (e) { console.error(e); }
-      if (running) animId = requestAnimationFrame(detect);
-    }; detect();
-    return () => { running = false; if (animId) cancelAnimationFrame(animId); };
-  }, [model, appMode]);
+  useEffect(() => { if (!model || !videoRef.current || !canvasRef.current || appMode !== 'person') return; let animId: number, running = true, last = 0; const detect = async () => { if (!running || !videoRef.current || !canvasRef.current) return; const now = Date.now(); if (now - last < 100) { animId = requestAnimationFrame(detect); return; } last = now; const v = videoRef.current, c = canvasRef.current; if (v.readyState !== 4) { animId = requestAnimationFrame(detect); return; } c.width = v.videoWidth; c.height = v.videoHeight; try { const p = await model.detect(v); const h = p.filter((x: any) => x.class === 'person' && x.score > 0.5); if (h.length > 0) { const [x, y, w, ht] = h[0].bbox; const sx = window.innerWidth / c.width, sy = window.innerHeight / c.height; setDetectedPerson({ bbox: h[0].bbox, class: h[0].class, score: h[0].score }); setPersonPosition({ x: x * sx, y: y * sy, width: w * sx, height: ht * sy }); } else { setDetectedPerson(null); setPersonPosition(null); } } catch (e) { console.error(e); } if (running) animId = requestAnimationFrame(detect); }; detect(); return () => { running = false; if (animId) cancelAnimationFrame(animId); }; }, [model, appMode]);
 
   useEffect(() => { const check = async () => { try { if ((navigator as any).xr) { const s = await (navigator as any).xr.isSessionSupported('immersive-ar'); setWebxrSupported(s); } } catch { setWebxrSupported(false); } }; check(); }, []);
 
-  const cleanupWebXR = useCallback(() => {
-    if (xrRendererRef.current) { xrRendererRef.current.setAnimationLoop(null); xrRendererRef.current.dispose(); if (xrContainerRef.current && xrRendererRef.current.domElement.parentNode === xrContainerRef.current) xrContainerRef.current.removeChild(xrRendererRef.current.domElement); }
-    xrSessionRef.current = null; xrRendererRef.current = null; xrSceneRef.current = null; xrCameraRef.current = null; xrGroupRef.current = null; xrReticleRef.current = null; xrHitTestSourceRef.current = null;
-    setWebxrActive(false); setWebxrPlaced(false); setAppMode('surface');
-  }, []);
-
+  const cleanupWebXR = useCallback(() => { if (xrRendererRef.current) { xrRendererRef.current.setAnimationLoop(null); xrRendererRef.current.dispose(); if (xrContainerRef.current && xrRendererRef.current.domElement.parentNode === xrContainerRef.current) xrContainerRef.current.removeChild(xrRendererRef.current.domElement); } xrSessionRef.current = null; xrRendererRef.current = null; xrSceneRef.current = null; xrCameraRef.current = null; xrGroupRef.current = null; xrReticleRef.current = null; xrHitTestSourceRef.current = null; setWebxrActive(false); setWebxrPlaced(false); setAppMode('surface'); }, []);
   const stopWebXR = useCallback(() => { if (xrSessionRef.current) { try { xrSessionRef.current.end(); } catch { cleanupWebXR(); } } else cleanupWebXR(); }, [cleanupWebXR]);
 
-  const startWebXR = async () => {
-    const xr = (navigator as any).xr; if (!xr) { alert('WebXR not available.'); setAppMode('surface'); return; }
-    try {
-      const si: any = { requiredFeatures: ['hit-test'], optionalFeatures: ['dom-overlay'] }; const ov = document.getElementById('ar-overlay'); if (ov) si.domOverlay = { root: ov };
-      const session = await xr.requestSession('immersive-ar', si); xrSessionRef.current = session;
-      const r = new THREE.WebGLRenderer({ antialias: true, alpha: true }); r.setPixelRatio(window.devicePixelRatio); r.setSize(window.innerWidth, window.innerHeight); r.xr.enabled = true; r.xr.setReferenceSpaceType('local'); xrRendererRef.current = r;
-      if (xrContainerRef.current) xrContainerRef.current.appendChild(r.domElement); await r.xr.setSession(session);
-      const s = new THREE.Scene(); xrSceneRef.current = s; s.add(new THREE.AmbientLight(0xffffff, 0.7)); const dl = new THREE.DirectionalLight(0xffffff, 0.8); dl.position.set(5, 10, 7); dl.castShadow = true; s.add(dl);
-      const cam = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 100); xrCameraRef.current = cam;
-      const g = new THREE.Group(); g.visible = false; s.add(g); xrGroupRef.current = g;
-      const ret = new THREE.Mesh(new THREE.RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x00ff00 })); ret.matrixAutoUpdate = false; ret.visible = false; s.add(ret); xrReticleRef.current = ret;
-      const vs = await session.requestReferenceSpace('viewer'); const hts = await session.requestHitTestSource({ space: vs }); xrHitTestSourceRef.current = hts;
-      session.addEventListener('select', () => { if (xrReticleRef.current?.visible && xrGroupRef.current && !xrGroupRef.current.visible) { xrGroupRef.current.position.setFromMatrixPosition(xrReticleRef.current.matrix); xrGroupRef.current.visible = true; xrGroupRef.current.scale.setScalar(0.3 * zoomLevel); xrReticleRef.current.visible = false; setWebxrPlaced(true); } });
-      session.addEventListener('end', () => cleanupWebXR());
-      r.setAnimationLoop((_: number, f: any) => { if (f && xrHitTestSourceRef.current && xrGroupRef.current && !xrGroupRef.current.visible) { const rs = r.xr.getReferenceSpace(); if (rs) { const res = f.getHitTestResults(xrHitTestSourceRef.current); if (res.length > 0) { const pose = res[0].getPose(rs); if (pose && xrReticleRef.current) { xrReticleRef.current.visible = true; xrReticleRef.current.matrix.fromArray(pose.transform.matrix); } } else if (xrReticleRef.current) xrReticleRef.current.visible = false; } } r.render(s, cam); });
-      setWebxrActive(true); setWebxrPlaced(false); setAppMode('webxr');
-    } catch (e: any) { console.error(e); alert('WebXR failed.'); setAppMode('surface'); }
-  };
+  const startWebXR = async () => { const xr = (navigator as any).xr; if (!xr) { alert('WebXR not available.'); setAppMode('surface'); return; } try { const si: any = { requiredFeatures: ['hit-test'], optionalFeatures: ['dom-overlay'] }; const ov = document.getElementById('ar-overlay'); if (ov) si.domOverlay = { root: ov }; const session = await xr.requestSession('immersive-ar', si); xrSessionRef.current = session; const r = new THREE.WebGLRenderer({ antialias: true, alpha: true }); r.setPixelRatio(window.devicePixelRatio); r.setSize(window.innerWidth, window.innerHeight); r.xr.enabled = true; r.xr.setReferenceSpaceType('local'); xrRendererRef.current = r; if (xrContainerRef.current) xrContainerRef.current.appendChild(r.domElement); await r.xr.setSession(session); const s = new THREE.Scene(); xrSceneRef.current = s; s.add(new THREE.AmbientLight(0xffffff, 0.7)); const dl = new THREE.DirectionalLight(0xffffff, 0.8); dl.position.set(5, 10, 7); dl.castShadow = true; s.add(dl); const cam = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 100); xrCameraRef.current = cam; const g = new THREE.Group(); g.visible = false; s.add(g); xrGroupRef.current = g; const ret = new THREE.Mesh(new THREE.RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x00ff00 })); ret.matrixAutoUpdate = false; ret.visible = false; s.add(ret); xrReticleRef.current = ret; const vs = await session.requestReferenceSpace('viewer'); const hts = await session.requestHitTestSource({ space: vs }); xrHitTestSourceRef.current = hts; session.addEventListener('select', () => { if (xrReticleRef.current?.visible && xrGroupRef.current && !xrGroupRef.current.visible) { xrGroupRef.current.position.setFromMatrixPosition(xrReticleRef.current.matrix); xrGroupRef.current.visible = true; xrGroupRef.current.scale.setScalar(0.3 * zoomLevel); xrReticleRef.current.visible = false; setWebxrPlaced(true); } }); session.addEventListener('end', () => cleanupWebXR()); r.setAnimationLoop((_: number, f: any) => { if (f && xrHitTestSourceRef.current && xrGroupRef.current && !xrGroupRef.current.visible) { const rs = r.xr.getReferenceSpace(); if (rs) { const res = f.getHitTestResults(xrHitTestSourceRef.current); if (res.length > 0) { const pose = res[0].getPose(rs); if (pose && xrReticleRef.current) { xrReticleRef.current.visible = true; xrReticleRef.current.matrix.fromArray(pose.transform.matrix); } } else if (xrReticleRef.current) xrReticleRef.current.visible = false; } } r.render(s, cam); }); setWebxrActive(true); setWebxrPlaced(false); setAppMode('webxr'); } catch (e: any) { console.error(e); alert('WebXR failed.'); setAppMode('surface'); } };
 
-  useEffect(() => { if (appMode !== 'webxr' || !webxrPlaced || !xrGroupRef.current) return; buildSceneContent(xrGroupRef.current, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData, animProgress); }, [appMode, webxrPlaced, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData, animProgress]);
+  useEffect(() => { if (appMode !== 'webxr' || !webxrPlaced || !xrGroupRef.current) return; buildSceneContent(xrGroupRef.current, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData, animProgress, tutorialText); }, [appMode, webxrPlaced, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData, animProgress, tutorialText]);
   useEffect(() => { if (xrGroupRef.current && webxrActive && webxrPlaced) xrGroupRef.current.scale.setScalar(0.3 * zoomLevel); }, [zoomLevel, webxrActive, webxrPlaced]);
   const resetWebXRPlacement = useCallback(() => { if (xrGroupRef.current) xrGroupRef.current.visible = false; setWebxrPlaced(false); }, []);
   const switchToMode = useCallback((mode: AppMode) => { if (appMode === 'webxr' && mode !== 'webxr') stopWebXR(); if (mode === 'webxr') { if (!webxrSupported) { alert('WebXR not supported.'); mode = 'surface'; } else { startWebXR(); return; } } setAppMode(mode); if (mode === 'surface') { setDetectedPerson(null); setPersonPosition(null); setSurfacePlaced(false); setSurfacePosition(null); } else if (mode === 'person') { setSurfacePlaced(false); setSurfacePosition(null); } }, [appMode, webxrSupported, stopWebXR]);
@@ -3439,32 +3326,21 @@ export default function Home() {
   const envTabs = currentStructure === 'array' ? [{ id: 'grocery', icon: '🛒', label: 'Shelf' }, { id: 'classroom', icon: '🧑‍🎓', label: 'Class' }, { id: 'todo', icon: '📝', label: 'Tasks' }] : currentStructure === 'linkedlist' ? [{ id: 'train', icon: '🚂', label: 'Train' }, { id: 'people', icon: '🚪', label: 'Queue' }, { id: 'domino', icon: '🁡', label: 'Domino' }] : currentStructure === 'stack' ? [{ id: 'books', icon: '📚', label: 'Books' }, { id: 'plates', icon: '🍽️', label: 'Plates' }, { id: 'boxes', icon: '📦', label: 'Boxes' }] : [{ id: 'tollgate', icon: '🛣️', label: 'Toll' }, { id: 'tickets', icon: '🎫', label: 'Tickets' }, { id: 'students', icon: '🏫', label: 'School' }];
 
   return (
-    <div id="ar-overlay" style={{ position: 'fixed', inset: 0, background: '#000', overflow: 'hidden' }}
-      onClick={appMode === 'surface' && !surfacePlaced ? handleSurfaceTap : undefined}
-      onTouchStart={appMode === 'surface' && surfacePlaced ? handleDragStart : undefined}
-      onTouchMove={appMode === 'surface' && isDraggingSurface ? handleDragMove : undefined}
-      onTouchEnd={appMode === 'surface' ? handleDragEnd : undefined}
-      onMouseDown={appMode === 'surface' && surfacePlaced ? handleDragStart : undefined}
-      onMouseMove={appMode === 'surface' && isDraggingSurface ? handleDragMove : undefined}
-      onMouseUp={appMode === 'surface' ? handleDragEnd : undefined}>
+    <div id="ar-overlay" style={{ position: 'fixed', inset: 0, background: '#000', overflow: 'hidden' }} onClick={appMode === 'surface' && !surfacePlaced ? handleSurfaceTap : undefined} onTouchStart={appMode === 'surface' && surfacePlaced ? handleDragStart : undefined} onTouchMove={appMode === 'surface' && isDraggingSurface ? handleDragMove : undefined} onTouchEnd={appMode === 'surface' ? handleDragEnd : undefined} onMouseDown={appMode === 'surface' && surfacePlaced ? handleDragStart : undefined} onMouseMove={appMode === 'surface' && isDraggingSurface ? handleDragMove : undefined} onMouseUp={appMode === 'surface' ? handleDragEnd : undefined}>
 
       {!webxrActive && <video ref={videoRef} playsInline muted autoPlay style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
       <div ref={xrContainerRef} style={{ position: 'fixed', inset: 0, zIndex: webxrActive ? 1 : -1, pointerEvents: 'none' }} />
 
       {!webxrActive && showVisualization && activePosition && (
-        <Visualization3D position={activePosition} data={currentData} highlightIndex={highlightIndex} highlightIndex2={highlightIndex2}
-          structure={currentStructure} environment={currentEnvId} zoomLevel={zoomLevel} setZoomLevel={setZoomLevel}
-          isSurfaceMode={appMode === 'surface'} animPhase={animPhase} animData={animData} animProgress={animProgress} />
+        <Visualization3D position={activePosition} data={currentData} highlightIndex={highlightIndex} highlightIndex2={highlightIndex2} structure={currentStructure} environment={currentEnvId} zoomLevel={zoomLevel} setZoomLevel={setZoomLevel} isSurfaceMode={appMode === 'surface'} animPhase={animPhase} animData={animData} animProgress={animProgress} tutorialText={tutorialText} />
       )}
 
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: 10, zIndex: 100 }}>
         {!webxrActive && <button onClick={switchCamera} style={{ position: 'absolute', top: 10, right: 10, width: 50, height: 50, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 24, zIndex: 200 }}>🔄</button>}
 
         <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', display: 'flex', background: 'rgba(0,0,0,0.8)', borderRadius: 25, padding: 3, border: '1px solid rgba(255,255,255,0.2)', zIndex: 200 }}>
-          <button onClick={() => switchToMode('person')} style={{ padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20, background: appMode === 'person' ? '#667eea' : 'transparent', color: 'white', opacity: appMode === 'person' ? 1 : 0.5 }}>🧑 Person</button>
-          <button onClick={() => switchToMode('surface')} style={{ padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20, background: appMode === 'surface' ? '#00b894' : 'transparent', color: 'white', opacity: appMode === 'surface' ? 1 : 0.5 }}>📱 Surface</button>
-          <button onClick={() => switchToMode('webxr')} style={{ padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20, background: appMode === 'webxr' ? '#e17055' : 'transparent', color: 'white', opacity: appMode === 'webxr' ? 1 : webxrSupported ? 0.5 : 0.25 }}>🌐 AR{!webxrSupported && ' ✗'}</button>
+          {(['person', 'surface', 'webxr'] as AppMode[]).map(m => (<button key={m} onClick={() => switchToMode(m)} style={{ padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20, background: appMode === m ? (m === 'person' ? '#667eea' : m === 'surface' ? '#00b894' : '#e17055') : 'transparent', color: 'white', opacity: appMode === m ? 1 : (m === 'webxr' && !webxrSupported ? 0.25 : 0.5) }}>{{ person: '🧑', surface: '📱', webxr: '🌐' }[m]}</button>))}
         </div>
 
         {showControls && !tutorialActive && (
@@ -3478,101 +3354,59 @@ export default function Home() {
 
         {!tutorialActive && (
           <div style={{ position: 'absolute', top: 48, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 4, background: 'rgba(0,0,0,0.8)', padding: 4, borderRadius: 25 }}>
-            {(['array', 'linkedlist', 'stack', 'queue'] as DataStructure[]).map(s => (
-              <button key={s} onClick={() => { if (!isAnimating && selectionMode === 'none') { setCurrentStructure(s); cancelSelection(); if (appMode === 'surface') { setSurfacePlaced(false); setSurfacePosition(null); } } }}
-                style={{ padding: '8px 12px', fontSize: 11, border: 'none', borderRadius: 20, background: currentStructure === s ? '#667eea' : 'transparent', color: 'white', opacity: currentStructure === s ? 1 : 0.6 }}>
-                {{ array: '📊', linkedlist: '🔗', stack: '📚', queue: '🚗' }[s]}{currentStructure === s && ' ' + { array: 'Array', linkedlist: 'List', stack: 'Stack', queue: 'Queue' }[s]}
-              </button>
-            ))}
+            {(['array', 'linkedlist', 'stack', 'queue'] as DataStructure[]).map(s => (<button key={s} onClick={() => { if (!isAnimating && selectionMode === 'none') { setCurrentStructure(s); cancelSelection(); if (appMode === 'surface') { setSurfacePlaced(false); setSurfacePosition(null); } } }} style={{ padding: '8px 12px', fontSize: 11, border: 'none', borderRadius: 20, background: currentStructure === s ? '#667eea' : 'transparent', color: 'white', opacity: currentStructure === s ? 1 : 0.6 }}>{{ array: '📊', linkedlist: '🔗', stack: '📚', queue: '🚗' }[s]}</button>))}
           </div>
         )}
 
         {showControls && !tutorialActive && (
           <div style={{ position: 'absolute', top: 90, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 4, background: 'rgba(0,0,0,0.7)', padding: 4, borderRadius: 20 }}>
-            {envTabs.map(e => (
-              <button key={e.id} onClick={() => !isAnimating && selectionMode === 'none' && (setCurrentEnv as any)(e.id)}
-                style={{ padding: '6px 12px', fontSize: 11, border: 'none', borderRadius: 15, background: currentEnvId === e.id ? '#00b894' : 'transparent', color: 'white', opacity: currentEnvId === e.id ? 1 : 0.6 }}>
-                {e.icon} {e.label}
-              </button>
-            ))}
+            {envTabs.map(e => (<button key={e.id} onClick={() => !isAnimating && selectionMode === 'none' && (setCurrentEnv as any)(e.id)} style={{ padding: '6px 12px', fontSize: 11, border: 'none', borderRadius: 15, background: currentEnvId === e.id ? '#00b894' : 'transparent', color: 'white', opacity: currentEnvId === e.id ? 1 : 0.6 }}>{e.icon}</button>))}
           </div>
         )}
         
-        {webxrActive && <button onClick={stopWebXR} style={{ position: 'absolute', top: 10, right: 10, padding: '10px 18px', background: '#e74c3c', color: 'white', border: 'none', borderRadius: 20, fontSize: 13, fontWeight: 'bold', zIndex: 300 }}>✕ Exit AR</button>}
+        {webxrActive && <button onClick={stopWebXR} style={{ position: 'absolute', top: 10, right: 10, padding: '10px 18px', background: '#e74c3c', color: 'white', border: 'none', borderRadius: 20, fontSize: 13, fontWeight: 'bold', zIndex: 300 }}>✕</button>}
       </div>
 
-      {/* MINIMAL TUTORIAL UI - Just Next + Skip */}
+      {/* MINIMAL TUTORIAL UI - Just Next + mini Skip */}
       {tutorialActive && (
-        <div style={{ position: 'fixed', bottom: 120, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 12, alignItems: 'center', zIndex: 200 }}>
-          <button onClick={endTutorial} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, color: '#fff', fontSize: 12, cursor: 'pointer' }}>✕</button>
-          <button onClick={nextStep} disabled={stepAnimating} style={{ padding: '14px 40px', background: stepAnimating ? '#555' : 'linear-gradient(135deg, #667eea, #764ba2)', border: 'none', borderRadius: 30, color: 'white', fontSize: 18, fontWeight: 'bold', cursor: stepAnimating ? 'not-allowed' : 'pointer', boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)' }}>
-            {currentStepIndex >= tutorialSteps.length - 1 ? '✓' : '→'}
-          </button>
-          <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>{currentStepIndex + 1}/{tutorialSteps.length}</div>
+        <div style={{ position: 'fixed', bottom: 140, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 16, alignItems: 'center', zIndex: 200 }}>
+          <button onClick={endTutorial} style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', border: '2px solid rgba(255,255,255,0.3)', color: '#fff', fontSize: 16 }}>✕</button>
+          <button onClick={nextStep} disabled={stepAnimating} style={{ width: 70, height: 70, borderRadius: '50%', background: stepAnimating ? '#555' : 'linear-gradient(135deg, #667eea, #764ba2)', border: 'none', color: 'white', fontSize: 28, fontWeight: 'bold', boxShadow: '0 4px 20px rgba(102,126,234,0.5)' }}>{currentStepIndex >= tutorialSteps.length - 1 ? '✓' : '→'}</button>
+          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: 'bold' }}>{currentStepIndex + 1}/{tutorialSteps.length}</div>
         </div>
       )}
 
       {showControls && !tutorialActive && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '20px 10px 30px', background: 'linear-gradient(to top, rgba(0,0,0,0.95), transparent)', zIndex: 100 }}>
-          {(appMode === 'surface' && surfacePlaced) && (<div style={{ textAlign: 'center', marginBottom: 10 }}><button onClick={resetSurfacePlacement} style={{ padding: '8px 20px', fontSize: 12, fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, background: 'rgba(255,255,255,0.1)', color: 'white' }}>📍 Reposition</button></div>)}
-          {(appMode === 'webxr' && webxrPlaced) && (<div style={{ textAlign: 'center', marginBottom: 10 }}><button onClick={resetWebXRPlacement} style={{ padding: '8px 20px', fontSize: 12, fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, background: 'rgba(255,255,255,0.1)', color: 'white' }}>📍 Reposition</button></div>)}
+          {(appMode === 'surface' && surfacePlaced) && (<div style={{ textAlign: 'center', marginBottom: 10 }}><button onClick={resetSurfacePlacement} style={{ padding: '8px 20px', fontSize: 12, fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, background: 'rgba(255,255,255,0.1)', color: 'white' }}>📍</button></div>)}
+          {(appMode === 'webxr' && webxrPlaced) && (<div style={{ textAlign: 'center', marginBottom: 10 }}><button onClick={resetWebXRPlacement} style={{ padding: '8px 20px', fontSize: 12, fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, background: 'rgba(255,255,255,0.1)', color: 'white' }}>📍</button></div>)}
           
           <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
             {currentStructure === 'array' && (<>
-              {selectionMode !== 'none' && (
-                <div style={{ width: '100%', marginBottom: 10 }}>
-                  <div style={{ textAlign: 'center', color: '#ffff00', marginBottom: 8, fontSize: 14, fontWeight: 'bold' }}>{pendingOperation}</div>
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    {getArrayData().map((_, i) => (<button key={i} onClick={() => handleIndexSelect(i)} style={{ width: 44, height: 44, borderRadius: '50%', border: (highlightIndex === i || swapFirstIndex === i) ? '3px solid #ffff00' : '2px solid rgba(255,255,255,0.5)', background: (highlightIndex === i || swapFirstIndex === i) ? '#ffff00' : 'rgba(255,255,255,0.15)', color: (highlightIndex === i || swapFirstIndex === i) ? '#000' : '#fff', fontSize: 16, fontWeight: 'bold', cursor: 'pointer' }}>[{i}]</button>))}
-                    {selectionMode === 'insert' && (<button onClick={() => handleIndexSelect(getArrayData().length)} style={{ width: 44, height: 44, borderRadius: '50%', border: '2px dashed rgba(255,255,255,0.5)', background: 'rgba(46,204,113,0.3)', color: '#2ecc71', fontSize: 14, fontWeight: 'bold', cursor: 'pointer' }}>[{getArrayData().length}]</button>)}
-                  </div>
-                  <div style={{ textAlign: 'center', marginTop: 8 }}><button onClick={cancelSelection} style={{ padding: '8px 20px', fontSize: 12, fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, background: 'rgba(231,76,60,0.3)', color: '#fff', cursor: 'pointer' }}>✕ Cancel</button></div>
-                </div>
-              )}
-              {selectionMode === 'none' && (<>
-                <OpBtn onClick={startAppendVsInsert} disabled={isAnimating || getArrayData().length >= 5} color="#f39c12" label="📚" />
-                <OpBtn onClick={startArrayAppend} disabled={isAnimating || getArrayData().length >= 6} color="#2ecc71" label="➕" />
-                <OpBtn onClick={startArrayInsert} disabled={isAnimating || getArrayData().length >= 6} color="#3498db" label="📥" />
-                <OpBtn onClick={startArrayDelete} disabled={isAnimating || getArrayData().length <= 2} color="#e74c3c" label="🗑️" />
-                <OpBtn onClick={startArraySwap} disabled={isAnimating || getArrayData().length < 2} color="#9b59b6" label="🔀" />
-              </>)}
+              {selectionMode !== 'none' && (<div style={{ width: '100%', marginBottom: 10 }}><div style={{ textAlign: 'center', color: '#ffff00', marginBottom: 8, fontSize: 14, fontWeight: 'bold' }}>{pendingOperation}</div><div style={{ display: 'flex', justifyContent: 'center', gap: 6, flexWrap: 'wrap' }}>{getArrayData().map((_, i) => (<button key={i} onClick={() => handleIndexSelect(i)} style={{ width: 44, height: 44, borderRadius: '50%', border: (highlightIndex === i || swapFirstIndex === i) ? '3px solid #ffff00' : '2px solid rgba(255,255,255,0.5)', background: (highlightIndex === i || swapFirstIndex === i) ? '#ffff00' : 'rgba(255,255,255,0.15)', color: (highlightIndex === i || swapFirstIndex === i) ? '#000' : '#fff', fontSize: 16, fontWeight: 'bold' }}>[{i}]</button>))}{selectionMode === 'insert' && (<button onClick={() => handleIndexSelect(getArrayData().length)} style={{ width: 44, height: 44, borderRadius: '50%', border: '2px dashed rgba(255,255,255,0.5)', background: 'rgba(46,204,113,0.3)', color: '#2ecc71', fontSize: 14, fontWeight: 'bold' }}>[{getArrayData().length}]</button>)}</div><div style={{ textAlign: 'center', marginTop: 8 }}><button onClick={cancelSelection} style={{ padding: '8px 20px', fontSize: 12, fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, background: 'rgba(231,76,60,0.3)', color: '#fff' }}>✕</button></div></div>)}
+              {selectionMode === 'none' && (<><OpBtn onClick={startAppendVsInsert} disabled={isAnimating || getArrayData().length >= 5} color="#f39c12" label="📚" /><OpBtn onClick={startArrayAppend} disabled={isAnimating || getArrayData().length >= 6} color="#2ecc71" label="➕" /><OpBtn onClick={startArrayInsert} disabled={isAnimating || getArrayData().length >= 6} color="#3498db" label="📥" /><OpBtn onClick={startArrayDelete} disabled={isAnimating || getArrayData().length <= 2} color="#e74c3c" label="🗑️" /><OpBtn onClick={startArraySwap} disabled={isAnimating || getArrayData().length < 2} color="#9b59b6" label="🔀" /></>)}
             </>)}
-            {currentStructure === 'linkedlist' && (<>
-              <OpBtn onClick={linkedListInsertHead} disabled={isAnimating || getLinkedListData().length >= 5} color="#2ecc71" label="⬅️" />
-              <OpBtn onClick={linkedListInsertTail} disabled={isAnimating || getLinkedListData().length >= 5} color="#3498db" label="➡️" />
-              <OpBtn onClick={linkedListDeleteHead} disabled={isAnimating || getLinkedListData().length <= 2} color="#e74c3c" label="🗑️" />
-              <OpBtn onClick={linkedListTraverse} disabled={isAnimating} color="#9b59b6" label="🔍" />
-            </>)}
-            {currentStructure === 'stack' && (<>
-              <OpBtn onClick={stackPush} disabled={isAnimating || getStackData().length >= 5} color="#2ecc71" label="⬆️" />
-              <OpBtn onClick={stackPop} disabled={isAnimating || getStackData().length <= 1} color="#e74c3c" label="⬇️" />
-              <OpBtn onClick={stackPeek} disabled={isAnimating} color="#f39c12" label="👁️" />
-            </>)}
-            {currentStructure === 'queue' && (<>
-              <OpBtn onClick={queueEnqueue} disabled={isAnimating || getQueueData().length >= 5} color="#2ecc71" label="➕" />
-              <OpBtn onClick={queueDequeue} disabled={isAnimating || getQueueData().length <= 1} color="#e74c3c" label="➖" />
-              <OpBtn onClick={queueFront} disabled={isAnimating} color="#f39c12" label="👁️" />
-            </>)}
+            {currentStructure === 'linkedlist' && (<><OpBtn onClick={linkedListInsertHead} disabled={isAnimating || getLinkedListData().length >= 5} color="#2ecc71" label="⬅️" /><OpBtn onClick={linkedListInsertTail} disabled={isAnimating || getLinkedListData().length >= 5} color="#3498db" label="➡️" /><OpBtn onClick={linkedListDeleteHead} disabled={isAnimating || getLinkedListData().length <= 2} color="#e74c3c" label="🗑️" /><OpBtn onClick={linkedListTraverse} disabled={isAnimating} color="#9b59b6" label="🔍" /></>)}
+            {currentStructure === 'stack' && (<><OpBtn onClick={stackPush} disabled={isAnimating || getStackData().length >= 5} color="#2ecc71" label="⬆️" /><OpBtn onClick={stackPop} disabled={isAnimating || getStackData().length <= 1} color="#e74c3c" label="⬇️" /><OpBtn onClick={stackPeek} disabled={isAnimating} color="#f39c12" label="👁️" /></>)}
+            {currentStructure === 'queue' && (<><OpBtn onClick={queueEnqueue} disabled={isAnimating || getQueueData().length >= 5} color="#2ecc71" label="➕" /><OpBtn onClick={queueDequeue} disabled={isAnimating || getQueueData().length <= 1} color="#e74c3c" label="➖" /><OpBtn onClick={queueFront} disabled={isAnimating} color="#f39c12" label="👁️" /></>)}
           </div>
           <div style={{ textAlign: 'center', marginTop: 10, color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>Size: {currentData.length}</div>
         </div>
       )}
 
-      {appMode === 'person' && !detectedPerson && !webxrActive && (<div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}><div style={{ fontSize: 40 }}>🧑</div><div style={{ marginTop: 8 }}>Point at a person</div></div>)}
-      {appMode === 'surface' && !surfacePlaced && !webxrActive && (<div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}><div style={{ fontSize: 40, animation: 'tapBounce 1.5s ease infinite' }}>👆</div><div style={{ marginTop: 8, fontWeight: 'bold' }}>Tap to Place</div><style>{`@keyframes tapBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }`}</style></div>)}
-      {appMode === 'webxr' && webxrActive && !webxrPlaced && (<div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}><div style={{ fontSize: 40, animation: 'xrPulse 2s ease infinite' }}>🌐</div><div style={{ marginTop: 8, fontWeight: 'bold', color: '#00ff00' }}>Scanning...</div><style>{`@keyframes xrPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }`}</style></div>)}
+      {appMode === 'person' && !detectedPerson && !webxrActive && (<div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}><div style={{ fontSize: 40 }}>🧑</div></div>)}
+      {appMode === 'surface' && !surfacePlaced && !webxrActive && (<div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}><div style={{ fontSize: 40, animation: 'tapBounce 1.5s ease infinite' }}>👆</div><style>{`@keyframes tapBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }`}</style></div>)}
+      {appMode === 'webxr' && webxrActive && !webxrPlaced && (<div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}><div style={{ fontSize: 40, animation: 'xrPulse 2s ease infinite' }}>🌐</div><style>{`@keyframes xrPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }`}</style></div>)}
     </div>
   );
 }
 
 function OpBtn({ onClick, disabled, color, label }: { onClick: () => void; disabled: boolean; color: string; label: string }) {
-  return (<button onClick={onClick} disabled={disabled} style={{ width: 56, height: 56, borderRadius: '50%', border: 'none', background: disabled ? '#555' : color, color: 'white', fontSize: 24, opacity: disabled ? 0.5 : 1, cursor: disabled ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{label}</button>);
+  return (<button onClick={onClick} disabled={disabled} style={{ width: 56, height: 56, borderRadius: '50%', border: 'none', background: disabled ? '#555' : color, color: 'white', fontSize: 24, opacity: disabled ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{label}</button>);
 }
 
-function Visualization3D({ position, data, highlightIndex, highlightIndex2, structure, environment, zoomLevel, setZoomLevel, isSurfaceMode, animPhase, animData, animProgress }: {
-  position: Position; data: DataItem[]; highlightIndex: number | null; highlightIndex2: number | null;
-  structure: DataStructure; environment: string; zoomLevel: number; setZoomLevel: (z: number) => void;
-  isSurfaceMode: boolean; animPhase: string; animData: Record<string, any>; animProgress: number;
+function Visualization3D({ position, data, highlightIndex, highlightIndex2, structure, environment, zoomLevel, setZoomLevel, isSurfaceMode, animPhase, animData, animProgress, tutorialText }: {
+  position: Position; data: DataItem[]; highlightIndex: number | null; highlightIndex2: number | null; structure: DataStructure; environment: string; zoomLevel: number; setZoomLevel: (z: number) => void; isSurfaceMode: boolean; animPhase: string; animData: Record<string, any>; animProgress: number; tutorialText?: { title: string; description: string; step: string } | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const groupRef = useRef<THREE.Group | null>(null);
@@ -3580,39 +3414,35 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
   const zoomRef = useRef(zoomLevel);
   useEffect(() => { zoomRef.current = zoomLevel; }, [zoomLevel]);
 
-  const renderWidth = window.innerWidth;
-  const renderHeight = window.innerHeight;
-
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(50, renderWidth / renderHeight, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, structure === 'stack' ? 1.2 : 0.5, structure === 'stack' ? 5 : 4.5);
     camera.lookAt(0, 0, 0);
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(renderWidth, renderHeight);
+    renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     container.appendChild(renderer.domElement);
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.7));
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
     dirLight.position.set(5, 10, 7); dirLight.castShadow = true; scene.add(dirLight);
-    const backLight = new THREE.DirectionalLight(0xffffff, 0.3);
-    backLight.position.set(-5, 5, -5); scene.add(backLight);
+    scene.add(new THREE.DirectionalLight(0xffffff, 0.3)).position.set(-5, 5, -5);
 
     const group = new THREE.Group(); groupRef.current = group; scene.add(group);
 
     let isDragging = false, lastX = 0, lastY = 0, pinchDist: number | null = null, pinchZoom = 1;
-    const getDist = (t: TouchList): number | null => { if (t.length < 2) return null; const dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY; return Math.sqrt(dx * dx + dy * dy); };
+    const getDist = (t: TouchList) => t.length < 2 ? null : Math.sqrt(Math.pow(t[0].clientX - t[1].clientX, 2) + Math.pow(t[0].clientY - t[1].clientY, 2));
     const onTS = (e: TouchEvent) => { e.preventDefault(); if (e.touches.length === 2) { pinchDist = getDist(e.touches); pinchZoom = zoomRef.current; } else if (e.touches.length === 1) { isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; } };
     const onTM = (e: TouchEvent) => { e.preventDefault(); if (e.touches.length === 2 && pinchDist !== null) { const d = getDist(e.touches); if (d) setZoomLevel(Math.max(0.3, Math.min(3, pinchZoom * (d / pinchDist)))); } else if (e.touches.length === 1 && isDragging) { rotationRef.current.y += (e.touches[0].clientX - lastX) * 0.01; rotationRef.current.x += (e.touches[0].clientY - lastY) * 0.008; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; } };
     const onTE = (e: TouchEvent) => { e.preventDefault(); if (e.touches.length < 2) pinchDist = null; if (e.touches.length === 0) isDragging = false; };
     const onMD = (e: MouseEvent) => { isDragging = true; lastX = e.clientX; lastY = e.clientY; };
     const onMM = (e: MouseEvent) => { if (!isDragging) return; rotationRef.current.y += (e.clientX - lastX) * 0.01; rotationRef.current.x += (e.clientY - lastY) * 0.008; lastX = e.clientX; lastY = e.clientY; };
-    const onMU = () => { isDragging = false; };
+    const onMU = () => isDragging = false;
     const onWH = (e: WheelEvent) => { e.preventDefault(); setZoomLevel(Math.max(0.3, Math.min(3, zoomRef.current + (e.deltaY > 0 ? -0.15 : 0.15)))); };
 
     container.addEventListener('touchstart', onTS, { passive: false });
@@ -3624,14 +3454,14 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
     container.addEventListener('mouseleave', onMU);
     container.addEventListener('wheel', onWH, { passive: false });
 
-    let animationId: number;
-    const animate = () => { if (groupRef.current) { groupRef.current.rotation.x = rotationRef.current.x; groupRef.current.rotation.y = rotationRef.current.y; groupRef.current.scale.setScalar(zoomRef.current); } renderer.render(scene, camera); animationId = requestAnimationFrame(animate); };
+    let animId: number;
+    const animate = () => { if (groupRef.current) { groupRef.current.rotation.x = rotationRef.current.x; groupRef.current.rotation.y = rotationRef.current.y; groupRef.current.scale.setScalar(zoomRef.current); } renderer.render(scene, camera); animId = requestAnimationFrame(animate); };
     animate();
 
-    return () => { cancelAnimationFrame(animationId); container.removeEventListener('touchstart', onTS); container.removeEventListener('touchmove', onTM); container.removeEventListener('touchend', onTE); container.removeEventListener('mousedown', onMD); container.removeEventListener('mousemove', onMM); container.removeEventListener('mouseup', onMU); container.removeEventListener('mouseleave', onMU); container.removeEventListener('wheel', onWH); renderer.dispose(); if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement); };
-  }, [structure, renderWidth, renderHeight]);
+    return () => { cancelAnimationFrame(animId); container.removeEventListener('touchstart', onTS); container.removeEventListener('touchmove', onTM); container.removeEventListener('touchend', onTE); container.removeEventListener('mousedown', onMD); container.removeEventListener('mousemove', onMM); container.removeEventListener('mouseup', onMU); container.removeEventListener('mouseleave', onMU); container.removeEventListener('wheel', onWH); renderer.dispose(); if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement); };
+  }, [structure]);
 
-  useEffect(() => { if (!groupRef.current) return; buildSceneContent(groupRef.current, data, highlightIndex, highlightIndex2, structure, environment, animPhase, animData, animProgress); }, [data, highlightIndex, highlightIndex2, structure, environment, animPhase, animData, animProgress]);
+  useEffect(() => { if (!groupRef.current) return; buildSceneContent(groupRef.current, data, highlightIndex, highlightIndex2, structure, environment, animPhase, animData, animProgress, tutorialText); }, [data, highlightIndex, highlightIndex2, structure, environment, animPhase, animData, animProgress, tutorialText]);
 
-  return <div ref={containerRef} style={{ position: 'absolute', left: 0, top: 0, width: '100vw', height: '100vh', zIndex: 50, touchAction: 'none', pointerEvents: 'auto', overflow: 'visible' }} />;
+  return <div ref={containerRef} style={{ position: 'absolute', left: 0, top: 0, width: '100vw', height: '100vh', zIndex: 50, touchAction: 'none', pointerEvents: 'auto' }} />;
 }
