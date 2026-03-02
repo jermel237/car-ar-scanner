@@ -1705,71 +1705,597 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   return dispenser;
 }
 
-// ==================== SCHOOL BUILDING ====================
+// ==================== SCHOOL BUILDING (UNIVERSITY) ====================
 
 function createSchoolBuilding(): THREE.Group {
   const school = new THREE.Group();
   const groundY = 0;
 
-  const brickMat = new THREE.MeshStandardMaterial({ color: '#a0522d', roughness: 0.8 });
-  const mainBuilding = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 1.6), brickMat);
-  mainBuilding.position.set(-0.5, groundY + 0.6, 0);
+  // ===== MAIN BUILDING =====
+  const brickMat = new THREE.MeshStandardMaterial({ color: '#8B4513', roughness: 0.7 });
+  const wallMat = new THREE.MeshStandardMaterial({ color: '#f5e6d3', roughness: 0.6 });
+  const roofMat = new THREE.MeshStandardMaterial({ color: '#2c3e50', roughness: 0.5, metalness: 0.3 });
+  const pillarMat = new THREE.MeshStandardMaterial({ color: '#e8dcc8', roughness: 0.4 });
+  const doorMat = new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.6 });
+  const windowMat = new THREE.MeshStandardMaterial({ color: '#87ceeb', metalness: 0.5, roughness: 0.1, transparent: true, opacity: 0.8 });
+  const windowFrameMat = new THREE.MeshStandardMaterial({ color: '#f5f5f5', roughness: 0.5 });
+  const goldMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.8, roughness: 0.2 });
+  const concreteMat = new THREE.MeshStandardMaterial({ color: '#a0a0a0', roughness: 0.8 });
+
+  // Main building base
+  const mainBuildingWidth = 2.4;
+  const mainBuildingHeight = 1.8;
+  const mainBuildingDepth = 0.8;
+
+  const mainBuilding = new THREE.Mesh(
+    new THREE.BoxGeometry(mainBuildingDepth, mainBuildingHeight, mainBuildingWidth),
+    wallMat
+  );
+  mainBuilding.position.set(-0.4, groundY + mainBuildingHeight / 2, 0);
   school.add(mainBuilding);
 
-  const entranceMat = new THREE.MeshStandardMaterial({ color: '#8b4513', roughness: 0.6 });
-  const entrance = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.7, 0.5), entranceMat);
-  entrance.position.set(-0.12, groundY + 0.35, 0);
+  // ===== ENTRANCE SECTION (protruding) =====
+  const entranceWidth = 0.9;
+  const entranceHeight = 1.4;
+  const entranceDepth = 0.3;
+
+  const entrance = new THREE.Mesh(
+    new THREE.BoxGeometry(entranceDepth, entranceHeight, entranceWidth),
+    wallMat
+  );
+  entrance.position.set(0, groundY + entranceHeight / 2, 0);
   school.add(entrance);
 
-  const doorMat = new THREE.MeshStandardMaterial({ color: '#4a2c2a', roughness: 0.6 });
-  [-0.12, 0.12].forEach(offsetZ => {
-    const door = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.55, 0.18), doorMat);
-    door.position.set(0.02, groundY + 0.275, offsetZ);
-    school.add(door);
+  // Entrance roof/pediment
+  const pedimentGeo = new THREE.BufferGeometry();
+  const pedimentVertices = new Float32Array([
+    // Triangle front
+    0, 0, -0.5,
+    0, 0, 0.5,
+    0, 0.25, 0,
+    // Triangle back
+    -0.15, 0, -0.5,
+    -0.15, 0, 0.5,
+    -0.15, 0.25, 0,
+  ]);
+  const pedimentIndices = [
+    0, 1, 2,  // front
+    3, 5, 4,  // back
+    0, 2, 5, 0, 5, 3,  // left side
+    1, 4, 5, 1, 5, 2,  // right side
+    0, 3, 4, 0, 4, 1,  // bottom
+  ];
+  pedimentGeo.setAttribute('position', new THREE.BufferAttribute(pedimentVertices, 3));
+  pedimentGeo.setIndex(pedimentIndices);
+  pedimentGeo.computeVertexNormals();
+
+  const pediment = new THREE.Mesh(pedimentGeo, wallMat);
+  pediment.position.set(0.15, groundY + entranceHeight, 0);
+  pediment.scale.set(1, 1, entranceWidth * 1.1);
+  school.add(pediment);
+
+  // Pediment base
+  const pedimentBase = new THREE.Mesh(
+    new THREE.BoxGeometry(entranceDepth + 0.1, 0.08, entranceWidth + 0.1),
+    concreteMat
+  );
+  pedimentBase.position.set(0.05, groundY + entranceHeight, 0);
+  school.add(pedimentBase);
+
+  // ===== PILLARS =====
+  const pillarRadius = 0.06;
+  const pillarHeight = entranceHeight - 0.2;
+  const pillarPositions = [-0.32, -0.12, 0.12, 0.32];
+
+  pillarPositions.forEach(z => {
+    // Pillar column
+    const pillar = new THREE.Mesh(
+      new THREE.CylinderGeometry(pillarRadius, pillarRadius * 1.1, pillarHeight, 16),
+      pillarMat
+    );
+    pillar.position.set(0.16, groundY + pillarHeight / 2 + 0.1, z);
+    school.add(pillar);
+
+    // Pillar base
+    const pillarBase = new THREE.Mesh(
+      new THREE.BoxGeometry(0.15, 0.1, 0.15),
+      pillarMat
+    );
+    pillarBase.position.set(0.16, groundY + 0.05, z);
+    school.add(pillarBase);
+
+    // Pillar capital (top decoration)
+    const pillarCap = new THREE.Mesh(
+      new THREE.BoxGeometry(0.14, 0.06, 0.14),
+      pillarMat
+    );
+    pillarCap.position.set(0.16, groundY + pillarHeight + 0.13, z);
+    school.add(pillarCap);
   });
 
-  const windowMat = new THREE.MeshStandardMaterial({ color: '#87ceeb', metalness: 0.4, roughness: 0.1 });
-  const windowFrameMat = new THREE.MeshStandardMaterial({ color: '#f5f5f5', roughness: 0.5 });
+  // ===== MAIN DOORS =====
+  const doorWidth = 0.18;
+  const doorHeight = 0.5;
+  
+  [-0.12, 0.12].forEach(z => {
+    // Door frame
+    const doorFrame = new THREE.Mesh(
+      new THREE.BoxGeometry(0.03, doorHeight + 0.05, doorWidth + 0.04),
+      new THREE.MeshStandardMaterial({ color: '#3e2723', roughness: 0.5 })
+    );
+    doorFrame.position.set(0.17, groundY + doorHeight / 2 + 0.025, z);
+    school.add(doorFrame);
 
-  [-0.55, -0.35, 0.35, 0.55].forEach(wz => {
-    [0.35, 0.65, 0.95].forEach(wy => {
-      const frame = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.18, 0.14), windowFrameMat);
-      frame.position.set(-0.18, groundY + wy, wz);
+    // Door
+    const door = new THREE.Mesh(
+      new THREE.BoxGeometry(0.02, doorHeight, doorWidth),
+      doorMat
+    );
+    door.position.set(0.18, groundY + doorHeight / 2, z);
+    school.add(door);
+
+    // Door handle
+    const handle = new THREE.Mesh(
+      new THREE.SphereGeometry(0.015, 8, 8),
+      goldMat
+    );
+    handle.position.set(0.2, groundY + doorHeight / 2, z + 0.05);
+    school.add(handle);
+
+    // Door window
+    const doorWindow = new THREE.Mesh(
+      new THREE.PlaneGeometry(doorWidth * 0.6, doorHeight * 0.3),
+      windowMat
+    );
+    doorWindow.position.set(0.19, groundY + doorHeight * 0.7, z);
+    doorWindow.rotation.y = Math.PI / 2;
+    school.add(doorWindow);
+  });
+
+  // ===== STEPS =====
+  const stepWidth = entranceWidth + 0.2;
+  const stepDepth = 0.12;
+  const stepHeight = 0.04;
+
+  for (let i = 0; i < 3; i++) {
+    const step = new THREE.Mesh(
+      new THREE.BoxGeometry(stepDepth, stepHeight, stepWidth - i * 0.05),
+      concreteMat
+    );
+    step.position.set(0.22 + i * stepDepth, groundY + stepHeight / 2 + i * stepHeight, 0);
+    school.add(step);
+  }
+
+  // ===== WINDOWS ON MAIN BUILDING =====
+  const windowWidth = 0.12;
+  const windowHeight = 0.2;
+  const windowPositions = [
+    // Left wing windows
+    { z: -0.9, floors: [0.4, 0.9, 1.4] },
+    { z: -0.7, floors: [0.4, 0.9, 1.4] },
+    // Right wing windows
+    { z: 0.9, floors: [0.4, 0.9, 1.4] },
+    { z: 0.7, floors: [0.4, 0.9, 1.4] },
+    // Above entrance
+    { z: -0.3, floors: [1.0, 1.45] },
+    { z: 0, floors: [1.45] },
+    { z: 0.3, floors: [1.0, 1.45] },
+  ];
+
+  windowPositions.forEach(wp => {
+    wp.floors.forEach(floorY => {
+      // Window frame
+      const frame = new THREE.Mesh(
+        new THREE.BoxGeometry(0.03, windowHeight + 0.03, windowWidth + 0.03),
+        windowFrameMat
+      );
+      frame.position.set(0, groundY + floorY, wp.z);
       school.add(frame);
-      const glass = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.15, 0.11), windowMat);
-      glass.position.set(-0.17, groundY + wy, wz);
+
+      // Window glass
+      const glass = new THREE.Mesh(
+        new THREE.PlaneGeometry(windowHeight, windowWidth),
+        windowMat
+      );
+      glass.position.set(0.02, groundY + floorY, wp.z);
+      glass.rotation.y = Math.PI / 2;
       school.add(glass);
+
+      // Window sill
+      const sill = new THREE.Mesh(
+        new THREE.BoxGeometry(0.04, 0.02, windowWidth + 0.04),
+        concreteMat
+      );
+      sill.position.set(0.01, groundY + floorY - windowHeight / 2 - 0.01, wp.z);
+      school.add(sill);
     });
   });
 
-  const roofMat = new THREE.MeshStandardMaterial({ color: '#4a4a4a', roughness: 0.6 });
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.08, 1.7), roofMat);
-  roof.position.set(-0.5, groundY + 1.24, 0);
-  school.add(roof);
+  // ===== CLOCK TOWER =====
+  const towerWidth = 0.35;
+  const towerHeight = 0.6;
+  
+  const tower = new THREE.Mesh(
+    new THREE.BoxGeometry(0.25, towerHeight, towerWidth),
+    wallMat
+  );
+  tower.position.set(-0.4, groundY + mainBuildingHeight + towerHeight / 2, 0);
+  school.add(tower);
 
+  // Tower roof (pyramid)
+  const towerRoofGeo = new THREE.ConeGeometry(0.25, 0.3, 4);
+  const towerRoof = new THREE.Mesh(towerRoofGeo, roofMat);
+  towerRoof.position.set(-0.4, groundY + mainBuildingHeight + towerHeight + 0.15, 0);
+  towerRoof.rotation.y = Math.PI / 4;
+  school.add(towerRoof);
+
+  // Tower spire
+  const spire = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.01, 0.03, 0.15, 8),
+    goldMat
+  );
+  spire.position.set(-0.4, groundY + mainBuildingHeight + towerHeight + 0.38, 0);
+  school.add(spire);
+
+  // Clock face
+  const clockCanvas = document.createElement('canvas');
+  clockCanvas.width = 128;
+  clockCanvas.height = 128;
+  const cctx = clockCanvas.getContext('2d')!;
+  
+  // Clock background
+  cctx.fillStyle = '#fff';
+  cctx.beginPath();
+  cctx.arc(64, 64, 58, 0, Math.PI * 2);
+  cctx.fill();
+  
+  // Clock border
+  cctx.strokeStyle = '#8B4513';
+  cctx.lineWidth = 6;
+  cctx.stroke();
+  
+  // Hour markers
+  cctx.fillStyle = '#333';
+  for (let i = 0; i < 12; i++) {
+    const angle = (i * 30 - 90) * Math.PI / 180;
+    const x = 64 + Math.cos(angle) * 45;
+    const y = 64 + Math.sin(angle) * 45;
+    cctx.beginPath();
+    cctx.arc(x, y, i % 3 === 0 ? 5 : 3, 0, Math.PI * 2);
+    cctx.fill();
+  }
+  
+  // Clock hands
+  cctx.strokeStyle = '#333';
+  cctx.lineCap = 'round';
+  // Hour hand
+  cctx.lineWidth = 5;
+  cctx.beginPath();
+  cctx.moveTo(64, 64);
+  cctx.lineTo(64 + Math.cos(-60 * Math.PI / 180) * 25, 64 + Math.sin(-60 * Math.PI / 180) * 25);
+  cctx.stroke();
+  // Minute hand
+  cctx.lineWidth = 3;
+  cctx.beginPath();
+  cctx.moveTo(64, 64);
+  cctx.lineTo(64, 64 - 38);
+  cctx.stroke();
+  // Center dot
+  cctx.fillStyle = '#8B4513';
+  cctx.beginPath();
+  cctx.arc(64, 64, 5, 0, Math.PI * 2);
+  cctx.fill();
+
+  const clockTex = new THREE.CanvasTexture(clockCanvas);
+  const clock = new THREE.Mesh(
+    new THREE.CircleGeometry(0.1, 32),
+    new THREE.MeshBasicMaterial({ map: clockTex })
+  );
+  clock.position.set(-0.265, groundY + mainBuildingHeight + towerHeight / 2 + 0.1, 0);
+  clock.rotation.y = Math.PI / 2;
+  school.add(clock);
+
+  // ===== MAIN ROOF =====
+  const mainRoof = new THREE.Mesh(
+    new THREE.BoxGeometry(mainBuildingDepth + 0.1, 0.08, mainBuildingWidth + 0.1),
+    roofMat
+  );
+  mainRoof.position.set(-0.4, groundY + mainBuildingHeight + 0.04, 0);
+  school.add(mainRoof);
+
+  // Roof trim
+  const roofTrim = new THREE.Mesh(
+    new THREE.BoxGeometry(mainBuildingDepth + 0.15, 0.04, mainBuildingWidth + 0.15),
+    new THREE.MeshStandardMaterial({ color: '#f5e6d3', roughness: 0.5 })
+  );
+  roofTrim.position.set(-0.4, groundY + mainBuildingHeight, 0);
+  school.add(roofTrim);
+
+  // ===== DECORATIVE ELEMENTS =====
+  
+  // Cornice under roof
+  const cornice = new THREE.Mesh(
+    new THREE.BoxGeometry(mainBuildingDepth + 0.05, 0.03, mainBuildingWidth + 0.05),
+    pillarMat
+  );
+  cornice.position.set(-0.4, groundY + mainBuildingHeight - 0.02, 0);
+  school.add(cornice);
+
+  // Floor separators
+  [0.65, 1.15].forEach(y => {
+    const separator = new THREE.Mesh(
+      new THREE.BoxGeometry(0.02, 0.03, mainBuildingWidth - 0.1),
+      pillarMat
+    );
+    separator.position.set(0, groundY + y, 0);
+    school.add(separator);
+  });
+
+  // ===== UNIVERSITY SIGN =====
   const signCanvas = document.createElement('canvas');
-  signCanvas.width = 80;
-  signCanvas.height = 280;
-  const schCtx = signCanvas.getContext('2d')!;
-  schCtx.fillStyle = '#1a5276';
-  schCtx.fillRect(0, 0, 80, 280);
-  schCtx.save();
-  schCtx.translate(40, 140);
-  schCtx.rotate(-Math.PI / 2);
-  schCtx.fillStyle = '#fff';
-  schCtx.font = 'bold 22px serif';
-  schCtx.textAlign = 'center';
-  schCtx.fillText('DS ACADEMY', 0, 8);
-  schCtx.restore();
+  signCanvas.width = 400;
+  signCanvas.height = 80;
+  const signCtx = signCanvas.getContext('2d')!;
+  
+  // Sign background
+  signCtx.fillStyle = '#1a5276';
+  signCtx.fillRect(0, 0, 400, 80);
+  
+  // Gold border
+  signCtx.strokeStyle = '#ffd700';
+  signCtx.lineWidth = 4;
+  signCtx.strokeRect(4, 4, 392, 72);
+  
+  // University text
+  signCtx.fillStyle = '#ffd700';
+  signCtx.font = 'bold 28px Georgia, serif';
+  signCtx.textAlign = 'center';
+  signCtx.fillText('UNIVERSITY OF', 200, 35);
+  signCtx.font = 'bold 24px Georgia, serif';
+  signCtx.fillText('DATA STRUCTURES', 200, 62);
+  
   const signTex = new THREE.CanvasTexture(signCanvas);
-  const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.7), new THREE.MeshBasicMaterial({ map: signTex }));
-  signMesh.position.set(-0.08, groundY + 0.85, 0.55);
+  const signMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.7, 0.14),
+    new THREE.MeshBasicMaterial({ map: signTex })
+  );
+  signMesh.position.set(0.02, groundY + entranceHeight + 0.18, 0);
   signMesh.rotation.y = Math.PI / 2;
   school.add(signMesh);
 
+  // ===== SIDE WINGS =====
+  [-1, 1].forEach(side => {
+    const wing = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, mainBuildingHeight * 0.85, 0.5),
+      wallMat
+    );
+    wing.position.set(-0.55, groundY + mainBuildingHeight * 0.85 / 2, side * 1.0);
+    school.add(wing);
+
+    // Wing roof
+    const wingRoof = new THREE.Mesh(
+      new THREE.BoxGeometry(0.55, 0.06, 0.55),
+      roofMat
+    );
+    wingRoof.position.set(-0.55, groundY + mainBuildingHeight * 0.85 + 0.03, side * 1.0);
+    school.add(wingRoof);
+
+    // Wing windows
+    [0.35, 0.75, 1.15].forEach(wy => {
+      const wingWindow = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.15, 0.12),
+        windowMat
+      );
+      wingWindow.position.set(-0.29, groundY + wy, side * 1.0);
+      wingWindow.rotation.y = Math.PI / 2;
+      school.add(wingWindow);
+    });
+  });
+
+  // ===== PHILIPPINE FLAG =====
+  const flagGroup = new THREE.Group();
+  
+  // Flag pole
+  const poleMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.8, roughness: 0.2 });
+  const pole = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.015, 0.02, 1.2, 12),
+    poleMat
+  );
+  pole.position.y = 0.6;
+  flagGroup.add(pole);
+
+  // Pole base
+  const poleBase = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.04, 0.05, 0.08, 12),
+    poleMat
+  );
+  poleBase.position.y = 0.04;
+  flagGroup.add(poleBase);
+
+  // Pole ball top
+  const poleTop = new THREE.Mesh(
+    new THREE.SphereGeometry(0.025, 12, 12),
+    goldMat
+  );
+  poleTop.position.y = 1.22;
+  flagGroup.add(poleTop);
+
+  // Philippine Flag canvas
+  const flagCanvas = document.createElement('canvas');
+  flagCanvas.width = 200;
+  flagCanvas.height = 100;
+  const fctx = flagCanvas.getContext('2d')!;
+
+  // Blue stripe (top)
+  fctx.fillStyle = '#0038a8';
+  fctx.fillRect(0, 0, 200, 50);
+
+  // Red stripe (bottom)
+  fctx.fillStyle = '#ce1126';
+  fctx.fillRect(0, 50, 200, 50);
+
+  // White triangle
+  fctx.fillStyle = '#ffffff';
+  fctx.beginPath();
+  fctx.moveTo(0, 0);
+  fctx.lineTo(100, 50);
+  fctx.lineTo(0, 100);
+  fctx.closePath();
+  fctx.fill();
+
+  // Sun (golden yellow)
+  fctx.fillStyle = '#fcd116';
+  const sunX = 33;
+  const sunY = 50;
+  const sunRadius = 12;
+  
+  // Sun rays (8 rays)
+  for (let i = 0; i < 8; i++) {
+    const angle = (i * 45) * Math.PI / 180;
+    fctx.beginPath();
+    fctx.moveTo(sunX, sunY);
+    const rayLength = 22;
+    const rayWidth = 4;
+    const x1 = sunX + Math.cos(angle - 0.15) * rayLength;
+    const y1 = sunY + Math.sin(angle - 0.15) * rayLength;
+    const x2 = sunX + Math.cos(angle + 0.15) * rayLength;
+    const y2 = sunY + Math.sin(angle + 0.15) * rayLength;
+    fctx.lineTo(x1, y1);
+    fctx.lineTo(x2, y2);
+    fctx.closePath();
+    fctx.fill();
+  }
+
+  // Sun circle
+  fctx.beginPath();
+  fctx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2);
+  fctx.fill();
+
+  // Sun face (inner circle)
+  fctx.strokeStyle = '#ce1126';
+  fctx.lineWidth = 1.5;
+  fctx.beginPath();
+  fctx.arc(sunX, sunY, 7, 0, Math.PI * 2);
+  fctx.stroke();
+
+  // Three stars
+  const drawStar = (cx: number, cy: number, size: number) => {
+    fctx.fillStyle = '#fcd116';
+    fctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const angle = (i * 72 - 90) * Math.PI / 180;
+      const x = cx + Math.cos(angle) * size;
+      const y = cy + Math.sin(angle) * size;
+      if (i === 0) fctx.moveTo(x, y);
+      else fctx.lineTo(x, y);
+      const innerAngle = ((i * 72) + 36 - 90) * Math.PI / 180;
+      const innerX = cx + Math.cos(innerAngle) * (size * 0.4);
+      const innerY = cy + Math.sin(innerAngle) * (size * 0.4);
+      fctx.lineTo(innerX, innerY);
+    }
+    fctx.closePath();
+    fctx.fill();
+  };
+
+  drawStar(12, 50, 8);   // Left star (center)
+  drawStar(45, 15, 7);   // Top star
+  drawStar(45, 85, 7);   // Bottom star
+
+  const flagTex = new THREE.CanvasTexture(flagCanvas);
+  
+  // Flag mesh (slightly waving effect using plane)
+  const flagWidth = 0.3;
+  const flagHeight = 0.15;
+  const flagGeo = new THREE.PlaneGeometry(flagWidth, flagHeight, 10, 1);
+  
+  // Add wave to flag
+  const positions = flagGeo.attributes.position;
+  for (let i = 0; i < positions.count; i++) {
+    const x = positions.getX(i);
+    const wave = Math.sin((x / flagWidth) * Math.PI * 2) * 0.01;
+    positions.setZ(i, wave);
+  }
+  flagGeo.computeVertexNormals();
+
+  const flagMesh = new THREE.Mesh(
+    flagGeo,
+    new THREE.MeshStandardMaterial({ 
+      map: flagTex, 
+      side: THREE.DoubleSide,
+      roughness: 0.8
+    })
+  );
+  flagMesh.position.set(flagWidth / 2 + 0.02, 1.1, 0);
+  flagMesh.rotation.y = Math.PI / 2;
+  flagGroup.add(flagMesh);
+
+  // Position flag pole
+  flagGroup.position.set(0.3, groundY, 0.7);
+  school.add(flagGroup);
+
+  // Add second flag on other side
+  const flagGroup2 = flagGroup.clone();
+  flagGroup2.position.set(0.3, groundY, -0.7);
+  school.add(flagGroup2);
+
+  // ===== GROUND/PLAZA =====
+  const plaza = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.5, 1.5),
+    new THREE.MeshStandardMaterial({ color: '#d4c4b0', roughness: 0.9, side: THREE.DoubleSide })
+  );
+  plaza.rotation.x = -Math.PI / 2;
+  plaza.rotation.z = Math.PI / 2;
+  plaza.position.set(0.8, groundY - 0.005, 0);
+  school.add(plaza);
+
+  // Pathway lines
+  const pathLine = new THREE.Mesh(
+    new THREE.BoxGeometry(1.5, 0.005, 0.4),
+    new THREE.MeshStandardMaterial({ color: '#a89078', roughness: 0.8 })
+  );
+  pathLine.position.set(0.8, groundY - 0.002, 0);
+  school.add(pathLine);
+
+  // ===== DECORATIVE BUSHES =====
+  const bushMat = new THREE.MeshStandardMaterial({ color: '#228b22', roughness: 0.9 });
+  
+  [[-0.5, 0.6], [-0.5, -0.6], [0.2, 0.5], [0.2, -0.5]].forEach(([x, z]) => {
+    const bush = new THREE.Mesh(
+      new THREE.SphereGeometry(0.08, 8, 8),
+      bushMat
+    );
+    bush.position.set(x, groundY + 0.06, z);
+    bush.scale.y = 0.7;
+    school.add(bush);
+  });
+
+  // ===== ENTRANCE LAMP POSTS =====
+  const lampMat = new THREE.MeshStandardMaterial({ color: '#2c2c2c', roughness: 0.4, metalness: 0.6 });
+  
+  [0.55, -0.55].forEach(z => {
+    // Lamp post
+    const lampPost = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.015, 0.02, 0.5, 8),
+      lampMat
+    );
+    lampPost.position.set(0.5, groundY + 0.25, z);
+    school.add(lampPost);
+
+    // Lamp head
+    const lampHead = new THREE.Mesh(
+      new THREE.SphereGeometry(0.04, 12, 12),
+      new THREE.MeshStandardMaterial({ 
+        color: '#ffffcc', 
+        emissive: '#ffff99', 
+        emissiveIntensity: 0.3 
+      })
+    );
+    lampHead.position.set(0.5, groundY + 0.52, z);
+    school.add(lampHead);
+  });
+
   return school;
 }
-
 // ==================== CARDBOARD BOX (ONLY LEFT/RIGHT FLAPS) ====================
 
 function createCardboardBox(label: string, color: string, isHighlighted: boolean, openAmount: number = 0): THREE.Group {
@@ -2699,11 +3225,18 @@ function buildSceneContent(
       group.add(ticketDispenserGroup);
 
     } else if (environment === 'students') {
+      // School building - positioned to face students (entrance facing positive X)
       const schoolBuilding = createSchoolBuilding();
-      schoolBuilding.position.set(startX - 0.8, groundY, 0);
-      schoolBuilding.scale.setScalar(0.5);
-      schoolBuilding.rotation.y = Math.PI / 2; // ROTATE 90 DEGREES TO FACE STUDENTS
+      schoolBuilding.position.set(startX - 1.2, groundY, 0);
+      schoolBuilding.scale.setScalar(0.55);
+      schoolBuilding.rotation.y = Math.PI / 2; // Entrance faces students
       group.add(schoolBuilding);
+
+      // Add "ENTRANCE" arrow sign
+      const entranceSign = createTextSprite('🚪 ENTRANCE', '#00ff00', 16);
+      entranceSign.position.set(startX - 0.5, groundY + 0.5, 0);
+      entranceSign.scale.set(0.35, 0.12, 1);
+      group.add(entranceSign);
 
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
@@ -2712,28 +3245,37 @@ function buildSceneContent(
         if (item.appearance) {
           let walkPhase = 0;
           let extraX = 0;
+          let extraZ = 0;
           let studentScale = 0.55;
           let shouldRender = true;
+          let studentRotation = -Math.PI / 2; // Face the school
 
           if (isFront) {
             if (animPhase === 'queue-dequeue-walk') {
               const progress = animProgress || 0;
-              walkPhase = progress * Math.PI * 10;
-              extraX = -progress * 1.2;
+              walkPhase = progress * Math.PI * 12;
+              extraX = -progress * 1.5; // Walk toward school
+              // Slight curve toward the door
+              extraZ = Math.sin(progress * Math.PI) * 0.05;
             } else if (animPhase === 'queue-dequeue-enter') {
               const progress = animProgress || 0;
-              walkPhase = Math.PI * 10 + progress * Math.PI * 4;
-              extraX = -1.2 - progress * 0.4;
-              studentScale = 0.55 * Math.max(0.01, 1 - progress * 0.95);
-              if (progress > 0.95) shouldRender = false;
+              walkPhase = Math.PI * 12 + progress * Math.PI * 6;
+              extraX = -1.5 - progress * 0.5; // Continue into school
+              studentScale = 0.55 * Math.max(0.01, 1 - progress * 0.98);
+              // Student gets smaller as they enter
+              if (progress > 0.9) shouldRender = false;
             }
           }
 
           if (shouldRender) {
             const human = createHuman3D(item.appearance, item.label, isHl, false, walkPhase);
-            human.position.set(startX + i * spacing + 0.6 + extraX, groundY, 0);
+            human.position.set(
+              startX + i * spacing + 0.8 + extraX, 
+              groundY, 
+              extraZ
+            );
             human.scale.setScalar(studentScale);
-            human.rotation.y = -Math.PI / 2;
+            human.rotation.y = studentRotation;
 
             if (!(isFront && (animPhase === 'queue-dequeue-walk' || animPhase === 'queue-dequeue-enter'))) {
               applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue', animProgress);
@@ -2743,6 +3285,43 @@ function buildSceneContent(
           }
         }
       });
+
+      // Queue labels
+      if (data.length > 0) {
+        const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
+        frontSprite.position.set(startX + 0.8, groundY - 0.18, 0.25);
+        frontSprite.scale.set(0.26, 0.09, 1);
+        group.add(frontSprite);
+
+        if (data.length > 1) {
+          const rearSprite = createTextSprite('REAR', '#ff6600', 16);
+          rearSprite.position.set(startX + (data.length - 1) * spacing + 0.8, groundY - 0.18, 0.25);
+          rearSprite.scale.set(0.26, 0.09, 1);
+          group.add(rearSprite);
+        }
+      }
+
+      // Pathway leading to school
+      const pathway = new THREE.Mesh(
+        new THREE.PlaneGeometry(Math.max(2.8, data.length * spacing + 3.0), 0.6),
+        new THREE.MeshStandardMaterial({ color: '#c4b8a8', side: THREE.DoubleSide, roughness: 0.9 })
+      );
+      pathway.rotation.x = -Math.PI / 2;
+      pathway.position.set(0.5, groundY - 0.01, 0);
+      group.add(pathway);
+
+      // Grass on sides
+      const grassMat = new THREE.MeshStandardMaterial({ color: '#4a7c4e', roughness: 0.95, side: THREE.DoubleSide });
+      [-0.45, 0.45].forEach(z => {
+        const grass = new THREE.Mesh(
+          new THREE.PlaneGeometry(Math.max(2.5, data.length * spacing + 2.5), 0.25),
+          grassMat
+        );
+        grass.rotation.x = -Math.PI / 2;
+        grass.position.set(0.5, groundY - 0.012, z);
+        group.add(grass);
+      });
+    }
 
       if (data.length > 0) {
         const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
