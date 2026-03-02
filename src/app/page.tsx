@@ -1801,7 +1801,7 @@ function createSchoolBuilding(): THREE.Group {
   bigFrame.position.set(0.19, groundY + doorHeight / 2 + 0.06, 0);
   school.add(bigFrame);
 
-  // Door header (simple rectangle instead of arch)
+  // Door header
   const doorHeader = new THREE.Mesh(
     new THREE.BoxGeometry(0.05, 0.08, doorWidth * 2 + doorGap + 0.12),
     new THREE.MeshStandardMaterial({ color: '#3e2723', roughness: 0.5 })
@@ -1850,20 +1850,6 @@ function createSchoolBuilding(): THREE.Group {
     doorWindow.rotation.y = Math.PI / 2;
     school.add(doorWindow);
   });
-
-  // Steps
-  const stepWidth = entranceWidth + 0.3;
-  const stepDepth = 0.12;
-  const stepHeight = 0.04;
-
-  for (let i = 0; i < 4; i++) {
-    const step = new THREE.Mesh(
-      new THREE.BoxGeometry(stepDepth, stepHeight, stepWidth - i * 0.05),
-      concreteMat
-    );
-    step.position.set(0.22 + i * stepDepth, groundY + stepHeight / 2 + i * stepHeight, 0);
-    school.add(step);
-  }
 
   // Windows on main building
   const windowPositions = [
@@ -1927,7 +1913,7 @@ function createSchoolBuilding(): THREE.Group {
   spire.position.set(-0.4, groundY + mainBuildingHeight + towerHeight + 0.4, 0);
   school.add(spire);
 
-  // Clock - FIXED position and rotation to face students
+  // Clock - facing students
   const clockCanvas = document.createElement('canvas');
   clockCanvas.width = 128;
   clockCanvas.height = 128;
@@ -1970,9 +1956,8 @@ function createSchoolBuilding(): THREE.Group {
     new THREE.CircleGeometry(0.1, 32),
     new THREE.MeshBasicMaterial({ map: clockTex })
   );
-  // Clock on front of tower facing RIGHT (toward students)
   clock.position.set(-0.25, groundY + mainBuildingHeight + towerHeight / 2 + 0.1, 0);
-  clock.rotation.y = -Math.PI / 2; // Face toward positive X (right)
+  clock.rotation.y = -Math.PI / 2;
   school.add(clock);
 
   // Main roof
@@ -2013,7 +1998,7 @@ function createSchoolBuilding(): THREE.Group {
     new THREE.MeshBasicMaterial({ map: signTex })
   );
   signMesh.position.set(0.18, groundY + entranceHeight + 0.2, 0);
-  signMesh.rotation.y = -Math.PI / 2; // Face toward students
+  signMesh.rotation.y = -Math.PI / 2;
   school.add(signMesh);
 
   // Side wings
@@ -2043,7 +2028,7 @@ function createSchoolBuilding(): THREE.Group {
     });
   });
 
-  // Philippine Flag - attached to pole properly
+  // Philippine Flag - FIXED: properly attached to pole
   const createPhilippineFlag = (posZ: number) => {
     const flagGroup = new THREE.Group();
 
@@ -2137,7 +2122,7 @@ function createSchoolBuilding(): THREE.Group {
 
     const flagTex = new THREE.CanvasTexture(flagCanvas);
     
-    // Flag with wave effect - attached to pole
+    // Flag with wave effect
     const flagWidth = 0.28;
     const flagHeight = 0.14;
     const flagGeo = new THREE.PlaneGeometry(flagWidth, flagHeight, 8, 1);
@@ -2152,9 +2137,9 @@ function createSchoolBuilding(): THREE.Group {
       flagGeo,
       new THREE.MeshStandardMaterial({ map: flagTex, side: THREE.DoubleSide, roughness: 0.8 })
     );
-    // Flag attached to pole - left edge at pole, extends to the right
-    flagMesh.position.set(flagWidth / 2 + 0.02, 1.1, 0);
-    flagMesh.rotation.y = -Math.PI / 2; // Face same direction as school
+    // Flag attached to pole - position so left edge is at pole
+    flagMesh.position.set(0.02, 1.1, flagWidth / 2);
+    flagMesh.rotation.y = -Math.PI / 2;
     flagGroup.add(flagMesh);
 
     flagGroup.position.set(0.35, groundY, posZ);
