@@ -1569,16 +1569,19 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
 
   const easeInOut = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
-  const isSliding = animPhase === 'queue-dequeue-slide';
-  const isExiting = animPhase === 'queue-dequeue-exit';
-  
-  let slideOffset = 0;
-  const slideDistance = totalTicketLength;
+const isSliding = animPhase === 'queue-dequeue-slide';
+const isExiting = animPhase === 'queue-dequeue-exit';
 
-  if (isSliding) {
-    const easedProgress = easeInOut(animProgress || 0);
-    slideOffset = -easedProgress * slideDistance;
-  }
+let slideOffset = 0;
+const slideDistance = totalTicketLength;
+
+if (isSliding) {
+  const easedProgress = easeInOut(animProgress || 0);
+  slideOffset = -easedProgress * slideDistance;
+} else if (isExiting) {
+  // Keep tickets at slid position during exit
+  slideOffset = -slideDistance;
+}
 
   tickets.forEach((ticket, i) => {
     const isHl = highlightIndex === i;
@@ -1586,10 +1589,10 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
 
     const ticketGroup = new THREE.Group();
 
-    let ticketX = ticketStartX + i * totalTicketLength;
-    if (isSliding) {
-      ticketX += slideOffset;
-    }
+let ticketX = ticketStartX + i * totalTicketLength;
+if (isSliding || isExiting) {
+  ticketX += slideOffset;
+}
     
     let ticketScale = 1;
     let ticketOpacity = 1;
@@ -2445,8 +2448,23 @@ function applyItemAnimation(
       obj.position.y += 0.2 * p;
       obj.scale.setScalar(1 + 0.15 * p);
     }
+    
+    // Remaining queue items move forward during dequeue to fill the gap
+    if (!isTarget && itemIndex > 0) {
+      const queueSpacing = 1.0;
+      if (animPhase === 'queue-dequeue-gate-open') {
+        obj.position.x -= p * queueSpacing * 0.2;
+      } else if (animPhase === 'queue-dequeue-drive') {
+        obj.position.x -= (0.2 + p * 0.8) * queueSpacing;
+      } else if (animPhase === 'queue-dequeue-gate-close') {
+        obj.position.x -= queueSpacing;
+      } else if (animPhase === 'queue-dequeue-walk') {
+        obj.position.x -= p * queueSpacing * 0.5;
+      } else if (animPhase === 'queue-dequeue-enter') {
+        obj.position.x -= (0.5 + p * 0.5) * queueSpacing;
+      }
+    }
   }
-}
 // ==================== BUILD SCENE CONTENT ====================
 
 function buildSceneContent(
@@ -3149,15 +3167,27 @@ function buildSceneContent(
               studentScale = 0.55 * Math.max(0.01, 1 - progress * 0.95);
               if (progress > 0.95) shouldRender = false;
             }
+          } else {
+            // Remaining students walk forward to fill the gap
+            if (animPhase === 'queue-dequeue-walk') {
+              const progress = animProgress || 0;
+              walkPhase = progress * Math.PI * 6;
+              extraX = -progress * spacing * 0.5;
+            } else if (animPhase === 'queue-dequeue-enter') {
+              const progress = animProgress || 0;
+              walkPhase = Math.PI * 6 + progress * Math.PI * 4;
+              extraX = -spacing * 0.5 - progress * spacing * 0.5;
+            }
           }
 
           if (shouldRender) {
             const human = createHuman3D(item.appearance, item.label, isHl, false, walkPhase);
             human.position.set(startX + i * spacing + 0.6 + extraX, groundY, 0);
             human.scale.setScalar(studentScale);
-            human.rotation.y = -Math.PI / 2; // Students face LEFT toward school
+            human.rotation.y = -Math.PI / 2;
 
-            if (!(isFront && (animPhase === 'queue-dequeue-walk' || animPhase === 'queue-dequeue-enter'))) {
+            if (!(isFront && (animPhase === 'queue-dequeue-walk' || animPhase === 'queue-dequeue-enter')) &&
+                !(!isFront && (animPhase === 'queue-dequeue-walk' || animPhase === 'queue-dequeue-enter'))) {
               applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue', animProgress);
             }
 
