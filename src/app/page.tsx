@@ -42,8 +42,6 @@ interface DataItem {
   appearance?: HumanAppearance;
 }
 
-// ==================== STEP-BY-STEP TUTORIAL SYSTEM ====================
-
 interface TutorialStep {
   title: string;
   description: string;
@@ -430,7 +428,6 @@ function createGroceryBox(color: string, label: string, isHighlighted: boolean):
 
   return product;
 }
-
 // ==================== HUMAN 3D ====================
 
 function createHuman3D(appearance: HumanAppearance, name: string, isHighlighted: boolean, isSeated: boolean = false, walkPhase: number = 0): THREE.Group {
@@ -879,134 +876,125 @@ function createBook(label: string, color: string, isHighlighted: boolean, isOpen
   return book;
 }
 
-// ==================== TABLET (TODO) ====================
+// ==================== TABLET FOR TODO ====================
 
 function createTablet(tasks: DataItem[], highlightIndex: number | null): THREE.Group {
   const tablet = new THREE.Group();
-  
-  const tabletWidth = 0.5;
-  const tabletHeight = 0.7;
+
+  const tabletWidth = 0.65;
+  const tabletHeight = 0.45;
   const tabletDepth = 0.02;
-  
-  // Tablet body
-  const bodyMat = new THREE.MeshStandardMaterial({
-    color: '#1a1a2e',
-    roughness: 0.3,
-    metalness: 0.8
-  });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(tabletWidth, tabletHeight, tabletDepth), bodyMat);
+
+  const bodyMat = new THREE.MeshStandardMaterial({ color: '#1a1a2e', roughness: 0.3, metalness: 0.5 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(tabletWidth, tabletDepth, tabletHeight), bodyMat);
   tablet.add(body);
-  
-  // Screen bezel
-  const bezelMat = new THREE.MeshStandardMaterial({ color: '#0d0d15', roughness: 0.2, metalness: 0.9 });
-  const bezel = new THREE.Mesh(new THREE.BoxGeometry(tabletWidth - 0.02, tabletHeight - 0.02, 0.005), bezelMat);
-  bezel.position.z = tabletDepth / 2 + 0.002;
+
+  const bezelMat = new THREE.MeshStandardMaterial({ color: '#0a0a15', roughness: 0.2 });
+  const bezel = new THREE.Mesh(new THREE.BoxGeometry(tabletWidth - 0.02, tabletDepth + 0.001, tabletHeight - 0.02), bezelMat);
+  bezel.position.y = 0.001;
   tablet.add(bezel);
-  
-  // Screen content
+
   const screenCanvas = document.createElement('canvas');
-  screenCanvas.width = 320;
-  screenCanvas.height = 450;
-  const sctx = screenCanvas.getContext('2d')!;
+  screenCanvas.width = 400;
+  screenCanvas.height = 280;
+  const ctx = screenCanvas.getContext('2d')!;
+
+  ctx.fillStyle = '#1e272e';
+  ctx.fillRect(0, 0, 400, 280);
+
+  ctx.fillStyle = '#e74c3c';
+  ctx.fillRect(0, 0, 400, 50);
   
-  // Screen background
-  const gradient = sctx.createLinearGradient(0, 0, 0, 450);
-  gradient.addColorStop(0, '#1e3c72');
-  gradient.addColorStop(1, '#2a5298');
-  sctx.fillStyle = gradient;
-  sctx.fillRect(0, 0, 320, 450);
-  
-  // Header
-  sctx.fillStyle = 'rgba(255,255,255,0.15)';
-  sctx.fillRect(0, 0, 320, 60);
-  sctx.fillStyle = '#fff';
-  sctx.font = 'bold 24px Arial';
-  sctx.textAlign = 'center';
-  sctx.fillText('📝 TO-DO LIST', 160, 40);
-  
-  // Tasks
-  const taskStartY = 80;
-  const taskHeight = 55;
-  
-  tasks.slice(0, 6).forEach((task, i) => {
-    const isHl = highlightIndex === i;
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 24px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('📝 TO-DO LIST', 200, 35);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+  ctx.fillRect(10, 55, 380, 25);
+  ctx.fillStyle = '#aaa';
+  ctx.font = '14px Arial';
+  ctx.textAlign = 'left';
+  ctx.fillText(`Active Tasks: ${tasks.length}`, 20, 72);
+  ctx.textAlign = 'right';
+  const now = new Date();
+  ctx.fillText(`${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`, 380, 72);
+
+  const taskStartY = 90;
+  const taskHeight = 38;
+  const maxVisibleTasks = 4;
+
+  tasks.slice(0, maxVisibleTasks).forEach((task, i) => {
     const y = taskStartY + i * taskHeight;
-    
-    // Task background
-    sctx.fillStyle = isHl ? 'rgba(255, 255, 0, 0.3)' : 'rgba(255,255,255,0.1)';
-    sctx.beginPath();
-    sctx.roundRect(15, y, 290, 45, 10);
-    sctx.fill();
-    
+    const isHl = highlightIndex === i;
+
     if (isHl) {
-      sctx.strokeStyle = '#ffff00';
-      sctx.lineWidth = 3;
-      sctx.stroke();
+      ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+    } else {
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)';
     }
-    
-    // Checkbox
-    sctx.strokeStyle = '#fff';
-    sctx.lineWidth = 2;
-    sctx.strokeRect(25, y + 12, 22, 22);
-    
-    // Task text
-    sctx.fillStyle = '#fff';
-    sctx.font = 'bold 18px Arial';
-    sctx.textAlign = 'left';
-    sctx.fillText(task.label, 60, y + 30);
-    
-    // Index badge
-    sctx.fillStyle = task.color;
-    sctx.beginPath();
-    sctx.arc(280, y + 22, 14, 0, Math.PI * 2);
-    sctx.fill();
-    sctx.fillStyle = '#fff';
-    sctx.font = 'bold 14px Arial';
-    sctx.textAlign = 'center';
-    sctx.fillText(`${i}`, 280, y + 27);
+    ctx.fillRect(10, y, 380, taskHeight - 2);
+
+    ctx.strokeStyle = task.color;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(20, y + 8, 20, 20);
+
+    ctx.fillStyle = task.color;
+    ctx.fillRect(50, y + 5, 4, taskHeight - 12);
+
+    ctx.fillStyle = isHl ? '#ffff00' : '#fff';
+    ctx.font = isHl ? 'bold 18px Arial' : '16px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(task.label, 65, y + 23);
+
+    ctx.fillStyle = '#666';
+    ctx.font = '12px Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText(`[${i}]`, 380, y + 23);
   });
-  
-  // Footer
-  sctx.fillStyle = 'rgba(255,255,255,0.1)';
-  sctx.fillRect(0, 420, 320, 30);
-  sctx.fillStyle = 'rgba(255,255,255,0.6)';
-  sctx.font = '12px Arial';
-  sctx.textAlign = 'center';
-  sctx.fillText(`${tasks.length} tasks`, 160, 438);
-  
+
+  if (tasks.length > maxVisibleTasks) {
+    ctx.fillStyle = '#666';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`+ ${tasks.length - maxVisibleTasks} more tasks...`, 200, 260);
+  }
+
+  if (tasks.length === 0) {
+    ctx.fillStyle = '#666';
+    ctx.font = '20px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('No tasks yet!', 200, 160);
+    ctx.font = '14px Arial';
+    ctx.fillText('Tap "Append" to add a task', 200, 185);
+  }
+
   const screenTex = new THREE.CanvasTexture(screenCanvas);
-  const screen = new THREE.Mesh(
-    new THREE.PlaneGeometry(tabletWidth - 0.05, tabletHeight - 0.05),
-    new THREE.MeshBasicMaterial({ map: screenTex })
-  );
-  screen.position.z = tabletDepth / 2 + 0.004;
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(tabletWidth - 0.04, tabletHeight - 0.04), new THREE.MeshBasicMaterial({ map: screenTex }));
+  screen.rotation.x = -Math.PI / 2;
+  screen.position.y = tabletDepth / 2 + 0.001;
   tablet.add(screen);
-  
-  // Home button
-  const homeBtnMat = new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.5 });
-  const homeBtn = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.005, 16), homeBtnMat);
-  homeBtn.rotation.x = Math.PI / 2;
-  homeBtn.position.set(0, -tabletHeight / 2 + 0.03, tabletDepth / 2 + 0.003);
+
+  const homeBtn = new THREE.Mesh(new THREE.CircleGeometry(0.015, 16), new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.5 }));
+  homeBtn.rotation.x = -Math.PI / 2;
+  homeBtn.position.set(0, tabletDepth / 2 + 0.001, tabletHeight / 2 - 0.025);
   tablet.add(homeBtn);
-  
-  // Camera
-  const cameraMat = new THREE.MeshStandardMaterial({ color: '#111' });
-  const camera = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.003, 12), cameraMat);
-  camera.rotation.x = Math.PI / 2;
-  camera.position.set(0, tabletHeight / 2 - 0.025, tabletDepth / 2 + 0.003);
+
+  const camera = new THREE.Mesh(new THREE.CircleGeometry(0.005, 8), new THREE.MeshBasicMaterial({ color: '#222' }));
+  camera.rotation.x = -Math.PI / 2;
+  camera.position.set(0, tabletDepth / 2 + 0.001, -tabletHeight / 2 + 0.025);
   tablet.add(camera);
-  
-  // Stand
-  const standMat = new THREE.MeshStandardMaterial({ color: '#555', metalness: 0.6 });
-  const standBase = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.15), standMat);
-  standBase.position.set(0, -tabletHeight / 2 - 0.15, -0.05);
+
+  const standMat = new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.3 });
+  const standBack = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 0.01), standMat);
+  standBack.position.set(0, -0.05, -0.15);
+  standBack.rotation.x = -0.5;
+  tablet.add(standBack);
+
+  const standBase = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.01, 0.12), standMat);
+  standBase.position.set(0, -0.12, -0.05);
   tablet.add(standBase);
-  
-  const standArm = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.15, 0.02), standMat);
-  standArm.position.set(0, -tabletHeight / 2 - 0.08, -0.02);
-  standArm.rotation.x = 0.3;
-  tablet.add(standArm);
-  
+
   return tablet;
 }
 
@@ -1300,218 +1288,6 @@ function createCar(color: string, label: string, isHighlighted: boolean): THREE.
 
   return car;
 }
-
-// ==================== PLATE (FIXED) ====================
-
-function createPlate(label: string, color: string, isHighlighted: boolean): THREE.Group {
-  const plateGroup = new THREE.Group();
-  
-  const plateRadius = 0.2;
-  const plateThickness = 0.02;
-  
-  // Main plate body - white ceramic
-  const plateMat = new THREE.MeshStandardMaterial({
-    color: '#ffffff',
-    roughness: 0.15,
-    metalness: 0.05,
-    emissive: isHighlighted ? '#ffff00' : '#000',
-    emissiveIntensity: isHighlighted ? 0.3 : 0
-  });
-  
-  // Plate base (slightly curved look with different sizes)
-  const plateBottom = new THREE.Mesh(
-    new THREE.CylinderGeometry(plateRadius * 0.6, plateRadius * 0.5, plateThickness * 0.3, 32),
-    plateMat
-  );
-  plateBottom.position.y = -plateThickness * 0.3;
-  plateGroup.add(plateBottom);
-  
-  // Plate main body
-  const plateBody = new THREE.Mesh(
-    new THREE.CylinderGeometry(plateRadius, plateRadius * 0.9, plateThickness, 32),
-    plateMat
-  );
-  plateGroup.add(plateBody);
-  
-  // Plate rim (raised edge)
-  const rimMat = new THREE.MeshStandardMaterial({ color: '#f5f5f5', roughness: 0.2 });
-  const rim = new THREE.Mesh(
-    new THREE.TorusGeometry(plateRadius - 0.01, 0.012, 8, 32),
-    rimMat
-  );
-  rim.rotation.x = Math.PI / 2;
-  rim.position.y = plateThickness / 2;
-  plateGroup.add(rim);
-  
-  // Inner decorative ring
-  const innerRing = new THREE.Mesh(
-    new THREE.TorusGeometry(plateRadius * 0.5, 0.004, 8, 32),
-    new THREE.MeshStandardMaterial({ color: '#e8e8e8', roughness: 0.3 })
-  );
-  innerRing.rotation.x = Math.PI / 2;
-  innerRing.position.y = plateThickness / 2 + 0.001;
-  plateGroup.add(innerRing);
-  
-  // Center design
-  const centerCircle = new THREE.Mesh(
-    new THREE.CircleGeometry(plateRadius * 0.25, 32),
-    new THREE.MeshStandardMaterial({ color: '#f0f0f0', roughness: 0.4 })
-  );
-  centerCircle.rotation.x = -Math.PI / 2;
-  centerCircle.position.y = plateThickness / 2 + 0.002;
-  plateGroup.add(centerCircle);
-  
-  // Small decorative dots around rim
-  for (let i = 0; i < 12; i++) {
-    const angle = (i / 12) * Math.PI * 2;
-    const dot = new THREE.Mesh(
-      new THREE.CircleGeometry(0.008, 8),
-      new THREE.MeshStandardMaterial({ color: '#ddd' })
-    );
-    dot.rotation.x = -Math.PI / 2;
-    dot.position.set(
-      Math.cos(angle) * (plateRadius * 0.75),
-      plateThickness / 2 + 0.002,
-      Math.sin(angle) * (plateRadius * 0.75)
-    );
-    plateGroup.add(dot);
-  }
-  
-  // Glow for highlighted
-  if (isHighlighted) {
-    const glow = new THREE.Mesh(
-      new THREE.CylinderGeometry(plateRadius + 0.03, plateRadius + 0.03, plateThickness + 0.03, 32),
-      new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.2 })
-    );
-    plateGroup.add(glow);
-  }
-  
-  return plateGroup;
-}
-
-// ==================== CARDBOARD BOX (ONLY LEFT/RIGHT FLAPS OPENING) ====================
-
-function createCardboardBox(label: string, color: string, isHighlighted: boolean, openAmount: number = 0): THREE.Group {
-  const box = new THREE.Group();
-  const boxW = 0.48, boxH = 0.34, boxD = 0.38;
-  const wallThickness = 0.015;
-  const flapThickness = 0.01;
-
-  const cardboardMat = new THREE.MeshStandardMaterial({
-    color,
-    roughness: 0.85,
-    emissive: isHighlighted ? '#ffff00' : '#000',
-    emissiveIntensity: isHighlighted ? 0.3 : 0
-  });
-  const innerMat = new THREE.MeshStandardMaterial({ color: '#c4a574', roughness: 0.9 });
-  const flapMat = new THREE.MeshStandardMaterial({ color, roughness: 0.85, side: THREE.DoubleSide });
-  const cornerMat = new THREE.MeshStandardMaterial({ color: '#8b6914', roughness: 0.8 });
-  const tapeMat = new THREE.MeshStandardMaterial({ color: '#d4a574', roughness: 0.6 });
-
-  const bottom = new THREE.Mesh(new THREE.BoxGeometry(boxW, wallThickness, boxD), cardboardMat);
-  bottom.position.y = wallThickness / 2;
-  box.add(bottom);
-
-  const frontWall = new THREE.Mesh(new THREE.BoxGeometry(boxW, boxH, wallThickness), cardboardMat);
-  frontWall.position.set(0, wallThickness + boxH / 2, boxD / 2 - wallThickness / 2);
-  box.add(frontWall);
-
-  const backWall = new THREE.Mesh(new THREE.BoxGeometry(boxW, boxH, wallThickness), cardboardMat);
-  backWall.position.set(0, wallThickness + boxH / 2, -boxD / 2 + wallThickness / 2);
-  box.add(backWall);
-
-  const leftWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, boxH, boxD - wallThickness * 2), cardboardMat);
-  leftWall.position.set(-boxW / 2 + wallThickness / 2, wallThickness + boxH / 2, 0);
-  box.add(leftWall);
-
-  const rightWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, boxH, boxD - wallThickness * 2), cardboardMat);
-  rightWall.position.set(boxW / 2 - wallThickness / 2, wallThickness + boxH / 2, 0);
-  box.add(rightWall);
-
-  const innerFloor = new THREE.Mesh(new THREE.BoxGeometry(boxW - wallThickness * 2, 0.005, boxD - wallThickness * 2), innerMat);
-  innerFloor.position.y = wallThickness + 0.003;
-  box.add(innerFloor);
-
-  [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(([sx, sz]) => {
-    const corner = new THREE.Mesh(new THREE.BoxGeometry(0.02, boxH, 0.02), cornerMat);
-    corner.position.set(sx * (boxW / 2 - 0.01), wallThickness + boxH / 2, sz * (boxD / 2 - 0.01));
-    box.add(corner);
-  });
-
-  const topY = wallThickness + boxH;
-  
-  const easedOpen = openAmount < 0.5 ? 2 * openAmount * openAmount : 1 - Math.pow(-2 * openAmount + 2, 2) / 2;
-  const openAngle = Math.PI * 0.6;
-
-  const mainFlapDepth = (boxD - wallThickness * 2) / 2;
-  const mainFlapWidth = boxW - wallThickness * 2;
-
-  const frontFlap = new THREE.Mesh(new THREE.BoxGeometry(mainFlapWidth, flapThickness, mainFlapDepth), flapMat);
-  frontFlap.position.set(0, topY + flapThickness / 2, (boxD / 2 - wallThickness) - mainFlapDepth / 2);
-  box.add(frontFlap);
-
-  const backFlap = new THREE.Mesh(new THREE.BoxGeometry(mainFlapWidth, flapThickness, mainFlapDepth), flapMat);
-  backFlap.position.set(0, topY + flapThickness / 2, (-boxD / 2 + wallThickness) + mainFlapDepth / 2);
-  box.add(backFlap);
-
-  const sideFlapWidth = (boxW - wallThickness * 2) / 2;
-  const sideFlapDepth = boxD - wallThickness * 2;
-
-  const leftFlapPivot = new THREE.Group();
-  leftFlapPivot.position.set(-boxW / 2 + wallThickness, topY + flapThickness, 0);
-  const leftFlap = new THREE.Mesh(new THREE.BoxGeometry(sideFlapWidth, flapThickness, sideFlapDepth), flapMat);
-  leftFlap.position.set(sideFlapWidth / 2, 0, 0);
-  leftFlapPivot.add(leftFlap);
-  leftFlapPivot.rotation.z = -easedOpen * openAngle;
-  box.add(leftFlapPivot);
-
-  const rightFlapPivot = new THREE.Group();
-  rightFlapPivot.position.set(boxW / 2 - wallThickness, topY + flapThickness, 0);
-  const rightFlap = new THREE.Mesh(new THREE.BoxGeometry(sideFlapWidth, flapThickness, sideFlapDepth), flapMat);
-  rightFlap.position.set(-sideFlapWidth / 2, 0, 0);
-  rightFlapPivot.add(rightFlap);
-  rightFlapPivot.rotation.z = easedOpen * openAngle;
-  box.add(rightFlapPivot);
-
-  if (openAmount < 0.2) {
-    const tapeWidth = 0.06;
-    const tape = new THREE.Mesh(new THREE.BoxGeometry(boxW * 0.7, 0.003, tapeWidth), tapeMat);
-    tape.position.set(0, topY + flapThickness + 0.002, 0);
-    box.add(tape);
-  }
-
-  const labelCanvas = document.createElement('canvas');
-  labelCanvas.width = 180;
-  labelCanvas.height = 120;
-  const labelCtx = labelCanvas.getContext('2d')!;
-  labelCtx.fillStyle = '#ffffff';
-  labelCtx.fillRect(0, 0, 180, 120);
-  labelCtx.fillStyle = '#e74c3c';
-  labelCtx.fillRect(6, 6, 168, 28);
-  labelCtx.fillStyle = '#fff';
-  labelCtx.font = 'bold 16px Arial';
-  labelCtx.textAlign = 'center';
-  labelCtx.fillText('FRAGILE', 90, 26);
-  labelCtx.fillStyle = '#2c3e50';
-  labelCtx.font = 'bold 28px Arial';
-  labelCtx.fillText(label, 90, 75);
-  labelCtx.fillStyle = '#666';
-  labelCtx.font = '12px Arial';
-  labelCtx.fillText('HANDLE WITH CARE', 90, 100);
-
-  const labelTex = new THREE.CanvasTexture(labelCanvas);
-  const labelMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.13), new THREE.MeshBasicMaterial({ map: labelTex }));
-  labelMesh.position.set(0, wallThickness + boxH / 2, boxD / 2 + 0.001);
-  box.add(labelMesh);
-
-  if (isHighlighted && openAmount < 0.1) {
-    const glow = new THREE.Mesh(new THREE.BoxGeometry(boxW + 0.04, boxH + 0.1, boxD + 0.04), new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 }));
-    glow.position.y = wallThickness + boxH / 2;
-    box.add(glow);
-  }
-
-  return box;
-}
 // ==================== DOMINO ====================
 
 function createDomino(value: string, isHighlighted: boolean): THREE.Group {
@@ -1589,7 +1365,6 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   const dispenser = new THREE.Group();
   const groundY = 0;
 
-  // Machine body
   const machineMat = new THREE.MeshStandardMaterial({ color: '#c0392b', roughness: 0.4, metalness: 0.3 });
   const machineBody = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.9, 0.5), machineMat);
   machineBody.position.set(0, groundY + 0.45, -0.6);
@@ -1605,7 +1380,6 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   topTrim.position.set(0, groundY + 0.91, -0.6);
   dispenser.add(topTrim);
 
-  // Slot frame
   const slotFrame = new THREE.Mesh(
     new THREE.BoxGeometry(0.08, 0.08, 0.3),
     new THREE.MeshStandardMaterial({ color: '#2c3e50', metalness: 0.5 })
@@ -1620,7 +1394,6 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   slotHole.position.set(0.2, groundY + 0.35, -0.6);
   dispenser.add(slotHole);
 
-  // Screen
   const screenFrame = new THREE.Mesh(
     new THREE.BoxGeometry(0.03, 0.22, 0.34),
     new THREE.MeshStandardMaterial({ color: '#1a1a1a' })
@@ -1648,7 +1421,6 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   screen.rotation.y = Math.PI / 2;
   dispenser.add(screen);
 
-  // Lights
   const lightColors = ['#ff0000', '#00ff00', '#ffff00', '#00ffff'];
   lightColors.forEach((lc, i) => {
     const light = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), new THREE.MeshBasicMaterial({ color: lc }));
@@ -1656,7 +1428,6 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
     dispenser.add(light);
   });
 
-  // Sign
   const signCanvas = document.createElement('canvas');
   signCanvas.width = 220;
   signCanvas.height = 70;
@@ -1675,7 +1446,6 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   sign.position.set(0, groundY + 1.02, -0.35);
   dispenser.add(sign);
 
-  // Ticket dimensions
   const ticketWidth = 0.18;
   const ticketHeight = 0.1;
   const ticketThickness = 0.008;
@@ -1826,11 +1596,10 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
 
 // ==================== UNIVERSITY BUILDING (FACING RIGHT) ====================
 
-function createUniversityBuilding(): THREE.Group {
+function createSchoolBuilding(): THREE.Group {
   const university = new THREE.Group();
   const groundY = 0;
 
-  // Main building
   const mainBuildingMat = new THREE.MeshStandardMaterial({ color: '#8B4513', roughness: 0.7 });
   const mainBuilding = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.4, 1.2), mainBuildingMat);
   mainBuilding.position.set(0, groundY + 0.7, -0.8);
@@ -1850,14 +1619,12 @@ function createUniversityBuilding(): THREE.Group {
   cornice.position.set(0, groundY + 1.38, -0.8);
   university.add(cornice);
 
-  // Portico (entrance facing right - positive X)
   const porticoMat = new THREE.MeshStandardMaterial({ color: '#e8dcc8', roughness: 0.4, metalness: 0.1 });
   
   const porticoRoof = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.6), porticoMat);
   porticoRoof.position.set(1.04, groundY + 0.95, -0.8);
   university.add(porticoRoof);
 
-  // Columns (facing right)
   const columnMat = new THREE.MeshStandardMaterial({ color: '#f5f0e6', roughness: 0.3, metalness: 0.05 });
   [[-0.2, -0.27], [-0.2, -0.03], [0.2, -0.27], [0.2, -0.03]].forEach(([z, xOffset]) => {
     const column = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.65, 12), columnMat);
@@ -1873,7 +1640,6 @@ function createUniversityBuilding(): THREE.Group {
     university.add(base);
   });
 
-  // Steps (facing right)
   const stepMat = new THREE.MeshStandardMaterial({ color: '#c9c0b0', roughness: 0.6 });
   for (let i = 0; i < 4; i++) {
     const step = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.5 + i * 0.06, 0.45 + i * 0.08), stepMat);
@@ -1881,7 +1647,6 @@ function createUniversityBuilding(): THREE.Group {
     university.add(step);
   }
 
-  // Doors (facing right)
   const doorFrameMat = new THREE.MeshStandardMaterial({ color: '#2c1810', roughness: 0.5 });
   const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.55, 0.35), doorFrameMat);
   doorFrame.position.set(1.01, groundY + 0.375, -0.8);
@@ -1898,7 +1663,6 @@ function createUniversityBuilding(): THREE.Group {
     university.add(handle);
   });
 
-  // Windows (on the front face - facing right)
   const windowMat = new THREE.MeshStandardMaterial({ color: '#87ceeb', metalness: 0.4, roughness: 0.1, transparent: true, opacity: 0.8 });
   const windowFrameMat = new THREE.MeshStandardMaterial({ color: '#f5f5f5', roughness: 0.5 });
 
@@ -1907,7 +1671,6 @@ function createUniversityBuilding(): THREE.Group {
 
   windowRows.forEach(wy => {
     windowCols.forEach(wz => {
-      // Front windows (facing right)
       const frame = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.22, 0.16), windowFrameMat);
       frame.position.set(1.01, groundY + wy, -0.8 + wz);
       university.add(frame);
@@ -1922,13 +1685,11 @@ function createUniversityBuilding(): THREE.Group {
     });
   });
 
-  // Roof
   const roofMat = new THREE.MeshStandardMaterial({ color: '#2c3e50', roughness: 0.6 });
   const roof = new THREE.Mesh(new THREE.BoxGeometry(2.08, 0.1, 1.28), roofMat);
   roof.position.set(0, groundY + 1.5, -0.8);
   university.add(roof);
 
-  // Clock tower
   const towerMat = new THREE.MeshStandardMaterial({ color: '#8B4513', roughness: 0.7 });
   const tower = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.35, 0.25), towerMat);
   tower.position.set(0, groundY + 1.625, -0.8);
@@ -1940,7 +1701,6 @@ function createUniversityBuilding(): THREE.Group {
   towerRoof.rotation.y = Math.PI / 4;
   university.add(towerRoof);
 
-  // Clock (facing right)
   const clockCanvas = document.createElement('canvas');
   clockCanvas.width = 64;
   clockCanvas.height = 64;
@@ -1971,7 +1731,6 @@ function createUniversityBuilding(): THREE.Group {
   clock.rotation.y = Math.PI / 2;
   university.add(clock);
 
-  // University sign (facing right)
   const signCanvas = document.createElement('canvas');
   signCanvas.width = 200;
   signCanvas.height = 60;
@@ -1991,7 +1750,6 @@ function createUniversityBuilding(): THREE.Group {
   signMesh.rotation.y = Math.PI / 2;
   university.add(signMesh);
 
-  // Lamp posts (near entrance)
   const lampMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', metalness: 0.7 });
   [-0.35, 0.35].forEach(z => {
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.4, 8), lampMat);
@@ -2007,7 +1765,6 @@ function createUniversityBuilding(): THREE.Group {
     university.add(light);
   });
 
-  // Bushes (near entrance)
   const bushMat = new THREE.MeshStandardMaterial({ color: '#228B22', roughness: 0.9 });
   [-0.25, 0.25].forEach(z => {
     const bush = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), bushMat);
@@ -2019,128 +1776,261 @@ function createUniversityBuilding(): THREE.Group {
   return university;
 }
 
-// ==================== TABLET FOR TODO ====================
+// ==================== CARDBOARD BOX (ONLY LEFT/RIGHT FLAPS) ====================
 
-function createTablet(tasks: DataItem[], highlightIndex: number | null): THREE.Group {
-  const tablet = new THREE.Group();
+function createCardboardBox(label: string, color: string, isHighlighted: boolean, openAmount: number = 0): THREE.Group {
+  const box = new THREE.Group();
+  const boxW = 0.48, boxH = 0.34, boxD = 0.38;
+  const wallThickness = 0.015;
+  const flapThickness = 0.01;
 
-  const tabletWidth = 0.65;
-  const tabletHeight = 0.45;
-  const tabletDepth = 0.02;
+  const cardboardMat = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.85,
+    emissive: isHighlighted ? '#ffff00' : '#000',
+    emissiveIntensity: isHighlighted ? 0.3 : 0
+  });
+  const innerMat = new THREE.MeshStandardMaterial({ color: '#c4a574', roughness: 0.9 });
+  const flapMat = new THREE.MeshStandardMaterial({ color, roughness: 0.85, side: THREE.DoubleSide });
+  const cornerMat = new THREE.MeshStandardMaterial({ color: '#8b6914', roughness: 0.8 });
+  const tapeMat = new THREE.MeshStandardMaterial({ color: '#d4a574', roughness: 0.6 });
 
-  const bodyMat = new THREE.MeshStandardMaterial({ color: '#1a1a2e', roughness: 0.3, metalness: 0.5 });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(tabletWidth, tabletDepth, tabletHeight), bodyMat);
-  tablet.add(body);
+  const bottom = new THREE.Mesh(new THREE.BoxGeometry(boxW, wallThickness, boxD), cardboardMat);
+  bottom.position.y = wallThickness / 2;
+  box.add(bottom);
 
-  const bezelMat = new THREE.MeshStandardMaterial({ color: '#0a0a15', roughness: 0.2 });
-  const bezel = new THREE.Mesh(new THREE.BoxGeometry(tabletWidth - 0.02, tabletDepth + 0.001, tabletHeight - 0.02), bezelMat);
-  bezel.position.y = 0.001;
-  tablet.add(bezel);
+  const frontWall = new THREE.Mesh(new THREE.BoxGeometry(boxW, boxH, wallThickness), cardboardMat);
+  frontWall.position.set(0, wallThickness + boxH / 2, boxD / 2 - wallThickness / 2);
+  box.add(frontWall);
 
-  const screenCanvas = document.createElement('canvas');
-  screenCanvas.width = 400;
-  screenCanvas.height = 280;
-  const ctx = screenCanvas.getContext('2d')!;
+  const backWall = new THREE.Mesh(new THREE.BoxGeometry(boxW, boxH, wallThickness), cardboardMat);
+  backWall.position.set(0, wallThickness + boxH / 2, -boxD / 2 + wallThickness / 2);
+  box.add(backWall);
 
-  ctx.fillStyle = '#1e272e';
-  ctx.fillRect(0, 0, 400, 280);
+  const leftWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, boxH, boxD - wallThickness * 2), cardboardMat);
+  leftWall.position.set(-boxW / 2 + wallThickness / 2, wallThickness + boxH / 2, 0);
+  box.add(leftWall);
 
-  ctx.fillStyle = '#e74c3c';
-  ctx.fillRect(0, 0, 400, 50);
-  
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 24px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText('📝 TO-DO LIST', 200, 35);
+  const rightWall = new THREE.Mesh(new THREE.BoxGeometry(wallThickness, boxH, boxD - wallThickness * 2), cardboardMat);
+  rightWall.position.set(boxW / 2 - wallThickness / 2, wallThickness + boxH / 2, 0);
+  box.add(rightWall);
 
-  ctx.fillStyle = 'rgba(255,255,255,0.1)';
-  ctx.fillRect(10, 55, 380, 25);
-  ctx.fillStyle = '#aaa';
-  ctx.font = '14px Arial';
-  ctx.textAlign = 'left';
-  ctx.fillText(`Active Tasks: ${tasks.length}`, 20, 72);
-  ctx.textAlign = 'right';
-  const now = new Date();
-  ctx.fillText(`${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`, 380, 72);
+  const innerFloor = new THREE.Mesh(new THREE.BoxGeometry(boxW - wallThickness * 2, 0.005, boxD - wallThickness * 2), innerMat);
+  innerFloor.position.y = wallThickness + 0.003;
+  box.add(innerFloor);
 
-  const taskStartY = 90;
-  const taskHeight = 38;
-  const maxVisibleTasks = 4;
-
-  tasks.slice(0, maxVisibleTasks).forEach((task, i) => {
-    const y = taskStartY + i * taskHeight;
-    const isHl = highlightIndex === i;
-
-    if (isHl) {
-      ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
-    } else {
-      ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)';
-    }
-    ctx.fillRect(10, y, 380, taskHeight - 2);
-
-    ctx.strokeStyle = task.color;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(20, y + 8, 20, 20);
-
-    ctx.fillStyle = task.color;
-    ctx.fillRect(50, y + 5, 4, taskHeight - 12);
-
-    ctx.fillStyle = isHl ? '#ffff00' : '#fff';
-    ctx.font = isHl ? 'bold 18px Arial' : '16px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText(task.label, 65, y + 23);
-
-    ctx.fillStyle = '#666';
-    ctx.font = '12px Arial';
-    ctx.textAlign = 'right';
-    ctx.fillText(`[${i}]`, 380, y + 23);
+  [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(([sx, sz]) => {
+    const corner = new THREE.Mesh(new THREE.BoxGeometry(0.02, boxH, 0.02), cornerMat);
+    corner.position.set(sx * (boxW / 2 - 0.01), wallThickness + boxH / 2, sz * (boxD / 2 - 0.01));
+    box.add(corner);
   });
 
-  if (tasks.length > maxVisibleTasks) {
-    ctx.fillStyle = '#666';
-    ctx.font = '14px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(`+ ${tasks.length - maxVisibleTasks} more tasks...`, 200, 260);
+  const topY = wallThickness + boxH;
+  
+  const easedOpen = openAmount < 0.5 ? 2 * openAmount * openAmount : 1 - Math.pow(-2 * openAmount + 2, 2) / 2;
+  const openAngle = Math.PI * 0.6;
+
+  const mainFlapDepth = (boxD - wallThickness * 2) / 2;
+  const mainFlapWidth = boxW - wallThickness * 2;
+
+  const frontFlap = new THREE.Mesh(new THREE.BoxGeometry(mainFlapWidth, flapThickness, mainFlapDepth), flapMat);
+  frontFlap.position.set(0, topY + flapThickness / 2, (boxD / 2 - wallThickness) - mainFlapDepth / 2);
+  box.add(frontFlap);
+
+  const backFlap = new THREE.Mesh(new THREE.BoxGeometry(mainFlapWidth, flapThickness, mainFlapDepth), flapMat);
+  backFlap.position.set(0, topY + flapThickness / 2, (-boxD / 2 + wallThickness) + mainFlapDepth / 2);
+  box.add(backFlap);
+
+  const sideFlapWidth = (boxW - wallThickness * 2) / 2;
+  const sideFlapDepth = boxD - wallThickness * 2;
+
+  const leftFlapPivot = new THREE.Group();
+  leftFlapPivot.position.set(-boxW / 2 + wallThickness, topY + flapThickness, 0);
+  const leftFlap = new THREE.Mesh(new THREE.BoxGeometry(sideFlapWidth, flapThickness, sideFlapDepth), flapMat);
+  leftFlap.position.set(sideFlapWidth / 2, 0, 0);
+  leftFlapPivot.add(leftFlap);
+  leftFlapPivot.rotation.z = -easedOpen * openAngle;
+  box.add(leftFlapPivot);
+
+  const rightFlapPivot = new THREE.Group();
+  rightFlapPivot.position.set(boxW / 2 - wallThickness, topY + flapThickness, 0);
+  const rightFlap = new THREE.Mesh(new THREE.BoxGeometry(sideFlapWidth, flapThickness, sideFlapDepth), flapMat);
+  rightFlap.position.set(-sideFlapWidth / 2, 0, 0);
+  rightFlapPivot.add(rightFlap);
+  rightFlapPivot.rotation.z = easedOpen * openAngle;
+  box.add(rightFlapPivot);
+
+  if (openAmount < 0.2) {
+    const tapeWidth = 0.06;
+    const tape = new THREE.Mesh(new THREE.BoxGeometry(boxW * 0.7, 0.003, tapeWidth), tapeMat);
+    tape.position.set(0, topY + flapThickness + 0.002, 0);
+    box.add(tape);
   }
 
-  if (tasks.length === 0) {
-    ctx.fillStyle = '#666';
-    ctx.font = '20px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('No tasks yet!', 200, 160);
-    ctx.font = '14px Arial';
-    ctx.fillText('Tap "Append" to add a task', 200, 185);
+  const labelCanvas = document.createElement('canvas');
+  labelCanvas.width = 180;
+  labelCanvas.height = 120;
+  const labelCtx = labelCanvas.getContext('2d')!;
+  labelCtx.fillStyle = '#ffffff';
+  labelCtx.fillRect(0, 0, 180, 120);
+  labelCtx.fillStyle = '#e74c3c';
+  labelCtx.fillRect(6, 6, 168, 28);
+  labelCtx.fillStyle = '#fff';
+  labelCtx.font = 'bold 16px Arial';
+  labelCtx.textAlign = 'center';
+  labelCtx.fillText('FRAGILE', 90, 26);
+  labelCtx.fillStyle = '#2c3e50';
+  labelCtx.font = 'bold 28px Arial';
+  labelCtx.fillText(label, 90, 75);
+  labelCtx.fillStyle = '#666';
+  labelCtx.font = '12px Arial';
+  labelCtx.fillText('HANDLE WITH CARE', 90, 100);
+
+  const labelTex = new THREE.CanvasTexture(labelCanvas);
+  const labelMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.13), new THREE.MeshBasicMaterial({ map: labelTex }));
+  labelMesh.position.set(0, wallThickness + boxH / 2, boxD / 2 + 0.001);
+  box.add(labelMesh);
+
+  if (isHighlighted && openAmount < 0.1) {
+    const glow = new THREE.Mesh(new THREE.BoxGeometry(boxW + 0.04, boxH + 0.1, boxD + 0.04), new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 }));
+    glow.position.y = wallThickness + boxH / 2;
+    box.add(glow);
   }
 
-  const screenTex = new THREE.CanvasTexture(screenCanvas);
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(tabletWidth - 0.04, tabletHeight - 0.04), new THREE.MeshBasicMaterial({ map: screenTex }));
-  screen.rotation.x = -Math.PI / 2;
-  screen.position.y = tabletDepth / 2 + 0.001;
-  tablet.add(screen);
-
-  const homeBtn = new THREE.Mesh(new THREE.CircleGeometry(0.015, 16), new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.5 }));
-  homeBtn.rotation.x = -Math.PI / 2;
-  homeBtn.position.set(0, tabletDepth / 2 + 0.001, tabletHeight / 2 - 0.025);
-  tablet.add(homeBtn);
-
-  const camera = new THREE.Mesh(new THREE.CircleGeometry(0.005, 8), new THREE.MeshBasicMaterial({ color: '#222' }));
-  camera.rotation.x = -Math.PI / 2;
-  camera.position.set(0, tabletDepth / 2 + 0.001, -tabletHeight / 2 + 0.025);
-  tablet.add(camera);
-
-  const standMat = new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.3 });
-  const standBack = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 0.01), standMat);
-  standBack.position.set(0, -0.05, -0.15);
-  standBack.rotation.x = -0.5;
-  tablet.add(standBack);
-
-  const standBase = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.01, 0.12), standMat);
-  standBase.position.set(0, -0.12, -0.05);
-  tablet.add(standBase);
-
-  return tablet;
+  return box;
 }
 
+// ==================== ANIMATION HELPER ====================
+
+function applyItemAnimation(
+  obj: THREE.Object3D,
+  itemIndex: number,
+  animPhase: string,
+  animData: Record<string, any>,
+  structure: DataStructure,
+  animProgress: number = 1
+): void {
+  if (!animPhase) return;
+
+  const isTarget = animData.index === itemIndex;
+  const isTarget1 = animData.index1 === itemIndex;
+  const isTarget2 = animData.index2 === itemIndex;
+  const ease = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const p = ease(animProgress);
+
+  if (structure === 'array') {
+    if (animPhase === 'access-lift' && isTarget) {
+      obj.position.y += 0.4 * p;
+      obj.rotation.z = 0.15 * p;
+    } else if (animPhase === 'access-bounce' && isTarget) {
+      obj.position.y += 0.28 * p;
+      obj.scale.setScalar(1 + 0.2 * p);
+      obj.rotation.z = -0.1 * p;
+    } else if (animPhase === 'access-settle' && isTarget) {
+      obj.position.y += 0.08 * (1 - p);
+    } else if (animPhase === 'insert-appear' && isTarget) {
+      obj.position.y += 0.5 * (1 - p);
+      obj.scale.setScalar(0.3 + 0.7 * p);
+      obj.rotation.y = Math.PI * 2 * (1 - p);
+    } else if (animPhase === 'insert-drop' && isTarget) {
+      obj.position.y += 0.7 * (1 - p);
+      obj.scale.setScalar(0.5 + 0.5 * p);
+      obj.rotation.z = 0.3 * (1 - p);
+    } else if (animPhase === 'insert-settle' && isTarget) {
+      obj.position.y += 0.15 * (1 - p);
+      obj.scale.setScalar(1 + 0.1 * (1 - p));
+    } else if (animPhase === 'delete-lift' && isTarget) {
+      obj.position.y += 0.45 * p;
+      obj.rotation.z = 0.4 * p;
+      obj.scale.setScalar(1 + 0.2 * p);
+    } else if (animPhase === 'delete-shrink' && isTarget) {
+      obj.position.y += 0.8 * p;
+      obj.scale.setScalar(Math.max(0.01, 1 - p));
+      obj.rotation.z = 3.0 * p;
+    } else if (animPhase === 'delete-close' && animData.deleteIndex !== undefined && itemIndex >= animData.deleteIndex) {
+      obj.position.y += 0.06 * (1 - p);
+    } else if (animPhase === 'swap-lift' && (isTarget1 || isTarget2)) {
+      obj.position.y += 0.45 * p;
+      obj.rotation.z = (isTarget1 ? 0.15 : -0.15) * p;
+    } else if (animPhase === 'swap-cross' && (isTarget1 || isTarget2)) {
+      obj.position.y += 0.5;
+      obj.rotation.z = (isTarget1 ? -0.2 : 0.2) * p;
+    } else if (animPhase === 'swap-drop' && (isTarget1 || isTarget2)) {
+      obj.position.y += 0.12 * (1 - p);
+      obj.scale.setScalar(1 + 0.12 * (1 - p));
+    }
+  }
+
+  if (structure === 'linkedlist') {
+    if (animPhase === 'll-insert-head' && isTarget) {
+      obj.position.y += 0.5 * (1 - p);
+      obj.scale.setScalar(0.6 + 0.4 * p);
+      obj.rotation.z = 0.2 * (1 - p);
+    } else if (animPhase === 'll-insert-head-settle' && isTarget) {
+      obj.position.y += 0.1 * (1 - p);
+      obj.scale.setScalar(1 + 0.05 * (1 - p));
+    } else if (animPhase === 'll-insert-tail' && isTarget) {
+      obj.position.y += 0.5 * (1 - p);
+      obj.scale.setScalar(0.6 + 0.4 * p);
+    } else if (animPhase === 'll-insert-tail-settle' && isTarget) {
+      obj.position.y += 0.1 * (1 - p);
+      obj.scale.setScalar(1 + 0.05 * (1 - p));
+    } else if (animPhase === 'll-delete-lift' && isTarget) {
+      obj.position.y += 0.5 * p;
+      obj.rotation.z = 0.3 * p;
+    } else if (animPhase === 'll-delete-shrink' && isTarget) {
+      obj.position.y += 0.8 * p;
+      obj.scale.setScalar(Math.max(0.01, 1 - p));
+      obj.rotation.z = 2.5 * p;
+    } else if (animPhase === 'll-traverse' && isTarget) {
+      obj.position.y += 0.2 * p;
+      obj.scale.setScalar(1 + 0.15 * p);
+    }
+  }
+
+  if (structure === 'stack') {
+    if (animPhase === 'stack-push-drop' && isTarget) {
+      obj.position.y += 0.6 * (1 - p);
+      obj.scale.setScalar(0.7 + 0.3 * p);
+      obj.rotation.z = 0.2 * (1 - p);
+    } else if (animPhase === 'stack-push-settle' && isTarget) {
+      obj.position.y += 0.1 * (1 - p);
+      obj.scale.setScalar(1 + 0.08 * (1 - p));
+    } else if (animPhase === 'stack-pop-lift' && isTarget) {
+      obj.position.y += 0.4 * p;
+      obj.rotation.z = -0.3 * p;
+    } else if (animPhase === 'stack-pop-fly' && isTarget) {
+      obj.position.y += 0.9 * p;
+      obj.scale.setScalar(Math.max(0.01, 1 - p));
+      obj.rotation.z = 3.0 * p;
+    } else if (animPhase === 'stack-peek-lift' && isTarget) {
+      obj.position.y += 0.15 * p;
+      obj.rotation.z = 0.05 * p;
+    } else if (animPhase === 'stack-peek-settle' && isTarget) {
+      obj.position.y += 0.08 * (1 - p);
+    }
+  }
+
+  if (structure === 'queue') {
+    if (animPhase === 'queue-enqueue-enter' && isTarget) {
+      obj.position.x += 1.2 * (1 - p);
+      obj.scale.setScalar(0.6 + 0.4 * p);
+    } else if (animPhase === 'queue-enqueue-settle' && isTarget) {
+      obj.position.x += 0.2 * (1 - p);
+      obj.scale.setScalar(1 + 0.05 * (1 - p));
+    } else if (animPhase === 'queue-dequeue-drive' && isTarget) {
+      obj.position.x -= 2.5 * p;
+    } else if (animPhase === 'queue-dequeue-walk' && isTarget) {
+      obj.position.x -= 0.8 * p;
+    } else if (animPhase === 'queue-dequeue-enter' && isTarget) {
+      obj.position.x -= 0.4 * p;
+      obj.scale.setScalar(Math.max(0.01, 1 - p * 0.95));
+    } else if (animPhase === 'queue-front-peek' && isTarget) {
+      obj.position.y += 0.2 * p;
+      obj.scale.setScalar(1 + 0.15 * p);
+    }
+  }
+}
 // ==================== BUILD SCENE CONTENT ====================
 
 function buildSceneContent(
@@ -2412,6 +2302,7 @@ function buildSceneContent(
       clock.position.set(roomWidth / 2 - 0.15, floorY + 1.1, -roomDepth / 2 + 0.02);
       group.add(clock);
 
+      // 3 students per row
       const studentsPerRow = 3;
       const rowSpacing = 0.55;
       const colSpacing = 0.65;
@@ -2459,12 +2350,10 @@ function buildSceneContent(
       });
 
     } else if (environment === 'todo') {
-      const roomWidth = 1.8;
-      const roomDepth = 1.2;
       const floorY = groundY - 0.15;
 
       const deskMat = new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.7 });
-      const desk = new THREE.Mesh(new THREE.BoxGeometry(roomWidth, 0.04, roomDepth), deskMat);
+      const desk = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.04, 1.2), deskMat);
       desk.position.y = floorY;
       group.add(desk);
 
@@ -2504,12 +2393,6 @@ function buildSceneContent(
         pencil.rotation.z = (i - 1) * 0.1;
         group.add(pencil);
       });
-
-      const notepadMat = new THREE.MeshStandardMaterial({ color: '#f5f5dc', roughness: 0.9 });
-      const notepad = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.01, 0.2), notepadMat);
-      notepad.position.set(-0.55, floorY + 0.025, 0.3);
-      notepad.rotation.y = 0.2;
-      group.add(notepad);
     }
 
   // ==================== LINKED LIST ====================
@@ -2917,11 +2800,10 @@ function buildSceneContent(
       const ticketDispenserGroup = createTicketDispenser(data, highlightIndex, animPhase || '', animProgress || 0);
       group.add(ticketDispenserGroup);
 
-        } else if (environment === 'students') {
-      const schoolBuilding = createUniversityBuilding();
+    } else if (environment === 'students') {
+      const schoolBuilding = createSchoolBuilding();
       schoolBuilding.position.set(startX - 1.0, groundY, 0);
       schoolBuilding.scale.setScalar(0.45);
-      schoolBuilding.rotation.y = 0; // Already facing right
       group.add(schoolBuilding);
 
       data.forEach((item, i) => {
@@ -2985,7 +2867,6 @@ function buildSceneContent(
     }
   }
 }
-
 // ==================== HOME COMPONENT ====================
 
 export default function Home() {
@@ -3044,7 +2925,6 @@ export default function Home() {
   const xrContainerRef = useRef<HTMLDivElement>(null);
   const animFrameRef = useRef<number | null>(null);
 
-  // Data states
   const [groceryItems, setGroceryItems] = useState<DataItem[]>([
     { id: 1, label: 'Coco Crunch', color: '#8B4513' },
     { id: 2, label: 'Corn Flakes', color: '#f39c12' },
@@ -3201,8 +3081,6 @@ export default function Home() {
     }
   };
 
-  // ==================== TUTORIAL FUNCTIONS ====================
-
   const runTutorialStep = async (step: TutorialStep) => {
     setStepAnimating(true);
     setTutorialText({ title: step.title, description: step.description, step: `${currentStepIndex + 1}/${tutorialSteps.length}` });
@@ -3301,7 +3179,6 @@ export default function Home() {
     const data = getArrayData();
     
     if (data.length === 0) {
-      // Show empty message in tutorial
       startTutorial([{ title: "⚠️ Cannot Delete!", description: "Array is EMPTY!\n\nNo elements to delete.\nAdd elements first." }]);
       return;
     }
@@ -3521,7 +3398,6 @@ export default function Home() {
     startTutorial(steps);
   };
 
-  // Selection handlers
   const startArrayInsert = () => {
     if (isAnimating || selectionMode !== 'none' || tutorialActive || getArrayData().length >= 8) return;
     setSelectionMode('insert');
@@ -3575,8 +3451,6 @@ export default function Home() {
     setHighlightIndex(null);
     setHighlightIndex2(null);
   };
-
-  // ==================== CAMERA & WEBXR ====================
 
   const startCamera = useCallback(async (facing: 'environment' | 'user') => {
     try {
@@ -3779,7 +3653,6 @@ export default function Home() {
           isSurfaceMode={appMode === 'surface'} animPhase={animPhase} animData={animData} animProgress={animProgress} tutorialText={tutorialText} />
       )}
 
-      {/* Top controls */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: 10, zIndex: 100 }}>
         {!webxrActive && <button onClick={switchCamera} style={{ position: 'absolute', top: 10, right: 10, width: 50, height: 50, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 24, zIndex: 200 }}>🔄</button>}
 
@@ -3821,7 +3694,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* Minimal Tutorial Controls */}
       {tutorialActive && (
         <div style={{ position: 'fixed', bottom: 100, left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(0,0,0,0.7)', padding: '10px 20px', borderRadius: 30, border: '1px solid rgba(255,255,255,0.2)', zIndex: 200 }}>
           <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: 'bold', minWidth: 50 }}>{currentStepIndex + 1}/{tutorialSteps.length}</span>
@@ -3835,7 +3707,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Bottom controls */}
       {showControls && !tutorialActive && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '20px 10px 30px', background: 'linear-gradient(to top, rgba(0,0,0,0.95), transparent)', zIndex: 100 }}>
           {(appMode === 'surface' && surfacePlaced) && (
@@ -3893,7 +3764,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Status messages */}
       {appMode === 'person' && !detectedPerson && !webxrActive && (
         <div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}>
           <div style={{ fontSize: 40 }}>🧑</div><div style={{ marginTop: 8 }}>Point camera at a person</div>
