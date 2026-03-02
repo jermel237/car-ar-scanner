@@ -750,7 +750,118 @@ function createHuman3D(appearance: HumanAppearance, name: string, isHighlighted:
 
   return human;
 }
+// ==================== CLIPBOARD (TODO) ====================
 
+function createClipboard(label: string, color: string, isHighlighted: boolean): THREE.Group {
+  const clipboard = new THREE.Group();
+
+  const boardMat = new THREE.MeshStandardMaterial({
+    color: '#6d4c2a',
+    roughness: 0.65,
+    emissive: isHighlighted ? '#ffff00' : '#000',
+    emissiveIntensity: isHighlighted ? 0.25 : 0
+  });
+  const board = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.5, 0.025), boardMat);
+  clipboard.add(board);
+
+  const edgeMat = new THREE.MeshStandardMaterial({ color: '#5a3d1f', roughness: 0.7 });
+  const topEdge = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.02, 0.03), edgeMat);
+  topEdge.position.y = 0.25;
+  clipboard.add(topEdge);
+
+  const clipMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.9, roughness: 0.2 });
+  const clipBase = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 0.04), clipMat);
+  clipBase.position.set(0, 0.26, 0.02);
+  clipboard.add(clipBase);
+
+  const clipArm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.015, 0.06), clipMat);
+  clipArm.position.set(0, 0.28, 0.04);
+  clipboard.add(clipArm);
+
+  const paperCanvas = document.createElement('canvas');
+  paperCanvas.width = 190;
+  paperCanvas.height = 280;
+  const pctx = paperCanvas.getContext('2d')!;
+
+  pctx.fillStyle = '#fefef6';
+  pctx.fillRect(0, 0, 190, 280);
+
+  pctx.fillStyle = color;
+  pctx.fillRect(0, 0, 190, 40);
+  pctx.fillStyle = '#fff';
+  pctx.font = 'bold 18px Arial';
+  pctx.textAlign = 'center';
+  pctx.fillText('TO-DO', 95, 28);
+
+  pctx.strokeStyle = '#ddd';
+  pctx.lineWidth = 1;
+  for (let y = 60; y < 260; y += 28) {
+    pctx.beginPath();
+    pctx.moveTo(20, y);
+    pctx.lineTo(170, y);
+    pctx.stroke();
+  }
+
+  pctx.fillStyle = '#333';
+  pctx.font = 'bold 22px Arial';
+  pctx.textAlign = 'center';
+  pctx.fillText(label, 95, 100);
+
+  pctx.strokeStyle = '#333';
+  pctx.lineWidth = 2;
+  pctx.strokeRect(22, 130, 14, 14);
+  pctx.strokeRect(22, 160, 14, 14);
+  pctx.strokeRect(22, 190, 14, 14);
+
+  pctx.fillStyle = '#666';
+  pctx.font = '14px Arial';
+  pctx.textAlign = 'left';
+  pctx.fillText('Task item 1', 44, 142);
+  pctx.fillText('Task item 2', 44, 172);
+  pctx.fillText('Task item 3', 44, 202);
+
+  const paperTex = new THREE.CanvasTexture(paperCanvas);
+  const paper = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.46), new THREE.MeshBasicMaterial({ map: paperTex }));
+  paper.position.z = 0.014;
+  clipboard.add(paper);
+
+  const penGroup = new THREE.Group();
+  const penBodyMat = new THREE.MeshStandardMaterial({ color: '#1a237e', metalness: 0.3, roughness: 0.5 });
+  const penBody = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 12), penBodyMat);
+  penGroup.add(penBody);
+
+  const gripMat = new THREE.MeshStandardMaterial({ color: '#333', roughness: 0.8 });
+  const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.05, 12), gripMat);
+  grip.position.y = -0.06;
+  penGroup.add(grip);
+
+  const tipMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.9, roughness: 0.1 });
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.01, 0.03, 12), tipMat);
+  tip.position.y = -0.125;
+  tip.rotation.z = Math.PI;
+  penGroup.add(tip);
+
+  const clipPen = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.06, 0.004), tipMat);
+  clipPen.position.set(0.014, 0.06, 0);
+  penGroup.add(clipPen);
+
+  const capTop = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 8), penBodyMat);
+  capTop.position.y = 0.11;
+  penGroup.add(capTop);
+
+  penGroup.position.set(0.22, -0.08, 0.03);
+  penGroup.rotation.z = -0.3;
+  clipboard.add(penGroup);
+
+  if (isHighlighted) {
+    clipboard.add(new THREE.Mesh(
+      new THREE.BoxGeometry(0.42, 0.54, 0.04),
+      new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 })
+    ));
+  }
+
+  return clipboard;
+}
 // ==================== BOOK ====================
 
 function createBook(label: string, color: string, isHighlighted: boolean, isOpen: boolean = false, openAmount: number = 0): THREE.Group {
