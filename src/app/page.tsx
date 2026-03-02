@@ -1,6 +1,3 @@
-I'll make all those changes for you. Here's the updated code:
-
-```javascript
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
