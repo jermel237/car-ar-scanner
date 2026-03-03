@@ -2791,6 +2791,7 @@ function buildSceneContent(
         }
       });
     }
+  }
    // ==================== LINKED LIST ====================
   } else if (structure === 'linkedlist') {
     if (environment === 'train') {
