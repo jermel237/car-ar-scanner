@@ -2441,26 +2441,9 @@ function applyItemAnimation(
       obj.position.y += 0.2 * p;
       obj.scale.setScalar(1 + 0.15 * p);
     }
-    // NOTE: dequeue animations are handled manually in each environment
-  }
-    
-    // Remaining queue items move forward during dequeue
-    if (!isTarget && itemIndex > 0) {
-      const queueSpacing = 1.0;
-      if (animPhase === 'queue-dequeue-gate-open') {
-        obj.position.x -= p * queueSpacing * 0.2;
-      } else if (animPhase === 'queue-dequeue-drive') {
-        obj.position.x -= (0.2 + p * 0.8) * queueSpacing;
-      } else if (animPhase === 'queue-dequeue-gate-close') {
-        obj.position.x -= queueSpacing;
-      } else if (animPhase === 'queue-dequeue-walk') {
-        obj.position.x -= p * queueSpacing * 0.5;
-      } else if (animPhase === 'queue-dequeue-enter') {
-        obj.position.x -= (0.5 + p * 0.5) * queueSpacing;
-      }
-    }
   }
 }
+
 // ==================== BUILD SCENE CONTENT ====================
 
 function buildSceneContent(
@@ -3110,9 +3093,7 @@ function buildSceneContent(
         let shouldRender = true;
 
         if (isFront) {
-          if (animPhase === 'queue-dequeue-gate-open') {
-            // Front car waits
-          } else if (animPhase === 'queue-dequeue-drive') {
+          if (animPhase === 'queue-dequeue-drive') {
             const progress = animProgress || 0;
             extraX = -progress * 2.5;
           } else if (animPhase === 'queue-dequeue-gate-close') {
@@ -3121,7 +3102,6 @@ function buildSceneContent(
             if ((animProgress || 0) > 0.5) shouldRender = false;
           }
         } else {
-          // Other cars move forward to fill gap
           if (animPhase === 'queue-dequeue-gate-open') {
             const progress = animProgress || 0;
             extraX = -progress * spacing * 0.3;
@@ -3138,7 +3118,6 @@ function buildSceneContent(
           carObj.position.set(startX + i * spacing + 0.5 + extraX, groundY + (isHl ? 0.06 : 0), 0);
           carObj.scale.setScalar(carScale);
           
-          // Only apply non-dequeue animations
           if (!animPhase?.startsWith('queue-dequeue')) {
             applyItemAnimation(carObj, i, animPhase || '', animData || {}, 'queue', animProgress);
           }
@@ -3148,32 +3127,13 @@ function buildSceneContent(
       });
 
       if (data.length > 0) {
-        let frontLabelX = startX + 0.5;
-        let rearLabelX = startX + (data.length - 1) * spacing + 0.5;
-        
-        // Adjust label positions during dequeue
-        if (animPhase === 'queue-dequeue-gate-open') {
-          const progress = animProgress || 0;
-          frontLabelX -= progress * spacing * 0.3;
-          rearLabelX -= progress * spacing * 0.3;
-        } else if (animPhase === 'queue-dequeue-drive') {
-          const progress = animProgress || 0;
-          frontLabelX -= spacing * 0.3 + progress * spacing * 0.7;
-          rearLabelX -= spacing * 0.3 + progress * spacing * 0.7;
-        } else if (animPhase === 'queue-dequeue-gate-close') {
-          frontLabelX -= spacing;
-          rearLabelX -= spacing;
-        }
-        
-        if (animPhase !== 'queue-dequeue-gate-close') {
-          const frontSprite = createTextSprite('FRONT', '#00ff00', 18);
-          frontSprite.position.set(frontLabelX, groundY - 0.22, 0);
-          frontSprite.scale.set(0.28, 0.1, 1);
-          group.add(frontSprite);
-        }
+        const frontSprite = createTextSprite('FRONT', '#00ff00', 18);
+        frontSprite.position.set(startX + 0.5, groundY - 0.22, 0);
+        frontSprite.scale.set(0.28, 0.1, 1);
+        group.add(frontSprite);
 
         const rearSprite = createTextSprite('REAR', '#ff6600', 18);
-        rearSprite.position.set(rearLabelX, groundY - 0.22, 0);
+        rearSprite.position.set(startX + (data.length - 1) * spacing + 0.5, groundY - 0.22, 0);
         rearSprite.scale.set(0.28, 0.1, 1);
         group.add(rearSprite);
       }
@@ -3185,7 +3145,10 @@ function buildSceneContent(
       road.rotation.x = -Math.PI / 2;
       road.position.y = groundY - 0.01;
       group.add(road);
-}
+
+    } else if (environment === 'tickets') {
+      const ticketDispenserGroup = createTicketDispenser(data, highlightIndex, animPhase || '', animProgress || 0);
+      group.add(ticketDispenserGroup);
 
     } else if (environment === 'students') {
       const schoolBuilding = createSchoolBuilding();
@@ -3217,7 +3180,6 @@ function buildSceneContent(
               if (progress > 0.95) shouldRender = false;
             }
           } else {
-            // Other students walk forward to fill gap
             if (animPhase === 'queue-dequeue-walk') {
               const progress = animProgress || 0;
               walkPhase = progress * Math.PI * 6;
@@ -3240,29 +3202,13 @@ function buildSceneContent(
       });
 
       if (data.length > 0) {
-        let frontLabelX = startX + 0.6;
-        let rearLabelX = startX + (data.length - 1) * spacing + 0.6;
-        
-        // Adjust label positions during dequeue
-        if (animPhase === 'queue-dequeue-walk') {
-          const progress = animProgress || 0;
-          frontLabelX -= progress * spacing * 0.5;
-          rearLabelX -= progress * spacing * 0.5;
-        } else if (animPhase === 'queue-dequeue-enter') {
-          const progress = animProgress || 0;
-          frontLabelX -= spacing * 0.5 + progress * spacing * 0.5;
-          rearLabelX -= spacing * 0.5 + progress * spacing * 0.5;
-        }
-        
-        if (animPhase !== 'queue-dequeue-enter' || (animProgress || 0) < 0.9) {
-          const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
-          frontSprite.position.set(frontLabelX, groundY - 0.18, 0);
-          frontSprite.scale.set(0.26, 0.09, 1);
-          group.add(frontSprite);
-        }
+        const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
+        frontSprite.position.set(startX + 0.6, groundY - 0.18, 0);
+        frontSprite.scale.set(0.26, 0.09, 1);
+        group.add(frontSprite);
 
         const rearSprite = createTextSprite('REAR', '#ff6600', 16);
-        rearSprite.position.set(rearLabelX, groundY - 0.18, 0);
+        rearSprite.position.set(startX + (data.length - 1) * spacing + 0.6, groundY - 0.18, 0);
         rearSprite.scale.set(0.26, 0.09, 1);
         group.add(rearSprite);
       }
@@ -3278,7 +3224,6 @@ function buildSceneContent(
   }
 }
 
-// ==================== HOME COMPONENT ====================
 // ==================== HOME COMPONENT ====================
 
 export default function Home() {
