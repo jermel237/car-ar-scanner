@@ -2494,8 +2494,8 @@ function buildSceneContent(
       }
     }
   }
-  // Disable highlighting during animations
-  if (animPhase && animPhase !== '') {
+  // Disable ALL highlighting during tutorial or animation
+  if (tutorialText || (animPhase && animPhase !== '')) {
     highlightIndex = null;
     highlightIndex2 = null;
   }
