@@ -2298,16 +2298,12 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   rightFlapPivot.rotation.z = -flapAngle;
   box.add(rightFlapPivot);
 
-  // Tape in the middle (only when closed)
+  // Tape in the middle (only when closed) - vertical |
   if (openAmount < 0.1) {
-    const tapeWidth = 0.05;
-    const tape = new THREE.Mesh(new THREE.BoxGeometry(boxW * 0.5, 0.003, tapeWidth), tapeMat);
+    const tapeWidth = 0.06;
+    const tape = new THREE.Mesh(new THREE.BoxGeometry(tapeWidth, 0.004, flapDepth * 0.9), tapeMat);
     tape.position.set(0, topY + flapThickness + 0.002, 0);
     box.add(tape);
-    
-    const tapeLine = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.004, flapDepth * 0.8), tapeMat);
-    tapeLine.position.set(0, topY + flapThickness + 0.003, 0);
-    box.add(tapeLine);
   }
 
   // Label on front
