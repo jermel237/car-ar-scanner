@@ -3124,6 +3124,7 @@ function buildSceneContent(
       group.add(ticketDispenserGroup);
 
     } else if (environment === 'students') {
+    } else if (environment === 'students') {
       const schoolBuilding = createSchoolBuilding();
       schoolBuilding.position.set(startX - 0.8, groundY, 0);
       schoolBuilding.scale.setScalar(0.5);
