@@ -2720,6 +2720,74 @@ function buildSceneContent(
         group.add(idx);
       });
 
+       } else if (environment === 'todo') {
+      const floorY = groundY - 0.25;
+      const scale = 0.65;
+      const deskSpacing = 0.55;
+      const numDesks = Math.max(4, data.length);
+      const rowStartX = -((numDesks - 1) * deskSpacing) / 2;
+
+      const floorMat = new THREE.MeshStandardMaterial({ color: '#c4a882', roughness: 0.7 });
+      const floorWidth = Math.max(2.5, numDesks * deskSpacing + 1);
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(floorWidth, 1.2), floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = floorY;
+      group.add(floor);
+
+      const wallMat = new THREE.MeshStandardMaterial({ color: '#f5f0e6', roughness: 0.9 });
+      const backWall = new THREE.Mesh(new THREE.PlaneGeometry(floorWidth, 0.9), wallMat);
+      backWall.position.set(0, floorY + 0.45, -0.6);
+      group.add(backWall);
+
+      const boardCanvas = document.createElement('canvas');
+      boardCanvas.width = 300;
+      boardCanvas.height = 100;
+      const bctx = boardCanvas.getContext('2d')!;
+      bctx.fillStyle = '#e74c3c';
+      bctx.fillRect(0, 0, 300, 100);
+      bctx.fillStyle = '#fff';
+      bctx.font = 'bold 28px Arial';
+      bctx.textAlign = 'center';
+      bctx.fillText('📝 TO-DO LIST', 150, 40);
+      bctx.font = '18px Arial';
+      bctx.fillText(`Tasks: ${data.length}`, 150, 75);
+      const boardTex = new THREE.CanvasTexture(boardCanvas);
+      const boardMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.17), new THREE.MeshBasicMaterial({ map: boardTex }));
+      boardMesh.position.set(0, floorY + 0.65, -0.59);
+      group.add(boardMesh);
+
+      for (let i = 0; i < numDesks; i++) {
+        const posX = rowStartX + i * deskSpacing;
+
+        const desk = createDesk(0);
+        desk.position.set(posX, floorY + 0.28, 0);
+        desk.scale.setScalar(scale);
+        group.add(desk);
+
+        const idx = createTextSprite(`[${i}]`, i < data.length ? '#ffffff' : '#555555', 16);
+        idx.position.set(posX, floorY + 0.08, 0.2);
+        idx.scale.set(0.18, 0.09, 1);
+        group.add(idx);
+      }
+
+      data.forEach((item, i) => {
+        const isHl = highlightIndex === i || highlightIndex2 === i;
+        const posX = rowStartX + i * deskSpacing;
+
+        const clipboard = createClipboard(item.label, item.color, isHl);
+        clipboard.position.set(posX, floorY + 0.38, 0);
+        clipboard.scale.setScalar(0.35);
+        clipboard.rotation.x = -0.3;
+        applyItemAnimation(clipboard, i, animPhase || '', animData || {}, 'array', animProgress);
+        group.add(clipboard);
+
+        if (isHl) {
+          const hlIdx = createTextSprite(`[${i}]`, '#ffff00', 18);
+          hlIdx.position.set(posX, floorY + 0.08, 0.2);
+          hlIdx.scale.set(0.2, 0.1, 1);
+          group.add(hlIdx);
+        }
+      });
     }
    // ==================== LINKED LIST ====================
   } else if (structure === 'linkedlist') {
