@@ -2634,27 +2634,17 @@ function buildSceneContent(
       const boardWidth = roomWidth * 0.6;
       const boardHeight = 0.45;
       
-      // Board frame
+      // Board frame (3D box)
       const frameMat = new THREE.MeshStandardMaterial({ color: '#8b4513', roughness: 0.6 });
       const boardFrame = new THREE.Mesh(new THREE.BoxGeometry(boardWidth + 0.06, boardHeight + 0.06, 0.03), frameMat);
       boardFrame.position.set(0, floorY + 0.7, -roomDepth / 2 + 0.02);
       group.add(boardFrame);
       
-      // Plain white board (no algorithm text)
-      const boardCanvas = document.createElement('canvas');
-      boardCanvas.width = 400;
-      boardCanvas.height = 200;
-      const bctx = boardCanvas.getContext('2d')!;
-      bctx.fillStyle = '#ffffff';
-      bctx.fillRect(0, 0, 400, 200);
-      
-      const boardTex = new THREE.CanvasTexture(boardCanvas);
-      const boardSurface = new THREE.Mesh(
-        new THREE.PlaneGeometry(boardWidth, boardHeight),
-        new THREE.MeshBasicMaterial({ map: boardTex })
-      );
-      boardSurface.position.set(0, floorY + 0.7, -roomDepth / 2 + 0.035);
-      group.add(boardSurface);
+      // Plain white board (3D box - not image)
+      const whiteBoardMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 });
+      const whiteBoard = new THREE.Mesh(new THREE.BoxGeometry(boardWidth, boardHeight, 0.02), whiteBoardMat);
+      whiteBoard.position.set(0, floorY + 0.7, -roomDepth / 2 + 0.04);
+      group.add(whiteBoard);
 
       // Board tray
       const trayMat = new THREE.MeshStandardMaterial({ color: '#666', metalness: 0.5 });
@@ -2686,7 +2676,7 @@ function buildSceneContent(
       group.add(clock);
 
       const studentsPerRow = 3;
-      const rowSpacing = 0.55;
+      const rowSpacing = 0.5;
       const colSpacing = 0.65;
 
       data.forEach((item, i) => {
@@ -2697,7 +2687,7 @@ function buildSceneContent(
         const rowItemCount = Math.min(studentsPerRow, data.length - row * studentsPerRow);
         const rowStartX = -((rowItemCount - 1) * colSpacing) / 2;
         const posX = rowStartX + col * colSpacing;
-        const posZ = 0.4 + row * rowSpacing; // Moved backward
+        const posZ = -0.5 + row * rowSpacing; // Students closer to whiteboard (back)
 
         const chair = createChair(0);
         chair.position.set(posX, floorY + 0.25, posZ);
