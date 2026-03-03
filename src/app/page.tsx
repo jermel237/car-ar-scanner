@@ -2438,13 +2438,18 @@ function applyItemAnimation(
     } else if (animPhase === 'queue-enqueue-settle' && isTarget) {
       obj.position.x += 0.2 * (1 - p);
       obj.scale.setScalar(1 + 0.05 * (1 - p));
+    } else if (animPhase === 'queue-dequeue-drive' && isTarget) {
+      obj.position.x -= 2.5 * p;
+    } else if (animPhase === 'queue-dequeue-walk' && isTarget) {
+      obj.position.x -= 0.8 * p;
+    } else if (animPhase === 'queue-dequeue-enter' && isTarget) {
+      obj.position.x -= 0.4 * p;
+      obj.scale.setScalar(Math.max(0.01, 1 - p * 0.95));
     } else if (animPhase === 'queue-front-peek' && isTarget) {
       obj.position.y += 0.2 * p;
       obj.scale.setScalar(1 + 0.15 * p);
     }
   }
-}
-
 // ==================== BUILD SCENE CONTENT ====================
 
 function buildSceneContent(
@@ -3085,54 +3090,13 @@ function buildSceneContent(
       tollBooth.scale.setScalar(0.85);
       group.add(tollBooth);
 
-      // Get the original front item ID to track who should disappear
-       const originalFrontId = animData?.frontId;
-
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
-        const isFront = i === 0;
-        const isOriginalFront = item.id === originalFrontId;
-        
-        let extraX = 0;
-        let carScale = 0.78;
-        let shouldRender = true;
-
-        if (isOriginalFront) {
-          // This is the car that should drive away
-          if (animPhase === 'queue-dequeue-drive') {
-            const progress = animProgress || 0;
-            extraX = -progress * 2.5;
-          } else if (animPhase === 'queue-dequeue-gate-close') {
-            shouldRender = false;
-          }
-        } else if (animPhase === 'queue-dequeue-gate-open' || animPhase === 'queue-dequeue-drive' || animPhase === 'queue-dequeue-gate-close') {
-          // Other cars move forward
-          const actualIndex = isOriginalFront ? i : (originalFrontId ? i + 1 : i);
-          
-          if (animPhase === 'queue-dequeue-gate-open') {
-            const progress = animProgress || 0;
-            extraX = -progress * spacing * 0.3;
-          } else if (animPhase === 'queue-dequeue-drive') {
-            const progress = animProgress || 0;
-            extraX = -spacing * 0.3 - progress * spacing * 0.7;
-          } else if (animPhase === 'queue-dequeue-gate-close') {
-            // After front is removed, items are at their new positions
-            // No extra offset needed since indexes have shifted
-            extraX = 0;
-          }
-        }
-
-        if (shouldRender) {
-          const carObj = createCar(item.color, item.label, isHl);
-          carObj.position.set(startX + i * spacing + 0.5 + extraX, groundY + (isHl ? 0.06 : 0), 0);
-          carObj.scale.setScalar(carScale);
-          
-          if (!animPhase?.startsWith('queue-dequeue')) {
-            applyItemAnimation(carObj, i, animPhase || '', animData || {}, 'queue', animProgress);
-          }
-          
-          group.add(carObj);
-        }
+        const carObj = createCar(item.color, item.label, isHl);
+        carObj.position.set(startX + i * spacing + 0.5, groundY + (isHl ? 0.06 : 0), 0);
+        carObj.scale.setScalar(0.78);
+        applyItemAnimation(carObj, i, animPhase || '', animData || {}, 'queue', animProgress);
+        group.add(carObj);
       });
 
       if (data.length > 0) {
@@ -3165,13 +3129,10 @@ function buildSceneContent(
       schoolBuilding.scale.setScalar(0.5);
       schoolBuilding.rotation.y = 0;
       group.add(schoolBuilding);
-      
-      // Get the original front item ID to track who should disappear
-      const originalFrontId = animData?.frontId;
 
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
-        const isOriginalFront = item.id === originalFrontId;
+        const isFront = i === 0;
 
         if (item.appearance) {
           let walkPhase = 0;
@@ -3179,8 +3140,7 @@ function buildSceneContent(
           let studentScale = 0.55;
           let shouldRender = true;
 
-          if (isOriginalFront) {
-            // This is the student that should enter the school
+          if (isFront) {
             if (animPhase === 'queue-dequeue-walk') {
               const progress = animProgress || 0;
               walkPhase = progress * Math.PI * 10;
@@ -3192,17 +3152,6 @@ function buildSceneContent(
               studentScale = 0.55 * Math.max(0.01, 1 - progress * 0.95);
               if (progress > 0.95) shouldRender = false;
             }
-          } else if (animPhase === 'queue-dequeue-walk' || animPhase === 'queue-dequeue-enter') {
-            // Other students walk forward
-            if (animPhase === 'queue-dequeue-walk') {
-              const progress = animProgress || 0;
-              walkPhase = progress * Math.PI * 6;
-              extraX = -progress * spacing * 0.5;
-            } else if (animPhase === 'queue-dequeue-enter') {
-              const progress = animProgress || 0;
-              walkPhase = Math.PI * 6 + progress * Math.PI * 4;
-              extraX = -spacing * 0.5 - progress * spacing * 0.5;
-            }
           }
 
           if (shouldRender) {
@@ -3210,6 +3159,11 @@ function buildSceneContent(
             human.position.set(startX + i * spacing + 0.6 + extraX, groundY, 0);
             human.scale.setScalar(studentScale);
             human.rotation.y = -Math.PI / 2;
+
+            if (!(isFront && (animPhase === 'queue-dequeue-walk' || animPhase === 'queue-dequeue-enter'))) {
+              applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue', animProgress);
+            }
+
             group.add(human);
           }
         }
@@ -3452,7 +3406,7 @@ export default function Home() {
     }
   };
 
-  const runTutorialStep = async (step: TutorialStep & { animData?: Record<string, any> }) => {
+  const runTutorialStep = async (step: TutorialStep) => {
     setStepAnimating(true);
     setTutorialText({ title: step.title, description: step.description, step: `${currentStepIndex + 1}/${tutorialSteps.length}` });
     
@@ -3468,13 +3422,7 @@ export default function Home() {
     }
     
     if (step.animPhase && step.animDuration) {
-      const customAnimData = step.animData || {};
-      await smoothAnimate(step.animDuration, step.animPhase, { 
-        index: step.highlightIndex, 
-        index1: step.highlightIndex, 
-        index2: step.highlightIndex2,
-        ...customAnimData
-      });
+      await smoothAnimate(step.animDuration, step.animPhase, { index: step.highlightIndex, index1: step.highlightIndex, index2: step.highlightIndex2 });
     } else {
       setAnimPhase('');
       setAnimData({});
@@ -3483,20 +3431,13 @@ export default function Home() {
     
     if (step.action) {
       step.action();
+      // Clear animation state IMMEDIATELY after action to prevent remaining items from disappearing
+      setAnimPhase('');
+      setAnimData({});
+      setAnimProgress(1);
     }
     
     setStepAnimating(false);
-  };
-  const nextStep = async () => {
-    if (stepAnimating) return;
-    
-    if (currentStepIndex < tutorialSteps.length - 1) {
-      const nextIdx = currentStepIndex + 1;
-      setCurrentStepIndex(nextIdx);
-      await runTutorialStep(tutorialSteps[nextIdx]);
-    } else {
-      endTutorial();
-    }
   };
 
   const endTutorial = () => {
