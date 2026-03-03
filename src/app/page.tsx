@@ -3004,6 +3004,212 @@ function buildSceneContent(
     } else if (environment === 'people') {
       const arrowY = 0.12;
 
+      // ==================== FOOD STALL ====================
+      const foodStall = new THREE.Group();
+      const stallX = startX - 1.2;
+
+      // Wooden frame posts
+      const woodMat = new THREE.MeshStandardMaterial({ color: '#8B4513', roughness: 0.8 });
+      const darkWoodMat = new THREE.MeshStandardMaterial({ color: '#5D3A1A', roughness: 0.7 });
+      
+      // Four corner posts
+      const postPositions = [
+        [-0.5, 0, -0.4], [0.5, 0, -0.4], [-0.5, 0, 0.4], [0.5, 0, 0.4]
+      ];
+      postPositions.forEach(([px, py, pz]) => {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.0, 0.08), woodMat);
+        post.position.set(px, 0.5, pz);
+        foodStall.add(post);
+      });
+
+      // Counter top
+      const counterTop = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.06, 0.9), woodMat);
+      counterTop.position.set(0, 0.45, 0);
+      foodStall.add(counterTop);
+
+      // Counter front panel
+      const counterFront = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.45, 0.05), darkWoodMat);
+      counterFront.position.set(0, 0.22, 0.42);
+      foodStall.add(counterFront);
+
+      // Roof frame
+      const roofBeamFront = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.06, 0.06), darkWoodMat);
+      roofBeamFront.position.set(0, 1.0, 0.43);
+      foodStall.add(roofBeamFront);
+
+      const roofBeamBack = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.06, 0.06), darkWoodMat);
+      roofBeamBack.position.set(0, 1.15, -0.43);
+      foodStall.add(roofBeamBack);
+
+      const roofBeamLeft = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.95), darkWoodMat);
+      roofBeamLeft.position.set(-0.55, 1.07, 0);
+      roofBeamLeft.rotation.x = 0.15;
+      foodStall.add(roofBeamLeft);
+
+      const roofBeamRight = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.95), darkWoodMat);
+      roofBeamRight.position.set(0.55, 1.07, 0);
+      roofBeamRight.rotation.x = 0.15;
+      foodStall.add(roofBeamRight);
+
+      // Thatched/wooden roof
+      const roofMat = new THREE.MeshStandardMaterial({ color: '#A0522D', roughness: 0.9 });
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.08, 1.1), roofMat);
+      roof.position.set(0, 1.15, 0);
+      roof.rotation.x = 0.15;
+      foodStall.add(roof);
+
+      // Roof edge trim
+      const roofTrim = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.04, 0.08), darkWoodMat);
+      roofTrim.position.set(0, 1.08, 0.52);
+      foodStall.add(roofTrim);
+
+      // Menu board
+      const menuCanvas = document.createElement('canvas');
+      menuCanvas.width = 200;
+      menuCanvas.height = 120;
+      const mctx = menuCanvas.getContext('2d')!;
+      mctx.fillStyle = '#2c1810';
+      mctx.fillRect(0, 0, 200, 120);
+      mctx.strokeStyle = '#8B4513';
+      mctx.lineWidth = 6;
+      mctx.strokeRect(3, 3, 194, 114);
+      mctx.fillStyle = '#f4d03f';
+      mctx.font = 'bold 22px Arial';
+      mctx.textAlign = 'center';
+      mctx.fillText('🍜 FOOD STALL', 100, 35);
+      mctx.fillStyle = '#fff';
+      mctx.font = '14px Arial';
+      mctx.fillText('Noodles . . . $5', 100, 60);
+      mctx.fillText('Rice Bowl . . $4', 100, 80);
+      mctx.fillText('Drinks . . . . $2', 100, 100);
+      const menuTex = new THREE.CanvasTexture(menuCanvas);
+      const menuBoard = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.5, 0.3),
+        new THREE.MeshBasicMaterial({ map: menuTex })
+      );
+      menuBoard.position.set(0, 0.85, -0.38);
+      foodStall.add(menuBoard);
+
+      // Food items on counter
+      const bowlMat = new THREE.MeshStandardMaterial({ color: '#fff', roughness: 0.3 });
+      
+      // Bowls with food
+      [-0.25, 0, 0.25].forEach((bx, i) => {
+        const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.05, 16), bowlMat);
+        bowl.position.set(bx, 0.5, -0.1);
+        foodStall.add(bowl);
+        
+        const food = new THREE.Mesh(
+          new THREE.SphereGeometry(0.06, 8, 8),
+          new THREE.MeshStandardMaterial({ 
+            color: ['#e67e22', '#f39c12', '#d35400'][i], 
+            roughness: 0.7 
+          })
+        );
+        food.position.set(bx, 0.53, -0.1);
+        food.scale.y = 0.5;
+        foodStall.add(food);
+      });
+
+      // Pot/cooking container
+      const potMat = new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.6, roughness: 0.4 });
+      const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.15, 16), potMat);
+      pot.position.set(-0.35, 0.55, -0.2);
+      foodStall.add(pot);
+
+      // Steam effect (simple cylinders)
+      const steamMat = new THREE.MeshBasicMaterial({ color: '#fff', transparent: true, opacity: 0.3 });
+      [0, 0.04, -0.04].forEach((sx, i) => {
+        const steam = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.02, 0.1, 8), steamMat);
+        steam.position.set(-0.35 + sx, 0.7 + i * 0.03, -0.2);
+        foodStall.add(steam);
+      });
+
+      // Lanterns
+      const lanternMat = new THREE.MeshStandardMaterial({ color: '#e74c3c', emissive: '#e74c3c', emissiveIntensity: 0.3 });
+      [-0.4, 0.4].forEach(lx => {
+        const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 12), lanternMat);
+        lantern.position.set(lx, 0.9, 0.35);
+        lantern.scale.y = 1.3;
+        foodStall.add(lantern);
+        
+        const lanternString = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.005, 0.005, 0.1, 6),
+          new THREE.MeshBasicMaterial({ color: '#333' })
+        );
+        lanternString.position.set(lx, 0.98, 0.35);
+        foodStall.add(lanternString);
+      });
+
+      // Small stool behind counter
+      const stoolMat = new THREE.MeshStandardMaterial({ color: '#6d4c2a', roughness: 0.8 });
+      const stool = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.08, 0.25, 8), stoolMat);
+      stool.position.set(0.3, 0.12, -0.25);
+      foodStall.add(stool);
+
+      foodStall.position.set(stallX, groundY, 0);
+      foodStall.scale.setScalar(0.85);
+      group.add(foodStall);
+
+      // ==================== GRASS GROUND ====================
+      const grassWidth = Math.max(3.5, data.length * spacing + 3);
+      const grassDepth = 2.0;
+
+      // Main grass
+      const grassMat = new THREE.MeshStandardMaterial({ color: '#228B22', roughness: 0.9 });
+      const grass = new THREE.Mesh(new THREE.PlaneGeometry(grassWidth, grassDepth), grassMat);
+      grass.rotation.x = -Math.PI / 2;
+      grass.position.y = groundY - 0.01;
+      group.add(grass);
+
+      // Grass texture variation (patches)
+      const patchMat = new THREE.MeshStandardMaterial({ color: '#2d8f2d', roughness: 0.95 });
+      for (let i = 0; i < 8; i++) {
+        const patch = new THREE.Mesh(
+          new THREE.CircleGeometry(0.15 + Math.random() * 0.1, 8),
+          patchMat
+        );
+        patch.rotation.x = -Math.PI / 2;
+        patch.position.set(
+          (Math.random() - 0.5) * grassWidth * 0.8,
+          groundY - 0.005,
+          (Math.random() - 0.5) * grassDepth * 0.6
+        );
+        group.add(patch);
+      }
+
+      // Dirt path where people stand
+      const pathMat = new THREE.MeshStandardMaterial({ color: '#8B7355', roughness: 0.85 });
+      const path = new THREE.Mesh(
+        new THREE.PlaneGeometry(Math.max(2.5, data.length * spacing + 1.5), 0.5),
+        pathMat
+      );
+      path.rotation.x = -Math.PI / 2;
+      path.position.set(0.3, groundY - 0.005, 0);
+      group.add(path);
+
+      // Small flowers/decorations
+      const flowerColors = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff'];
+      for (let i = 0; i < 12; i++) {
+        const flowerMat = new THREE.MeshStandardMaterial({ 
+          color: flowerColors[Math.floor(Math.random() * flowerColors.length)] 
+        });
+        const flower = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 6), flowerMat);
+        flower.position.set(
+          (Math.random() - 0.5) * grassWidth * 0.9,
+          groundY + 0.02,
+          (Math.random() > 0.5 ? 0.4 : -0.4) + (Math.random() - 0.5) * 0.3
+        );
+        group.add(flower);
+        
+        // Stem
+        const stemMat = new THREE.MeshStandardMaterial({ color: '#228B22' });
+        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.04, 4), stemMat);
+        stem.position.set(flower.position.x, groundY + 0.01, flower.position.z);
+        group.add(stem);
+      }
+
+      // ==================== PEOPLE IN LINE ====================
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         if (item.appearance) {
@@ -3011,16 +3217,19 @@ function buildSceneContent(
           const human = createHuman3D(item.appearance, item.label, isHl, false, walkPhase);
           human.position.set(startX + i * spacing, isHl ? 0.06 : 0, 0);
           human.scale.setScalar(0.72);
+          human.rotation.y = -Math.PI / 2; // Face the food stall
           applyItemAnimation(human, i, animPhase || '', animData || {}, 'linkedlist', animProgress);
           group.add(human);
         }
 
+        // Arrows between nodes
         if (i < data.length - 1) {
           const arrow = create3DArrow(startX + i * spacing, startX + (i + 1) * spacing, arrowY, false);
           group.add(arrow);
         }
       });
 
+      // NULL at the end
       if (data.length > 0) {
         const nullSprite = createTextSprite('NULL', '#ff0000', 20);
         nullSprite.position.set(startX + data.length * spacing, 0.12, 0);
@@ -3031,16 +3240,37 @@ function buildSceneContent(
         group.add(lastArrow);
       }
 
-      const floor = new THREE.Mesh(
-        new THREE.PlaneGeometry(Math.max(2, data.length * spacing + 2), 0.55),
-        new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
+      // HEAD label
+      if (data.length > 0) {
+        const headSprite = createTextSprite('HEAD', '#00ff00', 16);
+        headSprite.position.set(startX, 0.38, 0);
+        headSprite.scale.set(0.24, 0.1, 1);
+        group.add(headSprite);
+      }
+
+      // "People in Line" sign
+      const signCanvas = document.createElement('canvas');
+      signCanvas.width = 250;
+      signCanvas.height = 60;
+      const sctx = signCanvas.getContext('2d')!;
+      sctx.fillStyle = '#5D3A1A';
+      sctx.fillRect(0, 0, 250, 60);
+      sctx.strokeStyle = '#8B4513';
+      sctx.lineWidth = 4;
+      sctx.strokeRect(2, 2, 246, 56);
+      sctx.fillStyle = '#f4d03f';
+      sctx.font = 'bold 20px Arial';
+      sctx.textAlign = 'center';
+      sctx.fillText('🔗 PEOPLE IN LINE', 125, 38);
+      const signTex = new THREE.CanvasTexture(signCanvas);
+      const signMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.6, 0.15),
+        new THREE.MeshBasicMaterial({ map: signTex })
       );
-      floor.rotation.x = -Math.PI / 2;
-      floor.position.y = -0.16;
-      group.add(floor);
+      signMesh.position.set(stallX + 0.4, groundY + 1.3, 0);
+      group.add(signMesh);
 
     } else if (environment === 'domino') {
-      const arrowY = 0;
 
       // Casino table
       const tableGroup = new THREE.Group();
@@ -4438,7 +4668,7 @@ const startWebXR = async () => {
   const envTabs = currentStructure === 'array'
     ? [{ id: 'grocery', icon: '🛒', label: 'Shelf' }, { id: 'classroom', icon: '🧑‍🎓', label: 'Class' }, { id: 'todo', icon: '📝', label: 'Tasks' }]
     : currentStructure === 'linkedlist'
-      ? [{ id: 'train', icon: '🚂', label: 'Train' }, { id: 'people', icon: '🚪', label: 'Queue' }, { id: 'domino', icon: '🁡', label: 'Domino' }]
+      ? [{ id: 'train', icon: '🚂', label: 'Train' }, { id: 'people', icon: '🧑‍🤝‍🧑', label: 'Line' }, { id: 'domino', icon: '🁡', label: 'Domino' }]
       : currentStructure === 'stack'
         ? [{ id: 'books', icon: '📚', label: 'Books' }, { id: 'plates', icon: '🍽️', label: 'Plates' }, { id: 'boxes', icon: '📦', label: 'Boxes' }]
         : [{ id: 'tollgate', icon: '🛣️', label: 'Toll' }, { id: 'tickets', icon: '🎫', label: 'Tickets' }, { id: 'students', icon: '🏫', label: 'School' }];
