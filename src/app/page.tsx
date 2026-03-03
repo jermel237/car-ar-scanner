@@ -2605,7 +2605,7 @@ function buildSceneContent(
 
     } else if (environment === 'classroom') {
       const roomWidth = Math.max(2.5, data.length * spacing + 1.5);
-      const roomDepth = 1.8;
+      const roomDepth = 2.2;
       const roomHeight = 1.2;
       const floorY = groundY - 0.25;
       const scale = 0.7;
@@ -2634,35 +2634,19 @@ function buildSceneContent(
       const boardWidth = roomWidth * 0.6;
       const boardHeight = 0.45;
       
+      // Board frame
       const frameMat = new THREE.MeshStandardMaterial({ color: '#8b4513', roughness: 0.6 });
       const boardFrame = new THREE.Mesh(new THREE.BoxGeometry(boardWidth + 0.06, boardHeight + 0.06, 0.03), frameMat);
       boardFrame.position.set(0, floorY + 0.7, -roomDepth / 2 + 0.02);
       group.add(boardFrame);
       
+      // Plain white board (no algorithm text)
       const boardCanvas = document.createElement('canvas');
       boardCanvas.width = 400;
       boardCanvas.height = 200;
       const bctx = boardCanvas.getContext('2d')!;
       bctx.fillStyle = '#ffffff';
       bctx.fillRect(0, 0, 400, 200);
-      bctx.fillStyle = '#2c3e50';
-      bctx.font = 'bold 36px Arial';
-      bctx.textAlign = 'center';
-      bctx.fillText('📊 ALGORITHM', 200, 50);
-      bctx.font = '20px Arial';
-      bctx.fillText('Array Operations', 200, 85);
-      bctx.strokeStyle = '#3498db';
-      bctx.lineWidth = 2;
-      bctx.beginPath();
-      bctx.moveTo(50, 110);
-      bctx.lineTo(350, 110);
-      bctx.stroke();
-      bctx.fillStyle = '#666';
-      bctx.font = '16px Arial';
-      bctx.fillText('• Access: O(1)', 120, 140);
-      bctx.fillText('• Insert: O(n)', 280, 140);
-      bctx.fillText('• Delete: O(n)', 120, 170);
-      bctx.fillText('• Search: O(n)', 280, 170);
       
       const boardTex = new THREE.CanvasTexture(boardCanvas);
       const boardSurface = new THREE.Mesh(
@@ -2672,11 +2656,13 @@ function buildSceneContent(
       boardSurface.position.set(0, floorY + 0.7, -roomDepth / 2 + 0.035);
       group.add(boardSurface);
 
+      // Board tray
       const trayMat = new THREE.MeshStandardMaterial({ color: '#666', metalness: 0.5 });
       const tray = new THREE.Mesh(new THREE.BoxGeometry(boardWidth * 0.4, 0.02, 0.05), trayMat);
       tray.position.set(0, floorY + 0.45, -roomDepth / 2 + 0.05);
       group.add(tray);
 
+      // Clock
       const clockCanvas = document.createElement('canvas');
       clockCanvas.width = 64;
       clockCanvas.height = 64;
@@ -2711,7 +2697,7 @@ function buildSceneContent(
         const rowItemCount = Math.min(studentsPerRow, data.length - row * studentsPerRow);
         const rowStartX = -((rowItemCount - 1) * colSpacing) / 2;
         const posX = rowStartX + col * colSpacing;
-        const posZ = 0.1 + row * rowSpacing;
+        const posZ = 0.4 + row * rowSpacing; // Moved backward
 
         const chair = createChair(0);
         chair.position.set(posX, floorY + 0.25, posZ);
@@ -2744,74 +2730,6 @@ function buildSceneContent(
         group.add(idx);
       });
 
-    } else if (environment === 'todo') {
-      const floorY = groundY - 0.25;
-      const scale = 0.65;
-      const deskSpacing = 0.55;
-      const numDesks = Math.max(4, data.length);
-      const rowStartX = -((numDesks - 1) * deskSpacing) / 2;
-
-      const floorMat = new THREE.MeshStandardMaterial({ color: '#c4a882', roughness: 0.7 });
-      const floorWidth = Math.max(2.5, numDesks * deskSpacing + 1);
-      const floor = new THREE.Mesh(new THREE.PlaneGeometry(floorWidth, 1.2), floorMat);
-      floor.rotation.x = -Math.PI / 2;
-      floor.position.y = floorY;
-      group.add(floor);
-
-      const wallMat = new THREE.MeshStandardMaterial({ color: '#f5f0e6', roughness: 0.9 });
-      const backWall = new THREE.Mesh(new THREE.PlaneGeometry(floorWidth, 0.9), wallMat);
-      backWall.position.set(0, floorY + 0.45, -0.6);
-      group.add(backWall);
-
-      const boardCanvas = document.createElement('canvas');
-      boardCanvas.width = 300;
-      boardCanvas.height = 100;
-      const bctx = boardCanvas.getContext('2d')!;
-      bctx.fillStyle = '#e74c3c';
-      bctx.fillRect(0, 0, 300, 100);
-      bctx.fillStyle = '#fff';
-      bctx.font = 'bold 28px Arial';
-      bctx.textAlign = 'center';
-      bctx.fillText('📝 TO-DO LIST', 150, 40);
-      bctx.font = '18px Arial';
-      bctx.fillText(`Tasks: ${data.length}`, 150, 75);
-      const boardTex = new THREE.CanvasTexture(boardCanvas);
-      const boardMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.17), new THREE.MeshBasicMaterial({ map: boardTex }));
-      boardMesh.position.set(0, floorY + 0.65, -0.59);
-      group.add(boardMesh);
-
-      for (let i = 0; i < numDesks; i++) {
-        const posX = rowStartX + i * deskSpacing;
-
-        const desk = createDesk(0);
-        desk.position.set(posX, floorY + 0.28, 0);
-        desk.scale.setScalar(scale);
-        group.add(desk);
-
-        const idx = createTextSprite(`[${i}]`, i < data.length ? '#ffffff' : '#555555', 16);
-        idx.position.set(posX, floorY + 0.08, 0.2);
-        idx.scale.set(0.18, 0.09, 1);
-        group.add(idx);
-      }
-
-      data.forEach((item, i) => {
-        const isHl = highlightIndex === i || highlightIndex2 === i;
-        const posX = rowStartX + i * deskSpacing;
-
-        const clipboard = createClipboard(item.label, item.color, isHl);
-        clipboard.position.set(posX, floorY + 0.38, 0);
-        clipboard.scale.setScalar(0.35);
-        clipboard.rotation.x = -0.3;
-        applyItemAnimation(clipboard, i, animPhase || '', animData || {}, 'array', animProgress);
-        group.add(clipboard);
-
-        if (isHl) {
-          const hlIdx = createTextSprite(`[${i}]`, '#ffff00', 18);
-          hlIdx.position.set(posX, floorY + 0.08, 0.2);
-          hlIdx.scale.set(0.2, 0.1, 1);
-          group.add(hlIdx);
-        }
-      });
     }
    // ==================== LINKED LIST ====================
   } else if (structure === 'linkedlist') {
