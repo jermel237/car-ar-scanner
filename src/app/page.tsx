@@ -2504,11 +2504,18 @@ function buildSceneContent(
   const groundY = 0;
 
   if (tutorialText) {
+    let textY = 1.2;
+    if (structure === 'stack') {
+      textY = 1.8;
+    } else if (structure === 'array' && environment === 'grocery') {
+      textY = 1.6;
+    }
+    
     const textBox = create3DTextBox(
       tutorialText.title,
       tutorialText.description,
       tutorialText.step,
-      new THREE.Vector3(0, structure === 'stack' ? 1.8 : 1.2, 0)
+      new THREE.Vector3(0, textY, 0)
     );
     group.add(textBox);
   }
