@@ -2449,7 +2449,7 @@ function applyItemAnimation(
       obj.scale.setScalar(1 + 0.15 * p);
     }
     
-    // Remaining queue items move forward during dequeue to fill the gap
+    // Remaining queue items move forward during dequeue
     if (!isTarget && itemIndex > 0) {
       const queueSpacing = 1.0;
       if (animPhase === 'queue-dequeue-gate-open') {
@@ -2465,6 +2465,7 @@ function applyItemAnimation(
       }
     }
   }
+}
 // ==================== BUILD SCENE CONTENT ====================
 
 function buildSceneContent(
@@ -3142,7 +3143,7 @@ function buildSceneContent(
       const schoolBuilding = createSchoolBuilding();
       schoolBuilding.position.set(startX - 0.8, groundY, 0);
       schoolBuilding.scale.setScalar(0.5);
-      schoolBuilding.rotation.y = 0; // School entrance faces RIGHT toward students
+      schoolBuilding.rotation.y = 0;
       group.add(schoolBuilding);
 
       data.forEach((item, i) => {
@@ -3168,7 +3169,6 @@ function buildSceneContent(
               if (progress > 0.95) shouldRender = false;
             }
           } else {
-            // Remaining students walk forward to fill the gap
             if (animPhase === 'queue-dequeue-walk') {
               const progress = animProgress || 0;
               walkPhase = progress * Math.PI * 6;
@@ -3185,12 +3185,6 @@ function buildSceneContent(
             human.position.set(startX + i * spacing + 0.6 + extraX, groundY, 0);
             human.scale.setScalar(studentScale);
             human.rotation.y = -Math.PI / 2;
-
-            if (!(isFront && (animPhase === 'queue-dequeue-walk' || animPhase === 'queue-dequeue-enter')) &&
-                !(!isFront && (animPhase === 'queue-dequeue-walk' || animPhase === 'queue-dequeue-enter'))) {
-              applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue', animProgress);
-            }
-
             group.add(human);
           }
         }
@@ -3218,6 +3212,7 @@ function buildSceneContent(
     }
   }
 }
+
 
 // ==================== HOME COMPONENT ====================
 
