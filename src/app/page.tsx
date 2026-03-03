@@ -2255,50 +2255,47 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   const easedOpen = openAmount < 0.5 ? 2 * openAmount * openAmount : 1 - Math.pow(-2 * openAmount + 2, 2) / 2;
   
   // Two-phase animation:
-  // Phase 1 (0 to 0.5): Flaps go UP (vertical) - 90 degrees
-  // Phase 2 (0.5 to 1): Flaps fall OUTWARD - additional 45 degrees
+  // Phase 1 (0 to 0.5): Flaps go UP (from flat to vertical)
+  // Phase 2 (0.5 to 1): Flaps fall OUTWARD (past vertical)
   
-  let leftAngle = 0;
-  let rightAngle = 0;
+  let flapAngle = 0;
   
   if (easedOpen <= 0.5) {
-    // Phase 1: Go UP (from flat to vertical)
-    const phase1Progress = easedOpen * 2; // 0 to 1
-    leftAngle = phase1Progress * (Math.PI / 2);  // 0 to 90 degrees UP
-    rightAngle = phase1Progress * (Math.PI / 2); // 0 to 90 degrees UP
+    // Phase 1: Go UP (0 to 90 degrees)
+    const phase1Progress = easedOpen * 2;
+    flapAngle = phase1Progress * (Math.PI / 2);
   } else {
-    // Phase 2: Fall OUTWARD (from vertical to angled out)
-    const phase2Progress = (easedOpen - 0.5) * 2; // 0 to 1
-    leftAngle = (Math.PI / 2) + phase2Progress * (Math.PI / 4);  // 90 to 135 degrees (falls left)
-    rightAngle = (Math.PI / 2) + phase2Progress * (Math.PI / 4); // 90 to 135 degrees (falls right)
+    // Phase 2: Fall OUTWARD (90 to 135 degrees)
+    const phase2Progress = (easedOpen - 0.5) * 2;
+    flapAngle = (Math.PI / 2) + phase2Progress * (Math.PI / 4);
   }
 
-  // Flap dimensions - each flap covers half the width
+  // Flap dimensions - each flap covers half the top
   const flapWidth = (boxW - wallThickness * 2) / 2;
   const flapDepth = boxD - wallThickness * 2;
 
-  // LEFT FLAP - pivots from CENTER, goes UP then falls LEFT
+  // LEFT FLAP - pivots from LEFT EDGE, opens UP then falls OUTWARD (to the left)
   const leftFlapPivot = new THREE.Group();
-  leftFlapPivot.position.set(0, topY, 0); // Pivot at center of box top
+  leftFlapPivot.position.set(-boxW / 2 + wallThickness, topY, 0); // Pivot at LEFT edge
   
   const leftFlap = new THREE.Mesh(new THREE.BoxGeometry(flapWidth, flapThickness, flapDepth), flapMat);
-  leftFlap.position.set(-flapWidth / 2, 0, 0); // Extends to the left from pivot
+  leftFlap.position.set(flapWidth / 2, 0, 0); // Flap extends INWARD (toward center)
   leftFlapPivot.add(leftFlap);
   
-  // Rotate: positive Z = goes UP then falls to LEFT
-  leftFlapPivot.rotation.z = leftAngle;
+  // Rotate: positive Z = flap goes UP then falls LEFT (outward)
+  leftFlapPivot.rotation.z = flapAngle;
   box.add(leftFlapPivot);
 
-  // RIGHT FLAP - pivots from CENTER, goes UP then falls RIGHT
+  // RIGHT FLAP - pivots from RIGHT EDGE, opens UP then falls OUTWARD (to the right)
   const rightFlapPivot = new THREE.Group();
-  rightFlapPivot.position.set(0, topY, 0); // Pivot at center of box top
+  rightFlapPivot.position.set(boxW / 2 - wallThickness, topY, 0); // Pivot at RIGHT edge
   
   const rightFlap = new THREE.Mesh(new THREE.BoxGeometry(flapWidth, flapThickness, flapDepth), flapMat);
-  rightFlap.position.set(flapWidth / 2, 0, 0); // Extends to the right from pivot
+  rightFlap.position.set(-flapWidth / 2, 0, 0); // Flap extends INWARD (toward center)
   rightFlapPivot.add(rightFlap);
   
-  // Rotate: negative Z = goes UP then falls to RIGHT
-  rightFlapPivot.rotation.z = -rightAngle;
+  // Rotate: negative Z = flap goes UP then falls RIGHT (outward)
+  rightFlapPivot.rotation.z = -flapAngle;
   box.add(rightFlapPivot);
 
   // Tape in the middle (only when closed)
@@ -2308,7 +2305,6 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
     tape.position.set(0, topY + flapThickness + 0.002, 0);
     box.add(tape);
     
-    // Tape line down the middle
     const tapeLine = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.004, flapDepth * 0.8), tapeMat);
     tapeLine.position.set(0, topY + flapThickness + 0.003, 0);
     box.add(tapeLine);
