@@ -3042,6 +3042,183 @@ function buildSceneContent(
     } else if (environment === 'domino') {
       const arrowY = 0;
 
+      // Casino table
+      const tableGroup = new THREE.Group();
+
+      // Main table (oval shape using stretched cylinder)
+      const feltMat = new THREE.MeshStandardMaterial({ color: '#0d5c2e', roughness: 0.9 });
+      const tableTop = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.2, 1.2, 0.05, 32),
+        feltMat
+      );
+      tableTop.position.y = -0.28;
+      tableTop.scale.set(Math.max(1.5, data.length * spacing / 2 + 0.8), 1, 0.6);
+      tableGroup.add(tableTop);
+
+      // Table edge (wood trim)
+      const woodMat = new THREE.MeshStandardMaterial({ color: '#5d3a1a', roughness: 0.6, metalness: 0.1 });
+      const tableEdge = new THREE.Mesh(
+        new THREE.TorusGeometry(1.2, 0.04, 8, 32),
+        woodMat
+      );
+      tableEdge.position.y = -0.26;
+      tableEdge.rotation.x = Math.PI / 2;
+      tableEdge.scale.set(Math.max(1.5, data.length * spacing / 2 + 0.8), 0.6, 1);
+      tableGroup.add(tableEdge);
+
+      // Inner gold trim
+      const goldTrimMat = new THREE.MeshStandardMaterial({ color: '#d4af37', metalness: 0.8, roughness: 0.3 });
+      const innerTrim = new THREE.Mesh(
+        new THREE.TorusGeometry(1.1, 0.015, 8, 32),
+        goldTrimMat
+      );
+      innerTrim.position.y = -0.25;
+      innerTrim.rotation.x = Math.PI / 2;
+      innerTrim.scale.set(Math.max(1.4, data.length * spacing / 2 + 0.7), 0.55, 1);
+      tableGroup.add(innerTrim);
+
+      // Table legs
+      const legMat = new THREE.MeshStandardMaterial({ color: '#3d2510', roughness: 0.5 });
+      [[-0.8, -0.35], [0.8, -0.35], [-0.8, 0.35], [0.8, 0.35]].forEach(([x, z]) => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.35, 12), legMat);
+        leg.position.set(x * Math.max(1.3, data.length * spacing / 2 + 0.5), -0.45, z * 0.5);
+        tableGroup.add(leg);
+      });
+
+      // Felt pattern lines
+      const linesMat = new THREE.MeshBasicMaterial({ color: '#0a4a24' });
+      for (let i = -3; i <= 3; i++) {
+        const line = new THREE.Mesh(new THREE.BoxGeometry(0.005, 0.001, 0.5), linesMat);
+        line.position.set(i * 0.3, -0.254, 0);
+        tableGroup.add(line);
+      }
+
+      // Casino chips stacks (decoration)
+      const chipColors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6'];
+      [[-1.0, -0.2], [-1.0, 0.2], [1.0, -0.2], [1.0, 0.2]].forEach(([x, z], idx) => {
+        const stackHeight = 3 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < stackHeight; i++) {
+          const chipMat = new THREE.MeshStandardMaterial({ 
+            color: chipColors[(idx + i) % chipColors.length], 
+            metalness: 0.3, 
+            roughness: 0.5 
+          });
+          const chip = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.012, 16), chipMat);
+          chip.position.set(
+            x * Math.max(1.2, data.length * spacing / 2 + 0.4), 
+            -0.24 + i * 0.013, 
+            z * 0.4
+          );
+          tableGroup.add(chip);
+
+          // Chip edge detail
+          const edgeMat = new THREE.MeshStandardMaterial({ color: '#ffffff', metalness: 0.2 });
+          const edge = new THREE.Mesh(new THREE.TorusGeometry(0.038, 0.003, 4, 16), edgeMat);
+          edge.rotation.x = Math.PI / 2;
+          edge.position.set(
+            x * Math.max(1.2, data.length * spacing / 2 + 0.4), 
+            -0.24 + i * 0.013, 
+            z * 0.4
+          );
+          tableGroup.add(edge);
+        }
+      });
+
+      // Dealer area marker
+      const dealerMat = new THREE.MeshBasicMaterial({ color: '#0a4a24' });
+      const dealerArea = new THREE.Mesh(new THREE.RingGeometry(0.15, 0.18, 32), dealerMat);
+      dealerArea.rotation.x = -Math.PI / 2;
+      dealerArea.position.set(0, -0.252, -0.35);
+      tableGroup.add(dealerArea);
+
+      // "DEALER" text
+      const dealerCanvas = document.createElement('canvas');
+      dealerCanvas.width = 100;
+      dealerCanvas.height = 30;
+      const dctx = dealerCanvas.getContext('2d')!;
+      dctx.fillStyle = '#d4af37';
+      dctx.font = 'bold 18px serif';
+      dctx.textAlign = 'center';
+      dctx.fillText('DEALER', 50, 22);
+      const dealerTex = new THREE.CanvasTexture(dealerCanvas);
+      const dealerLabel = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.2, 0.06),
+        new THREE.MeshBasicMaterial({ map: dealerTex, transparent: true })
+      );
+      dealerLabel.rotation.x = -Math.PI / 2;
+      dealerLabel.position.set(0, -0.251, -0.38);
+      tableGroup.add(dealerLabel);
+
+      // Card shoe (where cards come from)
+      const shoeMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.4 });
+      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.08, 0.1), shoeMat);
+      shoe.position.set(-0.9 * Math.max(1.2, data.length * spacing / 2 + 0.3), -0.21, -0.25);
+      tableGroup.add(shoe);
+
+      // Cards in shoe
+      const cardMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 });
+      for (let i = 0; i < 5; i++) {
+        const card = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.001, 0.08), cardMat);
+        card.position.set(
+          -0.9 * Math.max(1.2, data.length * spacing / 2 + 0.3) - 0.02 + i * 0.012, 
+          -0.17 + i * 0.003, 
+          -0.25
+        );
+        card.rotation.z = 0.1;
+        tableGroup.add(card);
+      }
+
+      // Discard tray
+      const trayMat = new THREE.MeshStandardMaterial({ color: '#8b0000', roughness: 0.5 });
+      const tray = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.03, 0.08), trayMat);
+      tray.position.set(0.9 * Math.max(1.2, data.length * spacing / 2 + 0.3), -0.235, -0.25);
+      tableGroup.add(tray);
+
+      // Casino sign
+      const signCanvas = document.createElement('canvas');
+      signCanvas.width = 200;
+      signCanvas.height = 60;
+      const sctx = signCanvas.getContext('2d')!;
+      sctx.fillStyle = '#1a1a2e';
+      sctx.fillRect(0, 0, 200, 60);
+      sctx.strokeStyle = '#d4af37';
+      sctx.lineWidth = 3;
+      sctx.strokeRect(3, 3, 194, 54);
+      sctx.fillStyle = '#d4af37';
+      sctx.font = 'bold 22px serif';
+      sctx.textAlign = 'center';
+      sctx.fillText('♠ LINKED LIST ♣', 100, 28);
+      sctx.font = '14px serif';
+      sctx.fillText('♥ CASINO ♦', 100, 48);
+      const signTex = new THREE.CanvasTexture(signCanvas);
+      const signMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.5, 0.15),
+        new THREE.MeshBasicMaterial({ map: signTex })
+      );
+      signMesh.position.set(0, 0.3, -0.5);
+      tableGroup.add(signMesh);
+
+      // Ambient lights (decorative spheres)
+      const lightMat = new THREE.MeshStandardMaterial({ 
+        color: '#ffff99', 
+        emissive: '#ffff66', 
+        emissiveIntensity: 0.5 
+      });
+      [-0.6, 0.6].forEach(x => {
+        const light = new THREE.Mesh(new THREE.SphereGeometry(0.025, 12, 12), lightMat);
+        light.position.set(x * Math.max(1.3, data.length * spacing / 2 + 0.5), 0.25, -0.45);
+        tableGroup.add(light);
+
+        // Light pole
+        const poleMat = new THREE.MeshStandardMaterial({ color: '#d4af37', metalness: 0.8 });
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 8), poleMat);
+        pole.position.set(x * Math.max(1.3, data.length * spacing / 2 + 0.5), 0, -0.45);
+        tableGroup.add(pole);
+      });
+
+      group.add(tableGroup);
+
+      // Dominoes
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const domino = createDomino(item.label, isHl);
@@ -3056,6 +3233,7 @@ function buildSceneContent(
         }
       });
 
+      // NULL at the end
       if (data.length > 0) {
         const nullSprite = createTextSprite('NULL', '#ff0000', 20);
         nullSprite.position.set(startX + data.length * spacing, 0, 0);
@@ -3066,12 +3244,15 @@ function buildSceneContent(
         group.add(lastArrow);
       }
 
-      const table = new THREE.Mesh(
-        new THREE.BoxGeometry(Math.max(2, data.length * spacing + 1.2), 0.035, 0.55),
-        new THREE.MeshStandardMaterial({ color: '#1b5e20', roughness: 0.9 })
+      // Floor under table (carpet)
+      const carpetMat = new THREE.MeshStandardMaterial({ color: '#8b0000', roughness: 0.95 });
+      const carpet = new THREE.Mesh(
+        new THREE.PlaneGeometry(Math.max(4, data.length * spacing + 3), 2),
+        carpetMat
       );
-      table.position.y = -0.28;
-      group.add(table);
+      carpet.rotation.x = -Math.PI / 2;
+      carpet.position.y = -0.63;
+      group.add(carpet);
     }
 
   // ==================== STACK ====================
