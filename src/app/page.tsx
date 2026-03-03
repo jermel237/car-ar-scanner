@@ -4293,52 +4293,44 @@ function buildSceneContent(
     }
 
     if (environment === 'tollgate') {
-      // ==================== REALISTIC ROAD ====================
+      // ==================== REALISTIC ROAD (SINGLE LANE) ====================
       const roadLength = Math.max(4.5, data.length * spacing + 4);
       
-      // Asphalt road
+      // Asphalt road (narrower - single lane)
       const asphaltMat = new THREE.MeshStandardMaterial({ color: '#2a2a2a', roughness: 0.9 });
-      const road = new THREE.Mesh(new THREE.PlaneGeometry(roadLength, 1.2), asphaltMat);
+      const road = new THREE.Mesh(new THREE.PlaneGeometry(roadLength, 0.55), asphaltMat);
       road.rotation.x = -Math.PI / 2;
       road.position.set(roadLength / 2 - 2, groundY - 0.01, 0);
       group.add(road);
 
       // Road texture (subtle grain)
-      const roadGrain = new THREE.Mesh(new THREE.PlaneGeometry(roadLength, 1.2), 
+      const roadGrain = new THREE.Mesh(new THREE.PlaneGeometry(roadLength, 0.55), 
         new THREE.MeshStandardMaterial({ color: '#333333', roughness: 1, transparent: true, opacity: 0.3 })
       );
       roadGrain.rotation.x = -Math.PI / 2;
       roadGrain.position.set(roadLength / 2 - 2, groundY - 0.008, 0);
       group.add(roadGrain);
 
-      // Center dashed lines
-      const dashMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.5 });
-      const numDashes = Math.floor(roadLength / 0.35);
-      for (let i = 0; i < numDashes; i++) {
-        const dash = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.005, 0.04), dashMat);
-        dash.position.set(-2 + i * 0.35, groundY, 0);
-        group.add(dash);
-      }
-
       // Side lines (solid white)
-      [-0.55, 0.55].forEach(z => {
-        const sideLine = new THREE.Mesh(new THREE.BoxGeometry(roadLength, 0.005, 0.05), dashMat);
+      const dashMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.5 });
+      [-0.25, 0.25].forEach(z => {
+        const sideLine = new THREE.Mesh(new THREE.BoxGeometry(roadLength, 0.005, 0.03), dashMat);
         sideLine.position.set(roadLength / 2 - 2, groundY, z);
         group.add(sideLine);
       });
 
       // Road edge lines (yellow)
       const yellowMat = new THREE.MeshStandardMaterial({ color: '#f4d03f', roughness: 0.5 });
-      [-0.58, 0.58].forEach(z => {
-        const edgeLine = new THREE.Mesh(new THREE.BoxGeometry(roadLength, 0.005, 0.02), yellowMat);
+      [-0.27, 0.27].forEach(z => {
+        const edgeLine = new THREE.Mesh(new THREE.BoxGeometry(roadLength, 0.005, 0.015), yellowMat);
         edgeLine.position.set(roadLength / 2 - 2, groundY, z);
         group.add(edgeLine);
       });
 
-      // Road shoulders (gravel)
+      // Road shoulders (gravel - narrower)
       const gravelMat = new THREE.MeshStandardMaterial({ color: '#5a5a5a', roughness: 1 });
-      [-0.75, 0.75].forEach(z => {
-        const shoulder = new THREE.Mesh(new THREE.PlaneGeometry(roadLength, 0.25), gravelMat);
+      [-0.38, 0.38].forEach(z => {
+        const shoulder = new THREE.Mesh(new THREE.PlaneGeometry(roadLength, 0.15), gravelMat);
         shoulder.rotation.x = -Math.PI / 2;
         shoulder.position.set(roadLength / 2 - 2, groundY - 0.015, z);
         group.add(shoulder);
@@ -4346,17 +4338,17 @@ function buildSceneContent(
 
       // Grass areas
       const grassMat = new THREE.MeshStandardMaterial({ color: '#3a7d32', roughness: 0.95 });
-      [-1.1, 1.1].forEach(z => {
-        const grass = new THREE.Mesh(new THREE.PlaneGeometry(roadLength, 0.6), grassMat);
+      [-0.6, 0.6].forEach(z => {
+        const grass = new THREE.Mesh(new THREE.PlaneGeometry(roadLength, 0.4), grassMat);
         grass.rotation.x = -Math.PI / 2;
         grass.position.set(roadLength / 2 - 2, groundY - 0.02, z);
         group.add(grass);
       });
 
-      // ==================== TOLL BOOTH (ENHANCED) ====================
+      // ==================== TOLL BOOTH ====================
       const tollBooth = createTollBooth(gateOpenAmount);
       tollBooth.position.set(startX - 0.3, groundY, 0);
-      tollBooth.scale.setScalar(0.85);
+      tollBooth.scale.setScalar(0.7);
       group.add(tollBooth);
 
       // ==================== STREET LIGHTS ====================
@@ -4365,45 +4357,45 @@ function buildSceneContent(
         
         // Pole
         const poleMat = new THREE.MeshStandardMaterial({ color: '#3a3a3a', metalness: 0.6, roughness: 0.4 });
-        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 1.4, 12), poleMat);
-        pole.position.y = 0.7;
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 1.2, 12), poleMat);
+        pole.position.y = 0.6;
         light.add(pole);
 
         // Pole base
-        const base = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.08, 12), poleMat);
-        base.position.y = 0.04;
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.06, 12), poleMat);
+        base.position.y = 0.03;
         light.add(base);
 
         // Arm
-        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.025, 0.025), poleMat);
-        arm.position.set(0.15, 1.38, 0);
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.02, 0.02), poleMat);
+        arm.position.set(0.1, 1.18, 0);
         arm.rotation.z = 0.1;
         light.add(arm);
 
         // Light fixture housing
         const housingMat = new THREE.MeshStandardMaterial({ color: '#2a2a2a', metalness: 0.5, roughness: 0.5 });
-        const housing = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.06, 0.1), housingMat);
-        housing.position.set(0.3, 1.34, 0);
+        const housing = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.04, 0.07), housingMat);
+        housing.position.set(0.2, 1.15, 0);
         light.add(housing);
 
         // Light panel (glowing)
         const lightPanel = new THREE.Mesh(
-          new THREE.BoxGeometry(0.12, 0.015, 0.08),
+          new THREE.BoxGeometry(0.08, 0.01, 0.055),
           new THREE.MeshStandardMaterial({ 
             color: '#ffffee', 
             emissive: '#ffff99', 
             emissiveIntensity: 0.8 
           })
         );
-        lightPanel.position.set(0.3, 1.3, 0);
+        lightPanel.position.set(0.2, 1.12, 0);
         light.add(lightPanel);
 
         // Light glow effect
         const glow = new THREE.Mesh(
-          new THREE.SphereGeometry(0.08, 16, 16),
+          new THREE.SphereGeometry(0.05, 16, 16),
           new THREE.MeshBasicMaterial({ color: '#ffffaa', transparent: true, opacity: 0.15 })
         );
-        glow.position.set(0.3, 1.25, 0);
+        glow.position.set(0.2, 1.08, 0);
         light.add(glow);
 
         light.position.set(x, groundY, z);
@@ -4411,164 +4403,85 @@ function buildSceneContent(
       };
 
       // Add street lights along the road
-      const streetLight1 = createStreetLight(startX - 1.5, 0.9);
+      const streetLight1 = createStreetLight(startX - 1.2, 0.55);
       group.add(streetLight1);
 
-      const streetLight2 = createStreetLight(startX + data.length * spacing + 1, 0.9);
+      const streetLight2 = createStreetLight(startX + data.length * spacing + 0.8, 0.55);
       streetLight2.rotation.y = Math.PI;
       group.add(streetLight2);
-
-      const streetLight3 = createStreetLight(startX + data.length * spacing / 2, -0.9);
-      streetLight3.rotation.y = Math.PI;
-      group.add(streetLight3);
 
       // ==================== TRAFFIC LIGHT ====================
       const trafficLight = new THREE.Group();
       
       // Traffic light pole
       const tlPoleMat = new THREE.MeshStandardMaterial({ color: '#333333', metalness: 0.6, roughness: 0.4 });
-      const tlPole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 1.6, 12), tlPoleMat);
-      tlPole.position.y = 0.8;
+      const tlPole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 1.3, 12), tlPoleMat);
+      tlPole.position.y = 0.65;
       trafficLight.add(tlPole);
 
       // Traffic light arm
-      const tlArm = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.03, 0.03), tlPoleMat);
-      tlArm.position.set(-0.22, 1.55, 0);
+      const tlArm = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.02, 0.02), tlPoleMat);
+      tlArm.position.set(-0.15, 1.28, 0);
+      tlArm.rotation.z = 0.1;
       trafficLight.add(tlArm);
 
       // Traffic light housing
       const tlHousing = new THREE.Mesh(
-        new THREE.BoxGeometry(0.1, 0.3, 0.08),
+        new THREE.BoxGeometry(0.07, 0.22, 0.06),
         new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.5 })
       );
-      tlHousing.position.set(-0.45, 1.45, 0);
+      tlHousing.position.set(-0.3, 1.2, 0);
       trafficLight.add(tlHousing);
 
-      // Traffic light visor
+      // Traffic light visors
       const visorMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.6 });
-      [0.08, 0, -0.08].forEach((y, i) => {
-        const visor = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.1), visorMat);
-        visor.position.set(-0.51, 1.45 + y, 0);
+      [0.06, 0, -0.06].forEach((y) => {
+        const visor = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.045, 0.07), visorMat);
+        visor.position.set(-0.35, 1.2 + y, 0);
         trafficLight.add(visor);
       });
 
       // Red light
       const redLight = new THREE.Mesh(
-        new THREE.CircleGeometry(0.025, 16),
+        new THREE.CircleGeometry(0.018, 16),
         new THREE.MeshStandardMaterial({ 
           color: gateOpenAmount < 0.5 ? '#ff0000' : '#330000',
           emissive: gateOpenAmount < 0.5 ? '#ff0000' : '#000',
           emissiveIntensity: gateOpenAmount < 0.5 ? 0.8 : 0
         })
       );
-      redLight.position.set(-0.506, 1.53, 0);
+      redLight.position.set(-0.356, 1.26, 0);
       redLight.rotation.y = -Math.PI / 2;
       trafficLight.add(redLight);
 
       // Yellow light
       const yellowLight = new THREE.Mesh(
-        new THREE.CircleGeometry(0.025, 16),
+        new THREE.CircleGeometry(0.018, 16),
         new THREE.MeshStandardMaterial({ 
           color: '#332200',
           emissive: '#000',
           emissiveIntensity: 0
         })
       );
-      yellowLight.position.set(-0.506, 1.45, 0);
+      yellowLight.position.set(-0.356, 1.2, 0);
       yellowLight.rotation.y = -Math.PI / 2;
       trafficLight.add(yellowLight);
 
       // Green light
       const greenLight = new THREE.Mesh(
-        new THREE.CircleGeometry(0.025, 16),
+        new THREE.CircleGeometry(0.018, 16),
         new THREE.MeshStandardMaterial({ 
           color: gateOpenAmount > 0.5 ? '#00ff00' : '#003300',
           emissive: gateOpenAmount > 0.5 ? '#00ff00' : '#000',
           emissiveIntensity: gateOpenAmount > 0.5 ? 0.8 : 0
         })
       );
-      greenLight.position.set(-0.506, 1.37, 0);
+      greenLight.position.set(-0.356, 1.14, 0);
       greenLight.rotation.y = -Math.PI / 2;
       trafficLight.add(greenLight);
 
-      trafficLight.position.set(startX - 0.8, groundY, -0.7);
+      trafficLight.position.set(startX - 0.5, groundY, -0.45);
       group.add(trafficLight);
-
-      // ==================== ROAD SIGNS ====================
-      // Speed limit sign
-      const speedSignGroup = new THREE.Group();
-      
-      const signPole = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.02, 0.02, 1.0, 12),
-        new THREE.MeshStandardMaterial({ color: '#666666', metalness: 0.5 })
-      );
-      signPole.position.y = 0.5;
-      speedSignGroup.add(signPole);
-
-      const speedSignCanvas = document.createElement('canvas');
-      speedSignCanvas.width = 80;
-      speedSignCanvas.height = 80;
-      const ssCtx = speedSignCanvas.getContext('2d')!;
-      ssCtx.fillStyle = '#fff';
-      ssCtx.beginPath();
-      ssCtx.arc(40, 40, 38, 0, Math.PI * 2);
-      ssCtx.fill();
-      ssCtx.strokeStyle = '#cc0000';
-      ssCtx.lineWidth = 6;
-      ssCtx.stroke();
-      ssCtx.fillStyle = '#000';
-      ssCtx.font = 'bold 30px Arial';
-      ssCtx.textAlign = 'center';
-      ssCtx.fillText('30', 40, 50);
-      const speedSignTex = new THREE.CanvasTexture(speedSignCanvas);
-      
-      const speedSign = new THREE.Mesh(
-        new THREE.CircleGeometry(0.12, 24),
-        new THREE.MeshBasicMaterial({ map: speedSignTex })
-      );
-      speedSign.position.y = 0.95;
-      speedSign.rotation.y = Math.PI / 2;
-      speedSignGroup.add(speedSign);
-
-      speedSignGroup.position.set(startX + data.length * spacing + 0.8, groundY, 0.75);
-      group.add(speedSignGroup);
-
-      // Toll sign
-      const tollSignGroup = new THREE.Group();
-      
-      const tollSignPole = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.02, 0.02, 1.2, 12),
-        new THREE.MeshStandardMaterial({ color: '#666666', metalness: 0.5 })
-      );
-      tollSignPole.position.y = 0.6;
-      tollSignGroup.add(tollSignPole);
-
-      const tollSignCanvas = document.createElement('canvas');
-      tollSignCanvas.width = 160;
-      tollSignCanvas.height = 80;
-      const tsCtx = tollSignCanvas.getContext('2d')!;
-      tsCtx.fillStyle = '#006633';
-      tsCtx.fillRect(0, 0, 160, 80);
-      tsCtx.strokeStyle = '#fff';
-      tsCtx.lineWidth = 4;
-      tsCtx.strokeRect(4, 4, 152, 72);
-      tsCtx.fillStyle = '#fff';
-      tsCtx.font = 'bold 20px Arial';
-      tsCtx.textAlign = 'center';
-      tsCtx.fillText('TOLL PLAZA', 80, 35);
-      tsCtx.font = '16px Arial';
-      tsCtx.fillText('$ 2.50', 80, 58);
-      const tollSignTex = new THREE.CanvasTexture(tollSignCanvas);
-      
-      const tollSign = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.35, 0.18),
-        new THREE.MeshBasicMaterial({ map: tollSignTex })
-      );
-      tollSign.position.y = 1.1;
-      tollSignGroup.add(tollSign);
-
-      tollSignGroup.position.set(startX - 1.8, groundY, 0);
-      group.add(tollSignGroup);
 
       // ==================== CARS ====================
       data.forEach((item, i) => {
@@ -4576,7 +4489,7 @@ function buildSceneContent(
         const isFront = i === 0;
         
         let extraX = 0;
-        let carScale = 0.75;
+        let carScale = 0.6;
         let shouldRender = true;
 
         if (isFront) {
@@ -4585,7 +4498,7 @@ function buildSceneContent(
             extraX = -progress * 2.5;
           } else if (animPhase === 'queue-dequeue-gate-close') {
             extraX = -2.5;
-            carScale = 0.75 * Math.max(0.01, 1 - (animProgress || 0));
+            carScale = 0.6 * Math.max(0.01, 1 - (animProgress || 0));
             if ((animProgress || 0) > 0.5) shouldRender = false;
           }
         } else {
@@ -4602,7 +4515,7 @@ function buildSceneContent(
 
         if (shouldRender) {
           const carObj = createCar(item.color, item.label, isHl);
-          carObj.position.set(startX + i * spacing + 0.5 + extraX, groundY + (isHl ? 0.04 : 0), 0);
+          carObj.position.set(startX + i * spacing + 0.5 + extraX, groundY + (isHl ? 0.03 : 0), 0);
           carObj.scale.setScalar(carScale);
           
           if (!animPhase?.startsWith('queue-dequeue')) {
@@ -4616,13 +4529,13 @@ function buildSceneContent(
       // FRONT and REAR labels
       if (data.length > 0) {
         const frontSprite = createTextSprite('FRONT', '#00ff00', 18);
-        frontSprite.position.set(startX + 0.5, groundY - 0.18, 0);
-        frontSprite.scale.set(0.28, 0.1, 1);
+        frontSprite.position.set(startX + 0.5, groundY - 0.15, 0);
+        frontSprite.scale.set(0.26, 0.09, 1);
         group.add(frontSprite);
 
         const rearSprite = createTextSprite('REAR', '#ff6600', 18);
-        rearSprite.position.set(startX + (data.length - 1) * spacing + 0.5, groundY - 0.18, 0);
-        rearSprite.scale.set(0.28, 0.1, 1);
+        rearSprite.position.set(startX + (data.length - 1) * spacing + 0.5, groundY - 0.15, 0);
+        rearSprite.scale.set(0.26, 0.09, 1);
         group.add(rearSprite);
       }
 
