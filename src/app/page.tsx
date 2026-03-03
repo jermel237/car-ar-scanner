@@ -3905,6 +3905,19 @@ export default function Home() {
     checkXR();
   }, []);
 
+  // Update WebXR scene when data changes
+useEffect(() => {
+  if (appMode !== 'webxr' || !webxrPlaced || !xrGroupRef.current) return;
+  buildSceneContent(xrGroupRef.current, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData, animProgress, tutorialText);
+}, [appMode, webxrPlaced, currentData, highlightIndex, highlightIndex2, currentStructure, currentEnvId, animPhase, animData, animProgress, tutorialText]);
+
+// Update zoom in WebXR
+useEffect(() => {
+  if (xrGroupRef.current && webxrActive && webxrPlaced) {
+    xrGroupRef.current.scale.setScalar(0.3 * zoomLevel);
+  }
+}, [zoomLevel, webxrActive, webxrPlaced]);
+
   const cleanupWebXR = useCallback(() => {
     if (xrRendererRef.current) {
       xrRendererRef.current.setAnimationLoop(null);
@@ -3923,9 +3936,90 @@ export default function Home() {
     else cleanupWebXR();
   }, [cleanupWebXR]);
 
-  const startWebXR = async () => {
-    alert('WebXR starting...');
-  };
+  const resetWebXRPlacement = useCallback(() => {
+  if (xrGroupRef.current) xrGroupRef.current.visible = false;
+  if (xrReticleRef.current) xrReticleRef.current.visible = true;
+  setWebxrPlaced(false);
+}, []);
+
+const startWebXR = async () => {
+  const xr = (navigator as any).xr;
+  if (!xr) { alert('WebXR not available.'); setAppMode('surface'); return; }
+  try {
+    const sessionInit: any = { requiredFeatures: ['hit-test'], optionalFeatures: ['dom-overlay'] };
+    const overlayEl = document.getElementById('ar-overlay');
+    if (overlayEl) sessionInit.domOverlay = { root: overlayEl };
+    const session = await xr.requestSession('immersive-ar', sessionInit);
+    xrSessionRef.current = session;
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    renderer.xr.setReferenceSpaceType('local');
+    xrRendererRef.current = renderer;
+    if (xrContainerRef.current) xrContainerRef.current.appendChild(renderer.domElement);
+    await renderer.xr.setSession(session);
+    const scene = new THREE.Scene();
+    xrSceneRef.current = scene;
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(5, 10, 7);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 100);
+    xrCameraRef.current = camera;
+    const group = new THREE.Group();
+    group.visible = false;
+    scene.add(group);
+    xrGroupRef.current = group;
+    const reticle = new THREE.Mesh(
+      new THREE.RingGeometry(0.08, 0.1, 32).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+    );
+    reticle.matrixAutoUpdate = false;
+    reticle.visible = false;
+    scene.add(reticle);
+    xrReticleRef.current = reticle;
+    const viewerSpace = await session.requestReferenceSpace('viewer');
+    const hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
+    xrHitTestSourceRef.current = hitTestSource;
+    session.addEventListener('select', () => {
+      if (xrReticleRef.current?.visible && xrGroupRef.current && !xrGroupRef.current.visible) {
+        xrGroupRef.current.position.setFromMatrixPosition(xrReticleRef.current.matrix);
+        xrGroupRef.current.visible = true;
+        xrGroupRef.current.scale.setScalar(0.3 * zoomLevel);
+        xrReticleRef.current.visible = false;
+        setWebxrPlaced(true);
+      }
+    });
+    session.addEventListener('end', () => cleanupWebXR());
+    renderer.setAnimationLoop((_ts: number, frame: any) => {
+      if (frame && xrHitTestSourceRef.current && xrGroupRef.current && !xrGroupRef.current.visible) {
+        const refSpace = renderer.xr.getReferenceSpace();
+        if (refSpace) {
+          const results = frame.getHitTestResults(xrHitTestSourceRef.current);
+          if (results.length > 0) {
+            const pose = results[0].getPose(refSpace);
+            if (pose && xrReticleRef.current) {
+              xrReticleRef.current.visible = true;
+              xrReticleRef.current.matrix.fromArray(pose.transform.matrix);
+            }
+          } else if (xrReticleRef.current) {
+            xrReticleRef.current.visible = false;
+          }
+        }
+      }
+      renderer.render(scene, camera);
+    });
+    setWebxrActive(true);
+    setWebxrPlaced(false);
+    setAppMode('webxr');
+  } catch (err: any) {
+    console.error(err);
+    alert('WebXR failed: ' + err.message);
+    setAppMode('surface');
+  }
+};
 
   const switchToMode = useCallback((mode: AppMode) => {
     if (appMode === 'webxr' && mode !== 'webxr') stopWebXR();
@@ -4021,7 +4115,8 @@ export default function Home() {
 
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: 10, zIndex: 100 }}>
         {!webxrActive && <button onClick={switchCamera} style={{ position: 'absolute', top: 10, right: 10, width: 50, height: 50, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 24, zIndex: 200 }}>🔄</button>}
-
+        {webxrActive && <button onClick={stopWebXR} style={{ position: 'absolute', top: 10, right: 10, padding: '12px 20px', background: '#e74c3c', color: 'white', border: 'none', borderRadius: 20, fontSize: 14, fontWeight: 'bold', zIndex: 300 }}>✕ Exit AR</button>}
+        
         <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', display: 'flex', background: 'rgba(0,0,0,0.8)', borderRadius: 25, padding: 3, border: '1px solid rgba(255,255,255,0.2)', zIndex: 200 }}>
           <button onClick={() => switchToMode('person')} style={{ padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20, background: appMode === 'person' ? '#667eea' : 'transparent', color: 'white', opacity: appMode === 'person' ? 1 : 0.5 }}>🧑 Person</button>
           <button onClick={() => switchToMode('surface')} style={{ padding: '8px 12px', fontSize: 11, fontWeight: 'bold', border: 'none', borderRadius: 20, background: appMode === 'surface' ? '#00b894' : 'transparent', color: 'white', opacity: appMode === 'surface' ? 1 : 0.5 }}>📱 Surface</button>
@@ -4075,6 +4170,11 @@ export default function Home() {
 
       {showControls && !tutorialActive && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '20px 10px 30px', background: 'linear-gradient(to top, rgba(0,0,0,0.95), transparent)', zIndex: 100 }}>
+           {(appMode === 'webxr' && webxrPlaced) && (
+  <div style={{ textAlign: 'center', marginBottom: 10 }}>
+    <button onClick={resetWebXRPlacement} style={{ padding: '8px 20px', fontSize: 12, fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, background: 'rgba(255,255,255,0.1)', color: 'white' }}>📍 Reposition AR</button>
+  </div>
+)}
           {(appMode === 'surface' && surfacePlaced) && (
             <div style={{ textAlign: 'center', marginBottom: 10 }}>
               <button onClick={resetSurfacePlacement} style={{ padding: '8px 20px', fontSize: 12, fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, background: 'rgba(255,255,255,0.1)', color: 'white' }}>📍 Reposition</button>
@@ -4129,7 +4229,16 @@ export default function Home() {
           <div style={{ textAlign: 'center', marginTop: 10, color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>Size: {currentData.length}</div>
         </div>
       )}
-
+      
+      {appMode === 'webxr' && webxrActive && !webxrPlaced && (
+  <div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}>
+    <div style={{ fontSize: 40, animation: 'xrPulse 2s ease infinite' }}>🌐</div>
+    <div style={{ marginTop: 8, fontWeight: 'bold', color: '#00ff00' }}>Scanning surface...</div>
+    <div style={{ marginTop: 4, fontSize: 12, opacity: 0.7 }}>Point camera at floor, then tap</div>
+    <style>{`@keyframes xrPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.15); opacity: 0.8; } }`}</style>
+  </div>
+)}
+      
       {appMode === 'person' && !detectedPerson && !webxrActive && (
         <div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: 'white', padding: '20px 30px', borderRadius: 20, textAlign: 'center' }}>
           <div style={{ fontSize: 40 }}>🧑</div><div style={{ marginTop: 8 }}>Point camera at a person</div>
