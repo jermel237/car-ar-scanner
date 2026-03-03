@@ -2494,7 +2494,11 @@ function buildSceneContent(
       }
     }
   }
-
+  // Disable highlighting during animations
+  if (animPhase && animPhase.length > 0 && (animProgress || 0) < 1) {
+    highlightIndex = null;
+    highlightIndex2 = null;
+  }
   const spacing = structure === 'linkedlist' ? 1.1 : structure === 'queue' ? 1.0 : 0.85;
   const startX = -((data.length - 1) * spacing) / 2;
   const groundY = 0;
