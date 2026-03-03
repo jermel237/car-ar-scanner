@@ -3271,7 +3271,7 @@ function buildSceneContent(
       group.add(signMesh);
 
     } else if (environment === 'domino') {
-
+      const arrowY = 0;
       // Casino table
       const tableGroup = new THREE.Group();
 
