@@ -2253,34 +2253,34 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
 
   const topY = wallThickness + boxH;
   const easedOpen = openAmount < 0.5 ? 2 * openAmount * openAmount : 1 - Math.pow(-2 * openAmount + 2, 2) / 2;
-  const openAngle = Math.PI * 0.5; // 90 degrees - flaps go fully backward
+  const openAngle = Math.PI * 0.55; // How far flaps open outward
 
   // Flap dimensions - each flap covers half the width
   const flapWidth = (boxW - wallThickness * 2) / 2;
   const flapDepth = boxD - wallThickness * 2;
 
-  // LEFT FLAP - pivots from CENTER, rotates UP and BACKWARD (counterclockwise ↺)
+  // LEFT FLAP - pivots from CENTER (right edge of left flap), opens OUTWARD to the left ↺
   const leftFlapPivot = new THREE.Group();
-  leftFlapPivot.position.set(0, topY, 0); // Pivot at center of box
+  leftFlapPivot.position.set(0, topY, 0); // Pivot at center
   
   const leftFlap = new THREE.Mesh(new THREE.BoxGeometry(flapWidth, flapThickness, flapDepth), flapMat);
-  leftFlap.position.set(-flapWidth / 2, flapThickness / 2, 0); // Extends to the left
+  leftFlap.position.set(-flapWidth / 2, flapThickness / 2, 0); // Extends to the LEFT
   leftFlapPivot.add(leftFlap);
   
-  // Rotate UP and BACKWARD (around Y axis, counterclockwise from above)
-  leftFlapPivot.rotation.y = easedOpen * openAngle;
+  // Rotate OUTWARD (counterclockwise when viewed from front) ↺
+  leftFlapPivot.rotation.z = easedOpen * openAngle;
   box.add(leftFlapPivot);
 
-  // RIGHT FLAP - pivots from CENTER, rotates UP and BACKWARD (clockwise ↻)
+  // RIGHT FLAP - pivots from CENTER (left edge of right flap), opens OUTWARD to the right ↻
   const rightFlapPivot = new THREE.Group();
-  rightFlapPivot.position.set(0, topY, 0); // Pivot at center of box
+  rightFlapPivot.position.set(0, topY, 0); // Pivot at center
   
   const rightFlap = new THREE.Mesh(new THREE.BoxGeometry(flapWidth, flapThickness, flapDepth), flapMat);
-  rightFlap.position.set(flapWidth / 2, flapThickness / 2, 0); // Extends to the right
+  rightFlap.position.set(flapWidth / 2, flapThickness / 2, 0); // Extends to the RIGHT
   rightFlapPivot.add(rightFlap);
   
-  // Rotate UP and BACKWARD (around Y axis, clockwise from above)
-  rightFlapPivot.rotation.y = -easedOpen * openAngle;
+  // Rotate OUTWARD (clockwise when viewed from front) ↻
+  rightFlapPivot.rotation.z = -easedOpen * openAngle;
   box.add(rightFlapPivot);
 
   // Tape in the middle (only when closed)
