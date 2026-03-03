@@ -3086,7 +3086,7 @@ function buildSceneContent(
       group.add(tollBooth);
 
       // Get the original front item ID to track who should disappear
-      const originalFrontId = animData.frontId;
+       const originalFrontId = animData?.frontId;
 
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
@@ -3165,9 +3165,9 @@ function buildSceneContent(
       schoolBuilding.scale.setScalar(0.5);
       schoolBuilding.rotation.y = 0;
       group.add(schoolBuilding);
-
+      
       // Get the original front item ID to track who should disappear
-      const originalFrontId = animData.frontId;
+      const originalFrontId = animData?.frontId;
 
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
