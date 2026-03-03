@@ -2495,7 +2495,7 @@ function buildSceneContent(
     }
   }
   // Disable highlighting during animations
-  if (animPhase && animPhase.length > 0 && (animProgress || 0) < 1) {
+  if (animPhase && animPhase !== '') {
     highlightIndex = null;
     highlightIndex2 = null;
   }
