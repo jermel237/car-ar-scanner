@@ -51,7 +51,6 @@ interface TutorialStep {
   animPhase?: string;
   animDuration?: number;
   action?: () => void;
-  animData?: Record<string, any>;
 }
 
 // ==================== 3D TEXT SPRITE ====================
@@ -2438,18 +2437,13 @@ function applyItemAnimation(
     } else if (animPhase === 'queue-enqueue-settle' && isTarget) {
       obj.position.x += 0.2 * (1 - p);
       obj.scale.setScalar(1 + 0.05 * (1 - p));
-    } else if (animPhase === 'queue-dequeue-drive' && isTarget) {
-      obj.position.x -= 2.5 * p;
-    } else if (animPhase === 'queue-dequeue-walk' && isTarget) {
-      obj.position.x -= 0.8 * p;
-    } else if (animPhase === 'queue-dequeue-enter' && isTarget) {
-      obj.position.x -= 0.4 * p;
-      obj.scale.setScalar(Math.max(0.01, 1 - p * 0.95));
     } else if (animPhase === 'queue-front-peek' && isTarget) {
       obj.position.y += 0.2 * p;
       obj.scale.setScalar(1 + 0.15 * p);
     }
   }
+}
+
 // ==================== BUILD SCENE CONTENT ====================
 
 function buildSceneContent(
@@ -3092,11 +3086,44 @@ function buildSceneContent(
 
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
-        const carObj = createCar(item.color, item.label, isHl);
-        carObj.position.set(startX + i * spacing + 0.5, groundY + (isHl ? 0.06 : 0), 0);
-        carObj.scale.setScalar(0.78);
-        applyItemAnimation(carObj, i, animPhase || '', animData || {}, 'queue', animProgress);
-        group.add(carObj);
+        const isFront = i === 0;
+        
+        let extraX = 0;
+        let carScale = 0.78;
+        let shouldRender = true;
+
+        if (isFront) {
+          if (animPhase === 'queue-dequeue-drive') {
+            const progress = animProgress || 0;
+            extraX = -progress * 2.5;
+          } else if (animPhase === 'queue-dequeue-gate-close') {
+            extraX = -2.5;
+            carScale = 0.78 * Math.max(0.01, 1 - (animProgress || 0));
+            if ((animProgress || 0) > 0.5) shouldRender = false;
+          }
+        } else {
+          if (animPhase === 'queue-dequeue-gate-open') {
+            const progress = animProgress || 0;
+            extraX = -progress * spacing * 0.3;
+          } else if (animPhase === 'queue-dequeue-drive') {
+            const progress = animProgress || 0;
+            extraX = -spacing * 0.3 - progress * spacing * 0.7;
+          } else if (animPhase === 'queue-dequeue-gate-close') {
+            extraX = -spacing;
+          }
+        }
+
+        if (shouldRender) {
+          const carObj = createCar(item.color, item.label, isHl);
+          carObj.position.set(startX + i * spacing + 0.5 + extraX, groundY + (isHl ? 0.06 : 0), 0);
+          carObj.scale.setScalar(carScale);
+          
+          if (!animPhase?.startsWith('queue-dequeue')) {
+            applyItemAnimation(carObj, i, animPhase || '', animData || {}, 'queue', animProgress);
+          }
+          
+          group.add(carObj);
+        }
       });
 
       if (data.length > 0) {
@@ -3152,6 +3179,16 @@ function buildSceneContent(
               studentScale = 0.55 * Math.max(0.01, 1 - progress * 0.95);
               if (progress > 0.95) shouldRender = false;
             }
+          } else {
+            if (animPhase === 'queue-dequeue-walk') {
+              const progress = animProgress || 0;
+              walkPhase = progress * Math.PI * 6;
+              extraX = -progress * spacing * 0.5;
+            } else if (animPhase === 'queue-dequeue-enter') {
+              const progress = animProgress || 0;
+              walkPhase = Math.PI * 6 + progress * Math.PI * 4;
+              extraX = -spacing * 0.5 - progress * spacing * 0.5;
+            }
           }
 
           if (shouldRender) {
@@ -3159,11 +3196,6 @@ function buildSceneContent(
             human.position.set(startX + i * spacing + 0.6 + extraX, groundY, 0);
             human.scale.setScalar(studentScale);
             human.rotation.y = -Math.PI / 2;
-
-            if (!(isFront && (animPhase === 'queue-dequeue-walk' || animPhase === 'queue-dequeue-enter'))) {
-              applyItemAnimation(human, i, animPhase || '', animData || {}, 'queue', animProgress);
-            }
-
             group.add(human);
           }
         }
@@ -3424,6 +3456,7 @@ export default function Home() {
     if (step.animPhase && step.animDuration) {
       await smoothAnimate(step.animDuration, step.animPhase, { index: step.highlightIndex, index1: step.highlightIndex, index2: step.highlightIndex2 });
     } else {
+      // Clear animation state when step has no animation
       setAnimPhase('');
       setAnimData({});
       setAnimProgress(1);
@@ -3431,13 +3464,21 @@ export default function Home() {
     
     if (step.action) {
       step.action();
-      // Clear animation state IMMEDIATELY after action to prevent remaining items from disappearing
-      setAnimPhase('');
-      setAnimData({});
-      setAnimProgress(1);
     }
     
     setStepAnimating(false);
+  };
+
+  const nextStep = async () => {
+    if (stepAnimating) return;
+    
+    if (currentStepIndex < tutorialSteps.length - 1) {
+      const nextIdx = currentStepIndex + 1;
+      setCurrentStepIndex(nextIdx);
+      await runTutorialStep(tutorialSteps[nextIdx]);
+    } else {
+      endTutorial();
+    }
   };
 
   const endTutorial = () => {
