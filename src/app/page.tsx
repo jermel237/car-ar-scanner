@@ -1109,137 +1109,127 @@ function createTablet(tasks: DataItem[], highlightIndex: number | null): THREE.G
   return tablet;
 }
 
-// ==================== BULLET TRAIN CAR ====================
+// ==================== TRAIN CAR ====================
 
 function createTrainCar(isEngine: boolean, color: string, label: string, isHighlighted: boolean): THREE.Group {
   const train = new THREE.Group();
 
-  const bodyLength = 0.75;
-  const bodyHeight = 0.28;
-  const bodyWidth = 0.3;
-
-  // Main body - sleek bullet train shape
+  // Main body - grey color
+  const bodyGeo = new THREE.BoxGeometry(0.7, 0.32, 0.32);
   const bodyMat = new THREE.MeshStandardMaterial({
-    color: '#ffffff',
-    metalness: 0.6,
-    roughness: 0.3,
+    color: '#555555',
+    metalness: 0.4,
+    roughness: 0.5,
     emissive: isHighlighted ? '#ffff00' : '#000',
-    emissiveIntensity: isHighlighted ? 0.3 : 0,
+    emissiveIntensity: isHighlighted ? 0.4 : 0,
   });
-
-  const body = new THREE.Mesh(new THREE.BoxGeometry(bodyLength, bodyHeight, bodyWidth), bodyMat);
-  body.position.y = 0.18;
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.position.y = 0.14;
   train.add(body);
 
-  // Color stripe on side
-  const stripeMat = new THREE.MeshStandardMaterial({ color, metalness: 0.5, roughness: 0.4 });
-  const stripe = new THREE.Mesh(new THREE.BoxGeometry(bodyLength + 0.01, 0.04, bodyWidth + 0.01), stripeMat);
-  stripe.position.y = 0.14;
+  // Stripe - black
+  const stripeGeo = new THREE.BoxGeometry(0.72, 0.03, 0.33);
+  const stripeMat = new THREE.MeshStandardMaterial({ color: '#222222', metalness: 0.6 });
+  const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+  stripe.position.y = 0.2;
   train.add(stripe);
 
-  // Bottom stripe
-  const bottomStripe = new THREE.Mesh(new THREE.BoxGeometry(bodyLength + 0.01, 0.02, bodyWidth + 0.01), stripeMat);
-  bottomStripe.position.y = 0.05;
-  train.add(bottomStripe);
-
-  // Roof - rounded top
-  const roofMat = new THREE.MeshStandardMaterial({ color: '#e0e0e0', metalness: 0.5, roughness: 0.4 });
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(bodyLength - 0.02, 0.03, bodyWidth - 0.04), roofMat);
+  // Roof - dark grey
+  const roofGeo = new THREE.BoxGeometry(0.66, 0.06, 0.28);
+  const roofMat = new THREE.MeshStandardMaterial({ color: '#333333', metalness: 0.5 });
+  const roof = new THREE.Mesh(roofGeo, roofMat);
   roof.position.y = 0.33;
   train.add(roof);
 
-  // Undercarriage
-  const underMat = new THREE.MeshStandardMaterial({ color: '#333333', metalness: 0.6, roughness: 0.4 });
-  const under = new THREE.Mesh(new THREE.BoxGeometry(bodyLength - 0.05, 0.04, bodyWidth - 0.04), underMat);
-  under.position.y = 0.02;
+  // Undercarriage - black
+  const underGeo = new THREE.BoxGeometry(0.68, 0.05, 0.26);
+  const underMat = new THREE.MeshStandardMaterial({ color: '#111111', metalness: 0.7 });
+  const under = new THREE.Mesh(underGeo, underMat);
+  under.position.y = -0.04;
   train.add(under);
 
-  // Wheels (hidden under body - modern train style)
+  // Wheels
   const wheelMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', metalness: 0.8, roughness: 0.2 });
-  [[-0.25, -0.02, 0.12], [0.25, -0.02, 0.12], [-0.25, -0.02, -0.12], [0.25, -0.02, -0.12]].forEach(([wx, wy, wz]) => {
-    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.02, 16), wheelMat);
+  const hubMat = new THREE.MeshStandardMaterial({ color: '#444444', metalness: 0.9, roughness: 0.1 });
+  const spokeMat = new THREE.MeshStandardMaterial({ color: '#333333', metalness: 0.7 });
+
+  [[-0.22, -0.05, 0.17], [0.22, -0.05, 0.17], [-0.22, -0.05, -0.17], [0.22, -0.05, -0.17]].forEach(([wx, wy, wz]) => {
+    const wheelGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.02, 16);
+    const wheel = new THREE.Mesh(wheelGeo, wheelMat);
     wheel.rotation.x = Math.PI / 2;
     wheel.position.set(wx, wy, wz);
     train.add(wheel);
+
+    const hubGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.025, 12);
+    const hub = new THREE.Mesh(hubGeo, hubMat);
+    hub.rotation.x = Math.PI / 2;
+    hub.position.set(wx, wy, wz + (wz > 0 ? 0.005 : -0.005));
+    train.add(hub);
+
+    for (let i = 0; i < 6; i++) {
+      const spokeGeo = new THREE.BoxGeometry(0.008, 0.05, 0.005);
+      const spoke = new THREE.Mesh(spokeGeo, spokeMat);
+      spoke.position.set(wx, wy, wz);
+      spoke.rotation.z = (i * Math.PI) / 3;
+      train.add(spoke);
+    }
   });
 
-  // Windows - modern rectangular style
-  const windowMat = new THREE.MeshStandardMaterial({ color: '#1a1a2e', metalness: 0.7, roughness: 0.1 });
-  
-  if (isEngine) {
-    // Bullet nose
-    const noseMat = new THREE.MeshStandardMaterial({ color: '#ffffff', metalness: 0.7, roughness: 0.2 });
-    const noseLength = 0.25;
-    
-    // Create aerodynamic nose using a tapered box
-    const noseGeo = new THREE.BoxGeometry(noseLength, bodyHeight * 0.8, bodyWidth * 0.9);
-    const nose = new THREE.Mesh(noseGeo, noseMat);
-    nose.position.set(-bodyLength / 2 - noseLength / 2 + 0.05, 0.18, 0);
-    nose.scale.set(1, 1, 1);
-    train.add(nose);
-
-    // Nose tip (pointed)
-    const tipGeo = new THREE.ConeGeometry(bodyWidth * 0.35, 0.15, 4);
-    const tip = new THREE.Mesh(tipGeo, noseMat);
-    tip.rotation.z = Math.PI / 2;
-    tip.rotation.y = Math.PI / 4;
-    tip.position.set(-bodyLength / 2 - noseLength - 0.02, 0.18, 0);
-    train.add(tip);
-
-    // Front windshield
-    const windshieldMat = new THREE.MeshStandardMaterial({ color: '#0a0a15', metalness: 0.8, roughness: 0.1 });
-    const windshield = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.12, bodyWidth * 0.7), windshieldMat);
-    windshield.position.set(-bodyLength / 2 - 0.1, 0.22, 0);
-    train.add(windshield);
-
-    // Headlights
-    const lightMat = new THREE.MeshBasicMaterial({ color: '#ffffee' });
-    [-0.08, 0.08].forEach(z => {
-      const light = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.03, 0.04), lightMat);
-      light.position.set(-bodyLength / 2 - noseLength - 0.05, 0.12, z);
-      train.add(light);
-    });
-
-    // Stripe on nose
-    const noseStripe = new THREE.Mesh(new THREE.BoxGeometry(noseLength + 0.1, 0.035, bodyWidth * 0.92), stripeMat);
-    noseStripe.position.set(-bodyLength / 2 - noseLength / 2 + 0.08, 0.14, 0);
-    train.add(noseStripe);
-
-  } else {
-    // Passenger windows
-    const windowGeo = new THREE.BoxGeometry(0.1, 0.08, 0.01);
-    [-0.25, -0.08, 0.08, 0.25].forEach(x => {
+  // Windows - dark
+  if (!isEngine) {
+    const windowGeo = new THREE.BoxGeometry(0.1, 0.09, 0.01);
+    const windowMat = new THREE.MeshStandardMaterial({ color: '#1a1a2e', metalness: 0.5, roughness: 0.1 });
+    [-0.22, 0, 0.22].forEach(x => {
       const wF = new THREE.Mesh(windowGeo, windowMat);
-      wF.position.set(x, 0.22, bodyWidth / 2 + 0.005);
+      wF.position.set(x, 0.18, 0.165);
       train.add(wF);
       const wB = new THREE.Mesh(windowGeo, windowMat);
-      wB.position.set(x, 0.22, -bodyWidth / 2 - 0.005);
+      wB.position.set(x, 0.18, -0.165);
       train.add(wB);
     });
   }
 
-  // Door (on passenger cars)
-  if (!isEngine) {
-    const doorMat = new THREE.MeshStandardMaterial({ color: '#cccccc', metalness: 0.5 });
-    const door = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.18, 0.12), doorMat);
-    door.position.set(0, 0.15, bodyWidth / 2 + 0.006);
-    train.add(door);
-    
-    const door2 = door.clone();
-    door2.position.z = -bodyWidth / 2 - 0.006;
-    train.add(door2);
+  // Engine specific parts
+  if (isEngine) {
+    const boilerMat = new THREE.MeshStandardMaterial({ color: '#444444', metalness: 0.5, roughness: 0.4 });
+    const boilerGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.4, 12);
+    const boiler = new THREE.Mesh(boilerGeo, boilerMat);
+    boiler.rotation.z = Math.PI / 2;
+    boiler.position.set(-0.15, 0.16, 0);
+    train.add(boiler);
+
+    const chimneyBase = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.05, 0.06, 0.08, 12),
+      new THREE.MeshStandardMaterial({ color: '#1a1a1a', metalness: 0.6 })
+    );
+    chimneyBase.position.set(-0.08, 0.32, 0);
+    train.add(chimneyBase);
+
+    const chimneyTop = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.07, 0.05, 0.12, 12),
+      new THREE.MeshStandardMaterial({ color: '#1a1a1a', metalness: 0.6 })
+    );
+    chimneyTop.position.set(-0.08, 0.44, 0);
+    train.add(chimneyTop);
+
+    const cabinMat = new THREE.MeshStandardMaterial({ color: '#666666', metalness: 0.4 });
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.24, 0.32), cabinMat);
+    cabin.position.set(0.26, 0.24, 0);
+    train.add(cabin);
+
+    const cabRoof = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.03, 0.36), roofMat);
+    cabRoof.position.set(0.26, 0.38, 0);
+    train.add(cabRoof);
   }
 
-  // Connectors between cars
-  const connectorMat = new THREE.MeshStandardMaterial({ color: '#444', metalness: 0.7 });
-  if (!isEngine) {
-    const connector = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.1), connectorMat);
-    connector.position.set(-bodyLength / 2 - 0.04, 0.08, 0);
-    train.add(connector);
-  }
-  const connectorBack = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.1), connectorMat);
-  connectorBack.position.set(bodyLength / 2 + 0.04, 0.08, 0);
-  train.add(connectorBack);
+  // Connectors - dark grey
+  const hookGeo = new THREE.BoxGeometry(0.05, 0.03, 0.03);
+  const hookMat = new THREE.MeshStandardMaterial({ color: '#333333', metalness: 0.8 });
+  [-0.375, 0.375].forEach(x => {
+    const hook = new THREE.Mesh(hookGeo, hookMat);
+    hook.position.set(x, 0.02, 0);
+    train.add(hook);
+  });
 
   // Label
   const canvas = document.createElement('canvas');
@@ -1256,16 +1246,16 @@ function createTrainCar(isEngine: boolean, color: string, label: string, isHighl
   ctx.fillText(label, 80, 34);
   const labelTex = new THREE.CanvasTexture(canvas);
   const labelSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex, transparent: true }));
-  labelSprite.position.y = 0.55;
+  labelSprite.position.y = isEngine ? 0.75 : 0.55;
   labelSprite.scale.set(0.42, 0.13, 1);
   train.add(labelSprite);
 
   if (isHighlighted) {
     const glow = new THREE.Mesh(
-      new THREE.BoxGeometry(bodyLength + 0.1, bodyHeight + 0.1, bodyWidth + 0.08),
-      new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.1 })
+      new THREE.BoxGeometry(0.78, 0.42, 0.38),
+      new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 })
     );
-    glow.position.y = 0.18;
+    glow.position.y = 0.14;
     train.add(glow);
   }
 
