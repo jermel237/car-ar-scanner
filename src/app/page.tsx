@@ -1557,66 +1557,326 @@ function createTollBooth(gateOpenAmount: number = 0): THREE.Group {
 function createCar(color: string, label: string, isHighlighted: boolean): THREE.Group {
   const car = new THREE.Group();
 
+  // Car body materials
   const bodyMat = new THREE.MeshStandardMaterial({
     color,
-    metalness: 0.7,
-    roughness: 0.3,
+    metalness: 0.8,
+    roughness: 0.2,
     emissive: isHighlighted ? '#ffff00' : '#000',
-    emissiveIntensity: isHighlighted ? 0.3 : 0,
+    emissiveIntensity: isHighlighted ? 0.25 : 0,
   });
 
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.14, 0.26), bodyMat);
-  body.position.y = 0.1;
-  car.add(body);
+  const darkMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.8 });
+  const chromeMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.95, roughness: 0.05 });
+  const glassMat = new THREE.MeshStandardMaterial({ color: '#1a2530', metalness: 0.3, roughness: 0.1, transparent: true, opacity: 0.85 });
+  const interiorMat = new THREE.MeshStandardMaterial({ color: '#2c2c2c', roughness: 0.9 });
 
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.12, 0.23), bodyMat);
-  cabin.position.set(0.02, 0.23, 0);
+  // Main body (lower)
+  const bodyLower = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.12, 0.28), bodyMat);
+  bodyLower.position.y = 0.1;
+  car.add(bodyLower);
+
+  // Body side curves (fenders)
+  const fenderFront = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.3), bodyMat);
+  fenderFront.position.set(-0.24, 0.08, 0);
+  car.add(fenderFront);
+
+  const fenderBack = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.3), bodyMat);
+  fenderBack.position.set(0.24, 0.08, 0);
+  car.add(fenderBack);
+
+  // Hood (front sloped)
+  const hood = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 0.26), bodyMat);
+  hood.position.set(-0.18, 0.17, 0);
+  hood.rotation.z = 0.1;
+  car.add(hood);
+
+  // Hood lines
+  const hoodLine1 = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.005, 0.01), chromeMat);
+  hoodLine1.position.set(-0.18, 0.19, 0.05);
+  car.add(hoodLine1);
+  const hoodLine2 = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.005, 0.01), chromeMat);
+  hoodLine2.position.set(-0.18, 0.19, -0.05);
+  car.add(hoodLine2);
+
+  // Cabin
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.11, 0.24), bodyMat);
+  cabin.position.set(0.02, 0.215, 0);
   car.add(cabin);
 
-  const glassMat = new THREE.MeshStandardMaterial({ color: '#a8d8ea', metalness: 0.6, roughness: 0.05, transparent: true, opacity: 0.75 });
+  // Roof
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.02, 0.22), bodyMat);
+  roof.position.set(0.02, 0.28, 0);
+  car.add(roof);
 
-  const windshield = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.1, 0.21), glassMat);
-  windshield.position.set(-0.1, 0.24, 0);
+  // Trunk
+  const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.24), bodyMat);
+  trunk.position.set(0.2, 0.17, 0);
+  car.add(trunk);
+
+  // Windshield (front)
+  const windshield = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.09, 0.2), glassMat);
+  windshield.position.set(-0.08, 0.22, 0);
+  windshield.rotation.z = 0.35;
   car.add(windshield);
 
-  const tireMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.9 });
-  const rimMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.9, roughness: 0.1 });
+  // Rear window
+  const rearWindow = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.07, 0.18), glassMat);
+  rearWindow.position.set(0.12, 0.22, 0);
+  rearWindow.rotation.z = -0.3;
+  car.add(rearWindow);
 
-  [[-0.16, 0.045, 0.135], [0.16, 0.045, 0.135], [-0.16, 0.045, -0.135], [0.16, 0.045, -0.135]].forEach(([wx, wy, wz]) => {
-    const tire = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.025), tireMat);
+  // Side windows
+  [-0.125, 0.125].forEach(z => {
+    const sideWindow = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.06, 0.01), glassMat);
+    sideWindow.position.set(0.02, 0.23, z);
+    car.add(sideWindow);
+  });
+
+  // Window frames (chrome)
+  [-0.125, 0.125].forEach(z => {
+    const windowFrame = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.005, 0.012), chromeMat);
+    windowFrame.position.set(0.02, 0.265, z);
+    car.add(windowFrame);
+    
+    const windowFrameBottom = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.005, 0.012), chromeMat);
+    windowFrameBottom.position.set(0.02, 0.195, z);
+    car.add(windowFrameBottom);
+  });
+
+  // Interior visible through windows
+  const seats = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 0.18), interiorMat);
+  seats.position.set(0.02, 0.18, 0);
+  car.add(seats);
+
+  // Steering wheel hint
+  const steering = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.03, 0.03), darkMat);
+  steering.position.set(-0.02, 0.2, 0.06);
+  car.add(steering);
+
+  // Wheels with detailed rims
+  const wheelPositions: [number, number, number][] = [
+    [-0.18, 0.045, 0.14], [0.18, 0.045, 0.14],
+    [-0.18, 0.045, -0.14], [0.18, 0.045, -0.14]
+  ];
+
+  wheelPositions.forEach(([wx, wy, wz]) => {
+    // Tire
+    const tire = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.055, 0.055, 0.035, 24),
+      new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.9 })
+    );
+    tire.rotation.x = Math.PI / 2;
     tire.position.set(wx, wy, wz);
     car.add(tire);
-    const rim = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.028), rimMat);
+
+    // Tire tread
+    const tread = new THREE.Mesh(
+      new THREE.TorusGeometry(0.055, 0.008, 8, 24),
+      new THREE.MeshStandardMaterial({ color: '#0a0a0a', roughness: 1 })
+    );
+    tread.rotation.x = Math.PI / 2;
+    tread.position.set(wx, wy, wz);
+    car.add(tread);
+
+    // Rim
+    const rim = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.035, 0.035, 0.038, 16),
+      chromeMat
+    );
+    rim.rotation.x = Math.PI / 2;
     rim.position.set(wx, wy, wz);
     car.add(rim);
+
+    // Rim center
+    const rimCenter = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.015, 0.015, 0.04, 12),
+      new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.8 })
+    );
+    rimCenter.rotation.x = Math.PI / 2;
+    rimCenter.position.set(wx, wy, wz);
+    car.add(rimCenter);
+
+    // Rim spokes
+    for (let s = 0; s < 5; s++) {
+      const spoke = new THREE.Mesh(
+        new THREE.BoxGeometry(0.008, 0.039, 0.025),
+        chromeMat
+      );
+      const angle = (s / 5) * Math.PI * 2;
+      spoke.position.set(
+        wx,
+        wy + Math.cos(angle) * 0.022,
+        wz
+      );
+      spoke.rotation.x = angle;
+      car.add(spoke);
+    }
   });
 
-  const headlightMat = new THREE.MeshBasicMaterial({ color: '#ffffee' });
-  [-0.09, 0.09].forEach(z => {
-    const hl = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.035, 0.055), headlightMat);
-    hl.position.set(-0.275, 0.1, z);
-    car.add(hl);
+  // Headlights
+  const headlightMat = new THREE.MeshStandardMaterial({ 
+    color: '#ffffee', 
+    emissive: '#ffffaa', 
+    emissiveIntensity: 0.6 
+  });
+  [-0.08, 0.08].forEach(z => {
+    // Headlight housing
+    const housing = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.04, 0.06), chromeMat);
+    housing.position.set(-0.295, 0.1, z);
+    car.add(housing);
+    
+    // Headlight lens
+    const headlight = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.03, 0.05), headlightMat);
+    headlight.position.set(-0.3, 0.1, z);
+    car.add(headlight);
   });
 
+  // Fog lights
+  [-0.06, 0.06].forEach(z => {
+    const fogLight = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.012, 0.012, 0.01, 12),
+      new THREE.MeshStandardMaterial({ color: '#ffff99', emissive: '#ffff66', emissiveIntensity: 0.3 })
+    );
+    fogLight.rotation.x = Math.PI / 2;
+    fogLight.position.set(-0.29, 0.05, z);
+    car.add(fogLight);
+  });
+
+  // Front grille
+  const grille = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.05, 0.12), darkMat);
+  grille.position.set(-0.295, 0.1, 0);
+  car.add(grille);
+
+  // Grille lines
+  for (let i = 0; i < 5; i++) {
+    const grilleLine = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.004, 0.11), chromeMat);
+    grilleLine.position.set(-0.296, 0.08 + i * 0.012, 0);
+    car.add(grilleLine);
+  }
+
+  // Brand logo on grille
+  const logoMat = new THREE.MeshStandardMaterial({ color: '#c0c0c0', metalness: 0.9, roughness: 0.1 });
+  const logo = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, 0.02), logoMat);
+  logo.position.set(-0.305, 0.1, 0);
+  car.add(logo);
+
+  // Tail lights
+  const taillightMat = new THREE.MeshStandardMaterial({ 
+    color: '#ff2222', 
+    emissive: '#ff0000', 
+    emissiveIntensity: 0.4 
+  });
+  [-0.1, 0.1].forEach(z => {
+    // Taillight housing
+    const tailHousing = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.04, 0.05), darkMat);
+    tailHousing.position.set(0.29, 0.12, z);
+    car.add(tailHousing);
+    
+    // Taillight lens
+    const taillight = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.035, 0.045), taillightMat);
+    taillight.position.set(0.295, 0.12, z);
+    car.add(taillight);
+  });
+
+  // Brake light (center)
+  const brakeLight = new THREE.Mesh(
+    new THREE.BoxGeometry(0.01, 0.015, 0.08),
+    taillightMat
+  );
+  brakeLight.position.set(0.295, 0.15, 0);
+  car.add(brakeLight);
+
+  // Rear bumper
+  const rearBumper = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.035, 0.26), chromeMat);
+  rearBumper.position.set(0.29, 0.04, 0);
+  car.add(rearBumper);
+
+  // Front bumper
+  const frontBumper = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.035, 0.26), chromeMat);
+  frontBumper.position.set(-0.29, 0.04, 0);
+  car.add(frontBumper);
+
+  // Side mirrors
+  [-0.14, 0.14].forEach(z => {
+    const mirrorArm = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.01, 0.025), bodyMat);
+    mirrorArm.position.set(-0.06, 0.2, z);
+    car.add(mirrorArm);
+    
+    const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.025, 0.02), darkMat);
+    mirror.position.set(-0.06, 0.2, z + (z > 0 ? 0.02 : -0.02));
+    car.add(mirror);
+    
+    const mirrorGlass = new THREE.Mesh(new THREE.BoxGeometry(0.005, 0.02, 0.015), glassMat);
+    mirrorGlass.position.set(-0.05, 0.2, z + (z > 0 ? 0.025 : -0.025));
+    car.add(mirrorGlass);
+  });
+
+  // Door handles
+  [-0.12, 0.12].forEach(z => {
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.008, 0.01), chromeMat);
+    handle.position.set(0.02, 0.17, z);
+    car.add(handle);
+  });
+
+  // Door lines
+  [-0.124, 0.124].forEach(z => {
+    const doorLine = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.001, 0.002), darkMat);
+    doorLine.position.set(0, 0.12, z);
+    car.add(doorLine);
+  });
+
+  // Exhaust pipes
+  [-0.04, 0.04].forEach(z => {
+    const exhaust = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.012, 0.015, 0.04, 12),
+      chromeMat
+    );
+    exhaust.rotation.z = Math.PI / 2;
+    exhaust.position.set(0.31, 0.03, z);
+    car.add(exhaust);
+  });
+
+  // License plate
   const plateCanvas = document.createElement('canvas');
-  plateCanvas.width = 96;
-  plateCanvas.height = 36;
+  plateCanvas.width = 120;
+  plateCanvas.height = 40;
   const pctx = plateCanvas.getContext('2d')!;
   pctx.fillStyle = '#fff';
-  pctx.fillRect(0, 0, 96, 36);
-  pctx.fillStyle = '#2c3e50';
-  pctx.font = 'bold 14px Arial';
+  pctx.fillRect(0, 0, 120, 40);
+  pctx.strokeStyle = '#333';
+  pctx.lineWidth = 2;
+  pctx.strokeRect(2, 2, 116, 36);
+  pctx.fillStyle = '#1a3c6e';
+  pctx.font = 'bold 18px Arial';
   pctx.textAlign = 'center';
-  pctx.fillText(label, 48, 24);
+  pctx.fillText(label, 60, 28);
   const plateTex = new THREE.CanvasTexture(plateCanvas);
 
-  const frontPlate = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.045), new THREE.MeshBasicMaterial({ map: plateTex }));
-  frontPlate.position.set(-0.281, 0.04, 0);
+  // Front plate
+  const frontPlate = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.1, 0.035),
+    new THREE.MeshBasicMaterial({ map: plateTex })
+  );
+  frontPlate.position.set(-0.305, 0.05, 0);
   frontPlate.rotation.y = -Math.PI / 2;
   car.add(frontPlate);
 
+  // Rear plate
+  const rearPlate = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.1, 0.035),
+    new THREE.MeshBasicMaterial({ map: plateTex })
+  );
+  rearPlate.position.set(0.305, 0.05, 0);
+  rearPlate.rotation.y = Math.PI / 2;
+  car.add(rearPlate);
+
+  // Highlight glow
   if (isHighlighted) {
-    const glow = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.32, 0.32), new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.12 }));
+    const glow = new THREE.Mesh(
+      new THREE.BoxGeometry(0.65, 0.3, 0.32),
+      new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0.1 })
+    );
     glow.position.y = 0.15;
     car.add(glow);
   }
@@ -4033,17 +4293,290 @@ function buildSceneContent(
     }
 
     if (environment === 'tollgate') {
+      // ==================== REALISTIC ROAD ====================
+      const roadLength = Math.max(4.5, data.length * spacing + 4);
+      
+      // Asphalt road
+      const asphaltMat = new THREE.MeshStandardMaterial({ color: '#2a2a2a', roughness: 0.9 });
+      const road = new THREE.Mesh(new THREE.PlaneGeometry(roadLength, 1.2), asphaltMat);
+      road.rotation.x = -Math.PI / 2;
+      road.position.set(roadLength / 2 - 2, groundY - 0.01, 0);
+      group.add(road);
+
+      // Road texture (subtle grain)
+      const roadGrain = new THREE.Mesh(new THREE.PlaneGeometry(roadLength, 1.2), 
+        new THREE.MeshStandardMaterial({ color: '#333333', roughness: 1, transparent: true, opacity: 0.3 })
+      );
+      roadGrain.rotation.x = -Math.PI / 2;
+      roadGrain.position.set(roadLength / 2 - 2, groundY - 0.008, 0);
+      group.add(roadGrain);
+
+      // Center dashed lines
+      const dashMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.5 });
+      const numDashes = Math.floor(roadLength / 0.35);
+      for (let i = 0; i < numDashes; i++) {
+        const dash = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.005, 0.04), dashMat);
+        dash.position.set(-2 + i * 0.35, groundY, 0);
+        group.add(dash);
+      }
+
+      // Side lines (solid white)
+      [-0.55, 0.55].forEach(z => {
+        const sideLine = new THREE.Mesh(new THREE.BoxGeometry(roadLength, 0.005, 0.05), dashMat);
+        sideLine.position.set(roadLength / 2 - 2, groundY, z);
+        group.add(sideLine);
+      });
+
+      // Road edge lines (yellow)
+      const yellowMat = new THREE.MeshStandardMaterial({ color: '#f4d03f', roughness: 0.5 });
+      [-0.58, 0.58].forEach(z => {
+        const edgeLine = new THREE.Mesh(new THREE.BoxGeometry(roadLength, 0.005, 0.02), yellowMat);
+        edgeLine.position.set(roadLength / 2 - 2, groundY, z);
+        group.add(edgeLine);
+      });
+
+      // Road shoulders (gravel)
+      const gravelMat = new THREE.MeshStandardMaterial({ color: '#5a5a5a', roughness: 1 });
+      [-0.75, 0.75].forEach(z => {
+        const shoulder = new THREE.Mesh(new THREE.PlaneGeometry(roadLength, 0.25), gravelMat);
+        shoulder.rotation.x = -Math.PI / 2;
+        shoulder.position.set(roadLength / 2 - 2, groundY - 0.015, z);
+        group.add(shoulder);
+      });
+
+      // Grass areas
+      const grassMat = new THREE.MeshStandardMaterial({ color: '#3a7d32', roughness: 0.95 });
+      [-1.1, 1.1].forEach(z => {
+        const grass = new THREE.Mesh(new THREE.PlaneGeometry(roadLength, 0.6), grassMat);
+        grass.rotation.x = -Math.PI / 2;
+        grass.position.set(roadLength / 2 - 2, groundY - 0.02, z);
+        group.add(grass);
+      });
+
+      // ==================== TOLL BOOTH (ENHANCED) ====================
       const tollBooth = createTollBooth(gateOpenAmount);
       tollBooth.position.set(startX - 0.3, groundY, 0);
       tollBooth.scale.setScalar(0.85);
       group.add(tollBooth);
 
+      // ==================== STREET LIGHTS ====================
+      const createStreetLight = (x: number, z: number) => {
+        const light = new THREE.Group();
+        
+        // Pole
+        const poleMat = new THREE.MeshStandardMaterial({ color: '#3a3a3a', metalness: 0.6, roughness: 0.4 });
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 1.4, 12), poleMat);
+        pole.position.y = 0.7;
+        light.add(pole);
+
+        // Pole base
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.08, 12), poleMat);
+        base.position.y = 0.04;
+        light.add(base);
+
+        // Arm
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.025, 0.025), poleMat);
+        arm.position.set(0.15, 1.38, 0);
+        arm.rotation.z = 0.1;
+        light.add(arm);
+
+        // Light fixture housing
+        const housingMat = new THREE.MeshStandardMaterial({ color: '#2a2a2a', metalness: 0.5, roughness: 0.5 });
+        const housing = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.06, 0.1), housingMat);
+        housing.position.set(0.3, 1.34, 0);
+        light.add(housing);
+
+        // Light panel (glowing)
+        const lightPanel = new THREE.Mesh(
+          new THREE.BoxGeometry(0.12, 0.015, 0.08),
+          new THREE.MeshStandardMaterial({ 
+            color: '#ffffee', 
+            emissive: '#ffff99', 
+            emissiveIntensity: 0.8 
+          })
+        );
+        lightPanel.position.set(0.3, 1.3, 0);
+        light.add(lightPanel);
+
+        // Light glow effect
+        const glow = new THREE.Mesh(
+          new THREE.SphereGeometry(0.08, 16, 16),
+          new THREE.MeshBasicMaterial({ color: '#ffffaa', transparent: true, opacity: 0.15 })
+        );
+        glow.position.set(0.3, 1.25, 0);
+        light.add(glow);
+
+        light.position.set(x, groundY, z);
+        return light;
+      };
+
+      // Add street lights along the road
+      const streetLight1 = createStreetLight(startX - 1.5, 0.9);
+      group.add(streetLight1);
+
+      const streetLight2 = createStreetLight(startX + data.length * spacing + 1, 0.9);
+      streetLight2.rotation.y = Math.PI;
+      group.add(streetLight2);
+
+      const streetLight3 = createStreetLight(startX + data.length * spacing / 2, -0.9);
+      streetLight3.rotation.y = Math.PI;
+      group.add(streetLight3);
+
+      // ==================== TRAFFIC LIGHT ====================
+      const trafficLight = new THREE.Group();
+      
+      // Traffic light pole
+      const tlPoleMat = new THREE.MeshStandardMaterial({ color: '#333333', metalness: 0.6, roughness: 0.4 });
+      const tlPole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 1.6, 12), tlPoleMat);
+      tlPole.position.y = 0.8;
+      trafficLight.add(tlPole);
+
+      // Traffic light arm
+      const tlArm = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.03, 0.03), tlPoleMat);
+      tlArm.position.set(-0.22, 1.55, 0);
+      trafficLight.add(tlArm);
+
+      // Traffic light housing
+      const tlHousing = new THREE.Mesh(
+        new THREE.BoxGeometry(0.1, 0.3, 0.08),
+        new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.5 })
+      );
+      tlHousing.position.set(-0.45, 1.45, 0);
+      trafficLight.add(tlHousing);
+
+      // Traffic light visor
+      const visorMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.6 });
+      [0.08, 0, -0.08].forEach((y, i) => {
+        const visor = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.1), visorMat);
+        visor.position.set(-0.51, 1.45 + y, 0);
+        trafficLight.add(visor);
+      });
+
+      // Red light
+      const redLight = new THREE.Mesh(
+        new THREE.CircleGeometry(0.025, 16),
+        new THREE.MeshStandardMaterial({ 
+          color: gateOpenAmount < 0.5 ? '#ff0000' : '#330000',
+          emissive: gateOpenAmount < 0.5 ? '#ff0000' : '#000',
+          emissiveIntensity: gateOpenAmount < 0.5 ? 0.8 : 0
+        })
+      );
+      redLight.position.set(-0.506, 1.53, 0);
+      redLight.rotation.y = -Math.PI / 2;
+      trafficLight.add(redLight);
+
+      // Yellow light
+      const yellowLight = new THREE.Mesh(
+        new THREE.CircleGeometry(0.025, 16),
+        new THREE.MeshStandardMaterial({ 
+          color: '#332200',
+          emissive: '#000',
+          emissiveIntensity: 0
+        })
+      );
+      yellowLight.position.set(-0.506, 1.45, 0);
+      yellowLight.rotation.y = -Math.PI / 2;
+      trafficLight.add(yellowLight);
+
+      // Green light
+      const greenLight = new THREE.Mesh(
+        new THREE.CircleGeometry(0.025, 16),
+        new THREE.MeshStandardMaterial({ 
+          color: gateOpenAmount > 0.5 ? '#00ff00' : '#003300',
+          emissive: gateOpenAmount > 0.5 ? '#00ff00' : '#000',
+          emissiveIntensity: gateOpenAmount > 0.5 ? 0.8 : 0
+        })
+      );
+      greenLight.position.set(-0.506, 1.37, 0);
+      greenLight.rotation.y = -Math.PI / 2;
+      trafficLight.add(greenLight);
+
+      trafficLight.position.set(startX - 0.8, groundY, -0.7);
+      group.add(trafficLight);
+
+      // ==================== ROAD SIGNS ====================
+      // Speed limit sign
+      const speedSignGroup = new THREE.Group();
+      
+      const signPole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.02, 0.02, 1.0, 12),
+        new THREE.MeshStandardMaterial({ color: '#666666', metalness: 0.5 })
+      );
+      signPole.position.y = 0.5;
+      speedSignGroup.add(signPole);
+
+      const speedSignCanvas = document.createElement('canvas');
+      speedSignCanvas.width = 80;
+      speedSignCanvas.height = 80;
+      const ssCtx = speedSignCanvas.getContext('2d')!;
+      ssCtx.fillStyle = '#fff';
+      ssCtx.beginPath();
+      ssCtx.arc(40, 40, 38, 0, Math.PI * 2);
+      ssCtx.fill();
+      ssCtx.strokeStyle = '#cc0000';
+      ssCtx.lineWidth = 6;
+      ssCtx.stroke();
+      ssCtx.fillStyle = '#000';
+      ssCtx.font = 'bold 30px Arial';
+      ssCtx.textAlign = 'center';
+      ssCtx.fillText('30', 40, 50);
+      const speedSignTex = new THREE.CanvasTexture(speedSignCanvas);
+      
+      const speedSign = new THREE.Mesh(
+        new THREE.CircleGeometry(0.12, 24),
+        new THREE.MeshBasicMaterial({ map: speedSignTex })
+      );
+      speedSign.position.y = 0.95;
+      speedSign.rotation.y = Math.PI / 2;
+      speedSignGroup.add(speedSign);
+
+      speedSignGroup.position.set(startX + data.length * spacing + 0.8, groundY, 0.75);
+      group.add(speedSignGroup);
+
+      // Toll sign
+      const tollSignGroup = new THREE.Group();
+      
+      const tollSignPole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.02, 0.02, 1.2, 12),
+        new THREE.MeshStandardMaterial({ color: '#666666', metalness: 0.5 })
+      );
+      tollSignPole.position.y = 0.6;
+      tollSignGroup.add(tollSignPole);
+
+      const tollSignCanvas = document.createElement('canvas');
+      tollSignCanvas.width = 160;
+      tollSignCanvas.height = 80;
+      const tsCtx = tollSignCanvas.getContext('2d')!;
+      tsCtx.fillStyle = '#006633';
+      tsCtx.fillRect(0, 0, 160, 80);
+      tsCtx.strokeStyle = '#fff';
+      tsCtx.lineWidth = 4;
+      tsCtx.strokeRect(4, 4, 152, 72);
+      tsCtx.fillStyle = '#fff';
+      tsCtx.font = 'bold 20px Arial';
+      tsCtx.textAlign = 'center';
+      tsCtx.fillText('TOLL PLAZA', 80, 35);
+      tsCtx.font = '16px Arial';
+      tsCtx.fillText('$ 2.50', 80, 58);
+      const tollSignTex = new THREE.CanvasTexture(tollSignCanvas);
+      
+      const tollSign = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.35, 0.18),
+        new THREE.MeshBasicMaterial({ map: tollSignTex })
+      );
+      tollSign.position.y = 1.1;
+      tollSignGroup.add(tollSign);
+
+      tollSignGroup.position.set(startX - 1.8, groundY, 0);
+      group.add(tollSignGroup);
+
+      // ==================== CARS ====================
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const isFront = i === 0;
         
         let extraX = 0;
-        let carScale = 0.78;
+        let carScale = 0.75;
         let shouldRender = true;
 
         if (isFront) {
@@ -4052,7 +4585,7 @@ function buildSceneContent(
             extraX = -progress * 2.5;
           } else if (animPhase === 'queue-dequeue-gate-close') {
             extraX = -2.5;
-            carScale = 0.78 * Math.max(0.01, 1 - (animProgress || 0));
+            carScale = 0.75 * Math.max(0.01, 1 - (animProgress || 0));
             if ((animProgress || 0) > 0.5) shouldRender = false;
           }
         } else {
@@ -4069,7 +4602,7 @@ function buildSceneContent(
 
         if (shouldRender) {
           const carObj = createCar(item.color, item.label, isHl);
-          carObj.position.set(startX + i * spacing + 0.5 + extraX, groundY + (isHl ? 0.06 : 0), 0);
+          carObj.position.set(startX + i * spacing + 0.5 + extraX, groundY + (isHl ? 0.04 : 0), 0);
           carObj.scale.setScalar(carScale);
           
           if (!animPhase?.startsWith('queue-dequeue')) {
@@ -4080,25 +4613,18 @@ function buildSceneContent(
         }
       });
 
+      // FRONT and REAR labels
       if (data.length > 0) {
         const frontSprite = createTextSprite('FRONT', '#00ff00', 18);
-        frontSprite.position.set(startX + 0.5, groundY - 0.22, 0);
+        frontSprite.position.set(startX + 0.5, groundY - 0.18, 0);
         frontSprite.scale.set(0.28, 0.1, 1);
         group.add(frontSprite);
 
         const rearSprite = createTextSprite('REAR', '#ff6600', 18);
-        rearSprite.position.set(startX + (data.length - 1) * spacing + 0.5, groundY - 0.22, 0);
+        rearSprite.position.set(startX + (data.length - 1) * spacing + 0.5, groundY - 0.18, 0);
         rearSprite.scale.set(0.28, 0.1, 1);
         group.add(rearSprite);
       }
-
-      const road = new THREE.Mesh(
-        new THREE.PlaneGeometry(Math.max(3, data.length * spacing + 3.0), 0.7),
-        new THREE.MeshStandardMaterial({ color: '#34495e', side: THREE.DoubleSide })
-      );
-      road.rotation.x = -Math.PI / 2;
-      road.position.y = groundY - 0.01;
-      group.add(road);
 
     } else if (environment === 'tickets') {
       const ticketDispenserGroup = createTicketDispenser(data, highlightIndex, animPhase || '', animProgress || 0);
