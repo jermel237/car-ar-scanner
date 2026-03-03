@@ -2211,16 +2211,23 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   const wallThickness = 0.015;
   const flapThickness = 0.012;
 
+  // Real cardboard colors
+  const cardboardColor = '#c4a060';
+  const cardboardDark = '#a8894d';
+  const cardboardInner = '#d4b896';
+  const tapeColor = '#d4c4a0';
+
   const cardboardMat = new THREE.MeshStandardMaterial({
-    color,
-    roughness: 0.85,
+    color: cardboardColor,
+    roughness: 0.9,
+    metalness: 0.0,
     emissive: isHighlighted ? '#ffff00' : '#000',
-    emissiveIntensity: isHighlighted ? 0.3 : 0
+    emissiveIntensity: isHighlighted ? 0.2 : 0
   });
-  const innerMat = new THREE.MeshStandardMaterial({ color: '#c4a574', roughness: 0.9 });
-  const flapMat = new THREE.MeshStandardMaterial({ color, roughness: 0.85, side: THREE.DoubleSide });
-  const cornerMat = new THREE.MeshStandardMaterial({ color: '#8b6914', roughness: 0.8 });
-  const tapeMat = new THREE.MeshStandardMaterial({ color: '#d4a574', roughness: 0.6 });
+  const innerMat = new THREE.MeshStandardMaterial({ color: cardboardInner, roughness: 0.95 });
+  const flapMat = new THREE.MeshStandardMaterial({ color: cardboardColor, roughness: 0.9, side: THREE.DoubleSide });
+  const edgeMat = new THREE.MeshStandardMaterial({ color: cardboardDark, roughness: 0.85 });
+  const tapeMat = new THREE.MeshStandardMaterial({ color: tapeColor, roughness: 0.6, transparent: true, opacity: 0.85 });
 
   // Bottom
   const bottom = new THREE.Mesh(new THREE.BoxGeometry(boxW, wallThickness, boxD), cardboardMat);
@@ -2252,92 +2259,160 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   innerFloor.position.y = wallThickness + 0.003;
   box.add(innerFloor);
 
-  // Corner reinforcements
+  // Corner edges (darker)
   [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(([sx, sz]) => {
-    const corner = new THREE.Mesh(new THREE.BoxGeometry(0.02, boxH, 0.02), cornerMat);
-    corner.position.set(sx * (boxW / 2 - 0.01), wallThickness + boxH / 2, sz * (boxD / 2 - 0.01));
+    const corner = new THREE.Mesh(new THREE.BoxGeometry(0.018, boxH, 0.018), edgeMat);
+    corner.position.set(sx * (boxW / 2 - 0.009), wallThickness + boxH / 2, sz * (boxD / 2 - 0.009));
     box.add(corner);
+  });
+
+  // Bottom edges
+  [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([sx, sz], i) => {
+    if (i < 2) {
+      const edge = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.015, boxD - 0.04), edgeMat);
+      edge.position.set(sx * (boxW / 2 - 0.008), wallThickness + 0.008, 0);
+      box.add(edge);
+    } else {
+      const edge = new THREE.Mesh(new THREE.BoxGeometry(boxW - 0.04, 0.015, 0.015), edgeMat);
+      edge.position.set(0, wallThickness + 0.008, sz * (boxD / 2 - 0.008));
+      box.add(edge);
+    }
   });
 
   const topY = wallThickness + boxH;
   const easedOpen = openAmount < 0.5 ? 2 * openAmount * openAmount : 1 - Math.pow(-2 * openAmount + 2, 2) / 2;
   
-  // Two-phase animation:
-  // Phase 1 (0 to 0.5): Flaps go UP (from flat to vertical)
-  // Phase 2 (0.5 to 1): Flaps fall OUTWARD (past vertical)
-  
   let flapAngle = 0;
   
   if (easedOpen <= 0.5) {
-    // Phase 1: Go UP (0 to 90 degrees)
     const phase1Progress = easedOpen * 2;
     flapAngle = phase1Progress * (Math.PI / 2);
   } else {
-    // Phase 2: Fall OUTWARD (90 to 135 degrees)
     const phase2Progress = (easedOpen - 0.5) * 2;
     flapAngle = (Math.PI / 2) + phase2Progress * (Math.PI / 4);
   }
 
-  // Flap dimensions - each flap covers half the top
   const flapWidth = (boxW - wallThickness * 2) / 2;
   const flapDepth = boxD - wallThickness * 2;
 
-  // LEFT FLAP - pivots from LEFT EDGE, opens UP then falls OUTWARD (to the left)
+  // LEFT FLAP
   const leftFlapPivot = new THREE.Group();
-  leftFlapPivot.position.set(-boxW / 2 + wallThickness, topY, 0); // Pivot at LEFT edge
+  leftFlapPivot.position.set(-boxW / 2 + wallThickness, topY, 0);
   
   const leftFlap = new THREE.Mesh(new THREE.BoxGeometry(flapWidth, flapThickness, flapDepth), flapMat);
-  leftFlap.position.set(flapWidth / 2, 0, 0); // Flap extends INWARD (toward center)
+  leftFlap.position.set(flapWidth / 2, 0, 0);
   leftFlapPivot.add(leftFlap);
   
-  // Rotate: positive Z = flap goes UP then falls LEFT (outward)
   leftFlapPivot.rotation.z = flapAngle;
   box.add(leftFlapPivot);
 
-  // RIGHT FLAP - pivots from RIGHT EDGE, opens UP then falls OUTWARD (to the right)
+  // RIGHT FLAP
   const rightFlapPivot = new THREE.Group();
-  rightFlapPivot.position.set(boxW / 2 - wallThickness, topY, 0); // Pivot at RIGHT edge
+  rightFlapPivot.position.set(boxW / 2 - wallThickness, topY, 0);
   
   const rightFlap = new THREE.Mesh(new THREE.BoxGeometry(flapWidth, flapThickness, flapDepth), flapMat);
-  rightFlap.position.set(-flapWidth / 2, 0, 0); // Flap extends INWARD (toward center)
+  rightFlap.position.set(-flapWidth / 2, 0, 0);
   rightFlapPivot.add(rightFlap);
   
-  // Rotate: negative Z = flap goes UP then falls RIGHT (outward)
   rightFlapPivot.rotation.z = -flapAngle;
   box.add(rightFlapPivot);
 
-  // Tape in the middle (only when closed) - vertical |
+  // Packing tape in the middle (only when closed)
   if (openAmount < 0.1) {
-    const tapeWidth = 0.06;
-    const tape = new THREE.Mesh(new THREE.BoxGeometry(tapeWidth, 0.004, flapDepth * 0.9), tapeMat);
+    const tapeWidth = 0.07;
+    // Center tape (vertical)
+    const tape = new THREE.Mesh(new THREE.BoxGeometry(tapeWidth, 0.004, flapDepth * 0.95), tapeMat);
     tape.position.set(0, topY + flapThickness + 0.002, 0);
     box.add(tape);
+
+    // Side tapes (horizontal, on flaps)
+    const sideTape1 = new THREE.Mesh(new THREE.BoxGeometry(flapWidth * 0.6, 0.004, 0.05), tapeMat);
+    sideTape1.position.set(-flapWidth / 2.5, topY + flapThickness + 0.002, flapDepth * 0.35);
+    box.add(sideTape1);
+
+    const sideTape2 = new THREE.Mesh(new THREE.BoxGeometry(flapWidth * 0.6, 0.004, 0.05), tapeMat);
+    sideTape2.position.set(flapWidth / 2.5, topY + flapThickness + 0.002, flapDepth * 0.35);
+    box.add(sideTape2);
+
+    const sideTape3 = new THREE.Mesh(new THREE.BoxGeometry(flapWidth * 0.6, 0.004, 0.05), tapeMat);
+    sideTape3.position.set(-flapWidth / 2.5, topY + flapThickness + 0.002, -flapDepth * 0.35);
+    box.add(sideTape3);
+
+    const sideTape4 = new THREE.Mesh(new THREE.BoxGeometry(flapWidth * 0.6, 0.004, 0.05), tapeMat);
+    sideTape4.position.set(flapWidth / 2.5, topY + flapThickness + 0.002, -flapDepth * 0.35);
+    box.add(sideTape4);
   }
 
-  // Label on front
+  // Shipping label on front
   const labelCanvas = document.createElement('canvas');
-  labelCanvas.width = 180;
-  labelCanvas.height = 120;
+  labelCanvas.width = 160;
+  labelCanvas.height = 100;
   const labelCtx = labelCanvas.getContext('2d')!;
+  
+  // White label background
   labelCtx.fillStyle = '#ffffff';
-  labelCtx.fillRect(0, 0, 180, 120);
-  labelCtx.fillStyle = '#e74c3c';
-  labelCtx.fillRect(6, 6, 168, 28);
-  labelCtx.fillStyle = '#fff';
-  labelCtx.font = 'bold 16px Arial';
+  labelCtx.fillRect(0, 0, 160, 100);
+  
+  // Label border
+  labelCtx.strokeStyle = '#333';
+  labelCtx.lineWidth = 2;
+  labelCtx.strokeRect(2, 2, 156, 96);
+  
+  // Barcode lines
+  labelCtx.fillStyle = '#000';
+  for (let i = 0; i < 20; i++) {
+    const barWidth = Math.random() > 0.5 ? 3 : 2;
+    labelCtx.fillRect(15 + i * 6.5, 10, barWidth, 25);
+  }
+  
+  // Label text
+  labelCtx.fillStyle = '#333';
+  labelCtx.font = 'bold 22px Arial';
   labelCtx.textAlign = 'center';
-  labelCtx.fillText('FRAGILE', 90, 26);
-  labelCtx.fillStyle = '#2c3e50';
-  labelCtx.font = 'bold 28px Arial';
-  labelCtx.fillText(label, 90, 75);
-  labelCtx.fillStyle = '#666';
-  labelCtx.font = '12px Arial';
-  labelCtx.fillText('HANDLE WITH CARE', 90, 100);
+  labelCtx.fillText(label, 80, 60);
+  
+  // "FRAGILE" or "THIS SIDE UP"
+  labelCtx.fillStyle = '#e74c3c';
+  labelCtx.font = 'bold 12px Arial';
+  labelCtx.fillText('📦 HANDLE WITH CARE', 80, 82);
 
   const labelTex = new THREE.CanvasTexture(labelCanvas);
-  const labelMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.13), new THREE.MeshBasicMaterial({ map: labelTex }));
+  const labelMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.11), new THREE.MeshBasicMaterial({ map: labelTex }));
   labelMesh.position.set(0, wallThickness + boxH / 2, boxD / 2 + 0.001);
   box.add(labelMesh);
+
+  // Recycling symbol on side
+  const recycleCanvas = document.createElement('canvas');
+  recycleCanvas.width = 64;
+  recycleCanvas.height = 64;
+  const rCtx = recycleCanvas.getContext('2d')!;
+  rCtx.fillStyle = '#8B7355';
+  rCtx.font = '40px Arial';
+  rCtx.textAlign = 'center';
+  rCtx.fillText('♻️', 32, 48);
+  const recycleTex = new THREE.CanvasTexture(recycleCanvas);
+  const recycleMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 0.08), new THREE.MeshBasicMaterial({ map: recycleTex, transparent: true }));
+  recycleMesh.position.set(boxW / 2 + 0.001, wallThickness + boxH * 0.3, 0);
+  recycleMesh.rotation.y = Math.PI / 2;
+  box.add(recycleMesh);
+
+  // "UP" arrows on side
+  const upCanvas = document.createElement('canvas');
+  upCanvas.width = 64;
+  upCanvas.height = 80;
+  const uCtx = upCanvas.getContext('2d')!;
+  uCtx.fillStyle = '#5D4037';
+  uCtx.font = 'bold 30px Arial';
+  uCtx.textAlign = 'center';
+  uCtx.fillText('↑↑', 32, 35);
+  uCtx.font = 'bold 14px Arial';
+  uCtx.fillText('THIS', 32, 55);
+  uCtx.fillText('SIDE UP', 32, 72);
+  const upTex = new THREE.CanvasTexture(upCanvas);
+  const upMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 0.1), new THREE.MeshBasicMaterial({ map: upTex, transparent: true }));
+  upMesh.position.set(-boxW / 2 - 0.001, wallThickness + boxH * 0.6, 0);
+  upMesh.rotation.y = -Math.PI / 2;
+  box.add(upMesh);
 
   // Highlight glow
   if (isHighlighted && openAmount < 0.1) {
