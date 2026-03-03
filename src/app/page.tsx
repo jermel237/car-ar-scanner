@@ -3004,141 +3004,6 @@ function buildSceneContent(
     } else if (environment === 'people') {
       const arrowY = 0.12;
 
-      // ==================== BUS STOP SHELTER ====================
-      const busStop = new THREE.Group();
-      const stopX = startX - 1.4;
-
-      const metalMat = new THREE.MeshStandardMaterial({ color: '#4a4a4a', metalness: 0.7, roughness: 0.3 });
-      const glassMat = new THREE.MeshStandardMaterial({ color: '#87ceeb', metalness: 0.3, roughness: 0.1, transparent: true, opacity: 0.5 });
-      const benchWoodMat = new THREE.MeshStandardMaterial({ color: '#8B4513', roughness: 0.7 });
-
-      // Shelter poles
-      const polePositions = [[-0.5, 0, 0.35], [0.5, 0, 0.35], [-0.5, 0, -0.25], [0.5, 0, -0.25]];
-      polePositions.forEach(([px, py, pz]) => {
-        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.3, 12), metalMat);
-        pole.position.set(px, 0.65, pz);
-        busStop.add(pole);
-      });
-
-      // Shelter roof
-      const roofFrame = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.05, 0.7), metalMat);
-      roofFrame.position.set(0, 1.3, 0.05);
-      busStop.add(roofFrame);
-
-      // Glass roof panel
-      const roofGlass = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.02, 0.65), glassMat);
-      roofGlass.position.set(0, 1.27, 0.05);
-      busStop.add(roofGlass);
-
-      // Back glass panel
-      const backGlass = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.85, 0.02), glassMat);
-      backGlass.position.set(0, 0.7, -0.22);
-      busStop.add(backGlass);
-
-      // Back frame
-      const backFrame = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.04, 0.04), metalMat);
-      backFrame.position.set(0, 1.15, -0.23);
-      busStop.add(backFrame);
-
-      const backFrameBottom = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.04, 0.04), metalMat);
-      backFrameBottom.position.set(0, 0.25, -0.23);
-      busStop.add(backFrameBottom);
-
-      // Side glass panels
-      [-0.52, 0.52].forEach(sx => {
-        const sideGlass = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.85, 0.55), glassMat);
-        sideGlass.position.set(sx, 0.7, 0.05);
-        busStop.add(sideGlass);
-      });
-
-      // Bench
-      const benchSeat = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.05, 0.22), benchWoodMat);
-      benchSeat.position.set(0, 0.32, 0.05);
-      busStop.add(benchSeat);
-
-      // Bench legs
-      [-0.35, 0, 0.35].forEach(lx => {
-        const benchLeg = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.32, 0.18), metalMat);
-        benchLeg.position.set(lx, 0.16, 0.05);
-        busStop.add(benchLeg);
-      });
-
-      // Bench back rest
-      const benchBack = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.25, 0.03), benchWoodMat);
-      benchBack.position.set(0, 0.5, -0.08);
-      busStop.add(benchBack);
-
-      // Bus stop sign pole (attached to shelter)
-      const signPole = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.5, 12), metalMat);
-      signPole.position.set(0.55, 1.55, 0.35);
-      busStop.add(signPole);
-
-      // Bus stop sign
-      const busSignCanvas = document.createElement('canvas');
-      busSignCanvas.width = 120;
-      busSignCanvas.height = 150;
-      const bctx = busSignCanvas.getContext('2d')!;
-      bctx.fillStyle = '#1e3a5f';
-      bctx.beginPath();
-      bctx.roundRect(0, 0, 120, 150, 10);
-      bctx.fill();
-      bctx.strokeStyle = '#fff';
-      bctx.lineWidth = 4;
-      bctx.beginPath();
-      bctx.roundRect(4, 4, 112, 142, 8);
-      bctx.stroke();
-      bctx.fillStyle = '#fff';
-      bctx.font = 'bold 40px Arial';
-      bctx.textAlign = 'center';
-      bctx.fillText('🚌', 60, 50);
-      bctx.font = 'bold 16px Arial';
-      bctx.fillText('BUS', 60, 85);
-      bctx.fillText('STOP', 60, 105);
-      bctx.fillStyle = '#f1c40f';
-      bctx.font = 'bold 20px Arial';
-      bctx.fillText('LINE 42', 60, 135);
-      
-      const busSignTex = new THREE.CanvasTexture(busSignCanvas);
-      const signBoard = new THREE.Mesh(
-        new THREE.BoxGeometry(0.2, 0.25, 0.02),
-        new THREE.MeshBasicMaterial({ map: busSignTex })
-      );
-      signBoard.position.set(0.55, 1.72, 0.35);
-      busStop.add(signBoard);
-
-      // Schedule board inside shelter
-      const scheduleCanvas = document.createElement('canvas');
-      scheduleCanvas.width = 180;
-      scheduleCanvas.height = 120;
-      const sctx = scheduleCanvas.getContext('2d')!;
-      sctx.fillStyle = '#fff';
-      sctx.fillRect(0, 0, 180, 120);
-      sctx.fillStyle = '#1e3a5f';
-      sctx.fillRect(0, 0, 180, 28);
-      sctx.fillStyle = '#fff';
-      sctx.font = 'bold 16px Arial';
-      sctx.textAlign = 'center';
-      sctx.fillText('📋 SCHEDULE', 90, 20);
-      sctx.fillStyle = '#333';
-      sctx.font = '12px Arial';
-      sctx.textAlign = 'left';
-      sctx.fillText('🚌 Next Bus: 5 min', 12, 50);
-      sctx.fillText('🛣️ Route 42: Downtown', 12, 72);
-      sctx.fillText('✈️ Route 15: Airport', 12, 94);
-      sctx.fillText('🎓 Route 8: University', 12, 116);
-      
-      const scheduleTex = new THREE.CanvasTexture(scheduleCanvas);
-      const schedule = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.35, 0.24),
-        new THREE.MeshBasicMaterial({ map: scheduleTex })
-      );
-      schedule.position.set(0, 0.85, -0.2);
-      busStop.add(schedule);
-
-      busStop.position.set(stopX, groundY, 0);
-      busStop.scale.setScalar(0.85);
-      group.add(busStop);
-
       // ==================== ROAD AND SIDEWALK ====================
       const roadWidth = Math.max(5.5, data.length * spacing + 6);
 
@@ -3146,7 +3011,7 @@ function buildSceneContent(
       const roadMat = new THREE.MeshStandardMaterial({ color: '#333333', roughness: 0.9 });
       const road = new THREE.Mesh(new THREE.PlaneGeometry(roadWidth, 1.4), roadMat);
       road.rotation.x = -Math.PI / 2;
-      road.position.set(0, groundY - 0.02, -1.0);
+      road.position.set(0, groundY - 0.02, -0.6);
       group.add(road);
 
       // Road lines (dashed center)
@@ -3154,38 +3019,169 @@ function buildSceneContent(
       const numLines = Math.floor(roadWidth / 0.5);
       for (let i = 0; i < numLines; i++) {
         const line = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.005, 0.05), lineMat);
-        line.position.set(-roadWidth / 2 + 0.25 + i * 0.5, groundY - 0.015, -1.0);
+        line.position.set(-roadWidth / 2 + 0.25 + i * 0.5, groundY - 0.015, -0.6);
         group.add(line);
       }
 
       // Road edge lines
-      [-0.35, -1.65].forEach(z => {
+      [0.05, -1.25].forEach(z => {
         const edgeLine = new THREE.Mesh(new THREE.BoxGeometry(roadWidth, 0.005, 0.04), lineMat);
         edgeLine.position.set(0, groundY - 0.015, z);
         group.add(edgeLine);
       });
 
-      // Sidewalk
+      // Sidewalk (behind people)
       const sidewalkMat = new THREE.MeshStandardMaterial({ color: '#a0a0a0', roughness: 0.8 });
-      const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(roadWidth, 1.0), sidewalkMat);
+      const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(roadWidth, 1.2), sidewalkMat);
       sidewalk.rotation.x = -Math.PI / 2;
-      sidewalk.position.set(0, groundY - 0.01, 0.2);
+      sidewalk.position.set(0, groundY - 0.01, 0.7);
       group.add(sidewalk);
 
       // Sidewalk curb
       const curbMat = new THREE.MeshStandardMaterial({ color: '#707070', roughness: 0.7 });
       const curb = new THREE.Mesh(new THREE.BoxGeometry(roadWidth, 0.06, 0.1), curbMat);
-      curb.position.set(0, groundY, -0.32);
+      curb.position.set(0, groundY, 0.08);
       group.add(curb);
 
       // Grass area behind sidewalk
       const grassMat = new THREE.MeshStandardMaterial({ color: '#228B22', roughness: 0.9 });
       const grassBack = new THREE.Mesh(new THREE.PlaneGeometry(roadWidth, 0.8), grassMat);
       grassBack.rotation.x = -Math.PI / 2;
-      grassBack.position.set(0, groundY - 0.02, 0.8);
+      grassBack.position.set(0, groundY - 0.02, 1.4);
       group.add(grassBack);
 
-      // ==================== BUS ON ROAD ====================
+      // ==================== BUS STOP SHELTER (SMALLER, BEHIND PEOPLE) ====================
+      const busStop = new THREE.Group();
+
+      const metalMat = new THREE.MeshStandardMaterial({ color: '#4a4a4a', metalness: 0.7, roughness: 0.3 });
+      const glassMat = new THREE.MeshStandardMaterial({ color: '#87ceeb', metalness: 0.3, roughness: 0.1, transparent: true, opacity: 0.5 });
+      const benchWoodMat = new THREE.MeshStandardMaterial({ color: '#8B4513', roughness: 0.7 });
+
+      // Shelter poles
+      const polePositions = [[-0.4, 0, 0.25], [0.4, 0, 0.25], [-0.4, 0, -0.2], [0.4, 0, -0.2]];
+      polePositions.forEach(([px, py, pz]) => {
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.0, 12), metalMat);
+        pole.position.set(px, 0.5, pz);
+        busStop.add(pole);
+      });
+
+      // Shelter roof
+      const roofFrame = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.04, 0.55), metalMat);
+      roofFrame.position.set(0, 1.0, 0.02);
+      busStop.add(roofFrame);
+
+      // Glass roof panel
+      const roofGlass = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.02, 0.5), glassMat);
+      roofGlass.position.set(0, 0.98, 0.02);
+      busStop.add(roofGlass);
+
+      // Back glass panel
+      const backGlass = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.7, 0.02), glassMat);
+      backGlass.position.set(0, 0.55, -0.18);
+      busStop.add(backGlass);
+
+      // Back frame
+      const backFrame = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.03, 0.03), metalMat);
+      backFrame.position.set(0, 0.92, -0.19);
+      busStop.add(backFrame);
+
+      const backFrameBottom = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.03, 0.03), metalMat);
+      backFrameBottom.position.set(0, 0.18, -0.19);
+      busStop.add(backFrameBottom);
+
+      // Side glass panels
+      [-0.42, 0.42].forEach(sx => {
+        const sideGlass = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.7, 0.4), glassMat);
+        sideGlass.position.set(sx, 0.55, 0.02);
+        busStop.add(sideGlass);
+      });
+
+      // Bench
+      const benchSeat = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.04, 0.16), benchWoodMat);
+      benchSeat.position.set(0, 0.26, 0.02);
+      busStop.add(benchSeat);
+
+      // Bench legs
+      [-0.25, 0.25].forEach(lx => {
+        const benchLeg = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.26, 0.14), metalMat);
+        benchLeg.position.set(lx, 0.13, 0.02);
+        busStop.add(benchLeg);
+      });
+
+      // Bus stop sign pole (attached to shelter)
+      const signPole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.4, 12), metalMat);
+      signPole.position.set(0.45, 1.2, 0.25);
+      busStop.add(signPole);
+
+      // Bus stop sign
+      const busSignCanvas = document.createElement('canvas');
+      busSignCanvas.width = 100;
+      busSignCanvas.height = 120;
+      const bctx = busSignCanvas.getContext('2d')!;
+      bctx.fillStyle = '#1e3a5f';
+      bctx.beginPath();
+      bctx.roundRect(0, 0, 100, 120, 8);
+      bctx.fill();
+      bctx.strokeStyle = '#fff';
+      bctx.lineWidth = 3;
+      bctx.beginPath();
+      bctx.roundRect(3, 3, 94, 114, 6);
+      bctx.stroke();
+      bctx.fillStyle = '#fff';
+      bctx.font = 'bold 32px Arial';
+      bctx.textAlign = 'center';
+      bctx.fillText('🚌', 50, 40);
+      bctx.font = 'bold 14px Arial';
+      bctx.fillText('BUS', 50, 65);
+      bctx.fillText('STOP', 50, 82);
+      bctx.fillStyle = '#f1c40f';
+      bctx.font = 'bold 16px Arial';
+      bctx.fillText('LINE 42', 50, 108);
+      
+      const busSignTex = new THREE.CanvasTexture(busSignCanvas);
+      const signBoard = new THREE.Mesh(
+        new THREE.BoxGeometry(0.15, 0.18, 0.015),
+        new THREE.MeshBasicMaterial({ map: busSignTex })
+      );
+      signBoard.position.set(0.45, 1.35, 0.25);
+      busStop.add(signBoard);
+
+      // Schedule board inside shelter
+      const scheduleCanvas = document.createElement('canvas');
+      scheduleCanvas.width = 140;
+      scheduleCanvas.height = 90;
+      const sctx = scheduleCanvas.getContext('2d')!;
+      sctx.fillStyle = '#fff';
+      sctx.fillRect(0, 0, 140, 90);
+      sctx.fillStyle = '#1e3a5f';
+      sctx.fillRect(0, 0, 140, 22);
+      sctx.fillStyle = '#fff';
+      sctx.font = 'bold 12px Arial';
+      sctx.textAlign = 'center';
+      sctx.fillText('📋 SCHEDULE', 70, 16);
+      sctx.fillStyle = '#333';
+      sctx.font = '10px Arial';
+      sctx.textAlign = 'left';
+      sctx.fillText('🚌 Next: 5 min', 8, 40);
+      sctx.fillText('🛣️ 42: Downtown', 8, 55);
+      sctx.fillText('✈️ 15: Airport', 8, 70);
+      sctx.fillText('🎓 8: University', 8, 85);
+      
+      const scheduleTex = new THREE.CanvasTexture(scheduleCanvas);
+      const schedule = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.22, 0.14),
+        new THREE.MeshBasicMaterial({ map: scheduleTex })
+      );
+      schedule.position.set(0, 0.7, -0.16);
+      busStop.add(schedule);
+
+      // Position shelter behind people, at start position
+      busStop.position.set(startX - 0.3, groundY, 0.65);
+      busStop.scale.setScalar(0.5); // 2x smaller
+      busStop.rotation.y = Math.PI; // Face forward
+      group.add(busStop);
+
+      // ==================== BUS ON ROAD AT NULL POSITION ====================
       const bus = new THREE.Group();
       
       // Bus body
@@ -3195,21 +3191,21 @@ function buildSceneContent(
       bus.add(busBody);
 
       // Bus roof
-      const roofMat = new THREE.MeshStandardMaterial({ color: '#1e5f9a', roughness: 0.5 });
-      const busRoof = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.06, 0.55), roofMat);
+      const busRoofMat = new THREE.MeshStandardMaterial({ color: '#1e5f9a', roughness: 0.5 });
+      const busRoof = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.06, 0.55), busRoofMat);
       busRoof.position.y = 0.71;
       bus.add(busRoof);
 
       // Bus front
       const frontMat = new THREE.MeshStandardMaterial({ color: '#245c8a', roughness: 0.4 });
       const busFront = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.55), frontMat);
-      busFront.position.set(0.9, 0.33, 0);
+      busFront.position.set(-0.9, 0.33, 0);
       bus.add(busFront);
 
       // Windshield
       const busGlassMat = new THREE.MeshStandardMaterial({ color: '#87ceeb', metalness: 0.5, roughness: 0.1, transparent: true, opacity: 0.7 });
       const windshield = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.3, 0.45), busGlassMat);
-      windshield.position.set(0.92, 0.45, 0);
+      windshield.position.set(-0.92, 0.45, 0);
       bus.add(windshield);
 
       // Side windows
@@ -3228,7 +3224,7 @@ function buildSceneContent(
         new THREE.BoxGeometry(0.22, 0.42, 0.02),
         new THREE.MeshStandardMaterial({ color: '#1a1a1a' })
       );
-      doorFrame.position.set(0.6, 0.29, 0.31);
+      doorFrame.position.set(-0.6, 0.29, 0.31);
       bus.add(doorFrame);
 
       // Wheels
@@ -3251,7 +3247,7 @@ function buildSceneContent(
       const lightMat = new THREE.MeshStandardMaterial({ color: '#ffffcc', emissive: '#ffff66', emissiveIntensity: 0.5 });
       [-0.18, 0.18].forEach(z => {
         const headlight = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.07, 0.08), lightMat);
-        headlight.position.set(0.92, 0.2, z);
+        headlight.position.set(-0.92, 0.2, z);
         bus.add(headlight);
       });
 
@@ -3259,7 +3255,7 @@ function buildSceneContent(
       const tailLightMat = new THREE.MeshStandardMaterial({ color: '#ff3333', emissive: '#ff0000', emissiveIntensity: 0.3 });
       [-0.2, 0.2].forEach(z => {
         const taillight = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.06, 0.06), tailLightMat);
-        taillight.position.set(-0.92, 0.2, z);
+        taillight.position.set(0.92, 0.2, z);
         bus.add(taillight);
       });
 
@@ -3285,8 +3281,8 @@ function buildSceneContent(
         new THREE.PlaneGeometry(0.15, 0.08),
         new THREE.MeshBasicMaterial({ map: busNumTex })
       );
-      busNum.position.set(0.93, 0.6, 0);
-      busNum.rotation.y = Math.PI / 2;
+      busNum.position.set(-0.93, 0.6, 0);
+      busNum.rotation.y = -Math.PI / 2;
       bus.add(busNum);
 
       // Destination sign on top
@@ -3305,24 +3301,25 @@ function buildSceneContent(
         new THREE.PlaneGeometry(0.4, 0.09),
         new THREE.MeshBasicMaterial({ map: destTex })
       );
-      destSign.position.set(0.3, 0.7, 0.31);
+      destSign.position.set(-0.3, 0.7, 0.31);
       bus.add(destSign);
 
-      // Position bus on the road, front facing RIGHT (same as people)
-      bus.position.set(startX - 1.2, groundY, -1.0);
-      bus.rotation.y = 0; // Front facing right
-      bus.scale.setScalar(0.7);
+      // Position bus at NULL position on the road, front facing LEFT (toward people)
+      const nullX = startX + data.length * spacing + 0.5;
+      bus.position.set(nullX, groundY, -0.6);
+      bus.rotation.y = 0; // Front facing left toward people
+      bus.scale.setScalar(0.55);
       group.add(bus);
 
-      // ==================== PEOPLE IN LINE (3x SIZE) ====================
+      // ==================== PEOPLE IN LINE (ORIGINAL SIZE) ====================
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         if (item.appearance) {
           const walkPhase = (animPhase === 'll-traverse' && isHl) ? Math.PI * 0.5 : 0;
           const human = createHuman3D(item.appearance, item.label, isHl, false, walkPhase);
           human.position.set(startX + i * spacing, isHl ? 0.06 : 0, 0);
-          human.scale.setScalar(2.16); // 3x bigger (0.72 * 3 = 2.16)
-          human.rotation.y = -Math.PI / 2; // Face RIGHT (same as bus front)
+          human.scale.setScalar(0.72); // Original size
+          human.rotation.y = 0; // Face forward (toward bus at NULL)
           applyItemAnimation(human, i, animPhase || '', animData || {}, 'linkedlist', animProgress);
           group.add(human);
         }
@@ -3334,7 +3331,7 @@ function buildSceneContent(
         }
       });
 
-      // NULL at the end
+      // NULL at the end (near bus)
       if (data.length > 0) {
         const nullSprite = createTextSprite('NULL', '#ff0000', 20);
         nullSprite.position.set(startX + data.length * spacing, 0.12, 0);
@@ -3348,8 +3345,8 @@ function buildSceneContent(
       // HEAD label
       if (data.length > 0) {
         const headSprite = createTextSprite('HEAD', '#00ff00', 16);
-        headSprite.position.set(startX, 0.45, 0);
-        headSprite.scale.set(0.26, 0.11, 1);
+        headSprite.position.set(startX, 0.32, 0);
+        headSprite.scale.set(0.24, 0.1, 1);
         group.add(headSprite);
       }
 
