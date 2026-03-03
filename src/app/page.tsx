@@ -870,98 +870,251 @@ function createBook(label: string, color: string, isHighlighted: boolean, isOpen
   const bookWidth = 0.55;
   const bookHeight = 0.07;
   const bookDepth = 0.38;
-  const pageInset = 0.015;
+  const pageInset = 0.012;
 
-  const spineColor = new THREE.Color(color).multiplyScalar(0.7);
+  // Realistic book colors
+  const coverColor = new THREE.Color(color);
+  const spineColor = new THREE.Color(color).multiplyScalar(0.75);
+  const pageColor = '#f5f0e0';
+  const pageEdgeColor = '#e8e0d0';
+  const goldColor = '#d4af37';
+  const textColor = '#1a1a1a';
+
   const coverMat = new THREE.MeshStandardMaterial({
-    color,
-    roughness: 0.5,
+    color: coverColor,
+    roughness: 0.4,
     metalness: 0.05,
     emissive: isHighlighted && !isOpen ? '#ffff00' : '#000',
-    emissiveIntensity: isHighlighted && !isOpen ? 0.3 : 0,
+    emissiveIntensity: isHighlighted && !isOpen ? 0.25 : 0,
   });
 
-  const backCover = new THREE.Mesh(new THREE.BoxGeometry(bookWidth, 0.008, bookDepth), coverMat);
-  backCover.position.y = -bookHeight / 2 + 0.004;
+  const spineMat = new THREE.MeshStandardMaterial({
+    color: spineColor,
+    roughness: 0.35,
+    metalness: 0.05,
+  });
+
+  const pageMat = new THREE.MeshStandardMaterial({ color: pageColor, roughness: 0.9 });
+  const pageEdgeMat = new THREE.MeshStandardMaterial({ color: pageEdgeColor, roughness: 0.85 });
+  const goldMat = new THREE.MeshStandardMaterial({ color: goldColor, metalness: 0.7, roughness: 0.25 });
+  const textMat = new THREE.MeshStandardMaterial({ color: textColor, roughness: 0.8 });
+
+  // Back cover
+  const backCover = new THREE.Mesh(new THREE.BoxGeometry(bookWidth, 0.01, bookDepth), coverMat);
+  backCover.position.y = -bookHeight / 2 + 0.005;
   book.add(backCover);
 
+  // Pages block
   const pagesBlock = new THREE.Mesh(
-    new THREE.BoxGeometry(bookWidth - pageInset * 2, bookHeight - 0.02, bookDepth - pageInset * 2),
-    new THREE.MeshStandardMaterial({ color: '#f5f0e0', roughness: 0.9 })
+    new THREE.BoxGeometry(bookWidth - pageInset * 2, bookHeight - 0.025, bookDepth - pageInset * 2),
+    pageMat
   );
   pagesBlock.position.set(pageInset / 2, 0, 0);
   book.add(pagesBlock);
 
-  const pageLineMat = new THREE.MeshBasicMaterial({ color: '#e8e0d0' });
-  for (let y = -bookHeight / 2 + 0.01; y <= bookHeight / 2 - 0.01; y += 0.003) {
-    const lineRight = new THREE.Mesh(new THREE.BoxGeometry(0.002, 0.001, bookDepth - pageInset * 3), pageLineMat);
-    lineRight.position.set(bookWidth / 2 - pageInset, y, 0);
-    book.add(lineRight);
+  // Page edge lines (right side - visible when book is closed)
+  for (let i = 0; i < 15; i++) {
+    const pageLine = new THREE.Mesh(
+      new THREE.BoxGeometry(0.002, 0.002, bookDepth - pageInset * 3),
+      pageEdgeMat
+    );
+    pageLine.position.set(bookWidth / 2 - pageInset - 0.003, -bookHeight / 2 + 0.015 + i * 0.003, 0);
+    book.add(pageLine);
   }
 
-  const spine = new THREE.Mesh(
-    new THREE.BoxGeometry(0.025, bookHeight, bookDepth),
-    new THREE.MeshStandardMaterial({ color: spineColor, roughness: 0.4 })
+  // Page text lines on top page (visible from top)
+  const topPageCanvas = document.createElement('canvas');
+  topPageCanvas.width = 256;
+  topPageCanvas.height = 180;
+  const tpCtx = topPageCanvas.getContext('2d')!;
+  tpCtx.fillStyle = pageColor;
+  tpCtx.fillRect(0, 0, 256, 180);
+  
+  // Draw text lines
+  tpCtx.fillStyle = '#888';
+  const loremWords = ['Lorem', 'ipsum', 'dolor', 'sit', 'amet', 'consectetur', 'adipiscing', 'elit', 'sed', 'do', 'eiusmod', 'tempor'];
+  tpCtx.font = '8px Times New Roman';
+  for (let line = 0; line < 18; line++) {
+    let lineText = '';
+    for (let w = 0; w < 8; w++) {
+      lineText += loremWords[Math.floor(Math.random() * loremWords.length)] + ' ';
+    }
+    tpCtx.fillText(lineText, 15, 15 + line * 9);
+  }
+  
+  const topPageTex = new THREE.CanvasTexture(topPageCanvas);
+  const topPageText = new THREE.Mesh(
+    new THREE.PlaneGeometry(bookWidth - pageInset * 3, bookDepth - pageInset * 3),
+    new THREE.MeshBasicMaterial({ map: topPageTex, transparent: true })
   );
-  spine.position.x = -bookWidth / 2 - 0.0125;
+  topPageText.rotation.x = -Math.PI / 2;
+  topPageText.position.set(pageInset / 2, bookHeight / 2 - 0.013, 0);
+  book.add(topPageText);
+
+  // Spine
+  const spine = new THREE.Mesh(
+    new THREE.BoxGeometry(0.03, bookHeight + 0.01, bookDepth + 0.01),
+    spineMat
+  );
+  spine.position.x = -bookWidth / 2 - 0.015;
   book.add(spine);
 
-  const ridgeMat = new THREE.MeshStandardMaterial({ color: '#ffd700', metalness: 0.6 });
-  [-0.14, -0.05, 0.05, 0.14].forEach(z => {
-    const ridge = new THREE.Mesh(new THREE.BoxGeometry(0.005, bookHeight + 0.005, 0.015), ridgeMat);
-    ridge.position.set(-bookWidth / 2 - 0.025, 0, z);
+  // Spine ridges (horizontal lines)
+  for (let i = 0; i < 4; i++) {
+    const ridge = new THREE.Mesh(
+      new THREE.BoxGeometry(0.035, 0.006, bookDepth * 0.15),
+      goldMat
+    );
+    ridge.position.set(-bookWidth / 2 - 0.017, -bookHeight * 0.3 + i * (bookHeight * 0.25), 0);
     book.add(ridge);
+  }
+
+  // 3D Title on spine (embossed letters)
+  const titleGroup = new THREE.Group();
+  const letters = label.toUpperCase().split('');
+  const letterHeight = 0.04;
+  const letterSpacing = 0.045;
+  const startZ = (letters.length - 1) * letterSpacing / 2;
+
+  letters.forEach((letter, i) => {
+    // Create embossed letter effect using small box
+    const letterCanvas = document.createElement('canvas');
+    letterCanvas.width = 32;
+    letterCanvas.height = 40;
+    const lCtx = letterCanvas.getContext('2d')!;
+    lCtx.fillStyle = goldColor;
+    lCtx.font = 'bold 28px Georgia';
+    lCtx.textAlign = 'center';
+    lCtx.fillText(letter, 16, 30);
+    const letterTex = new THREE.CanvasTexture(letterCanvas);
+    
+    // Embossed base
+    const letterBase = new THREE.Mesh(
+      new THREE.BoxGeometry(0.008, letterHeight, 0.035),
+      goldMat
+    );
+    letterBase.position.set(-bookWidth / 2 - 0.022, 0, startZ - i * letterSpacing);
+    titleGroup.add(letterBase);
+    
+    // Letter texture on top
+    const letterFace = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.035, letterHeight),
+      new THREE.MeshBasicMaterial({ map: letterTex, transparent: true })
+    );
+    letterFace.position.set(-bookWidth / 2 - 0.027, 0, startZ - i * letterSpacing);
+    letterFace.rotation.y = -Math.PI / 2;
+    titleGroup.add(letterFace);
   });
+  book.add(titleGroup);
 
-  const spineCanvas = document.createElement('canvas');
-  spineCanvas.width = 140;
-  spineCanvas.height = 30;
-  const sctx = spineCanvas.getContext('2d')!;
-  sctx.fillStyle = '#ffd700';
-  sctx.font = 'bold 16px serif';
-  sctx.textAlign = 'center';
-  sctx.fillText(label, 70, 22);
-  const spineTex = new THREE.CanvasTexture(spineCanvas);
-  const spineLabel = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.28, 0.05),
-    new THREE.MeshBasicMaterial({ map: spineTex, transparent: true })
-  );
-  spineLabel.position.set(-bookWidth / 2 - 0.026, 0, 0);
-  spineLabel.rotation.y = -Math.PI / 2;
-  spineLabel.rotation.z = Math.PI / 2;
-  book.add(spineLabel);
-
+  // Front cover group (for opening animation)
   const frontCoverGroup = new THREE.Group();
-  frontCoverGroup.position.set(-bookWidth / 2, bookHeight / 2 - 0.004, 0);
+  frontCoverGroup.position.set(-bookWidth / 2, bookHeight / 2 - 0.005, 0);
 
-  const frontCover = new THREE.Mesh(new THREE.BoxGeometry(bookWidth, 0.008, bookDepth), coverMat);
+  const frontCover = new THREE.Mesh(new THREE.BoxGeometry(bookWidth, 0.01, bookDepth), coverMat);
   frontCover.position.set(bookWidth / 2, 0, 0);
   frontCoverGroup.add(frontCover);
 
-  const coverCanvas = document.createElement('canvas');
-  coverCanvas.width = 180;
-  coverCanvas.height = 140;
-  const cctx = coverCanvas.getContext('2d')!;
-  cctx.strokeStyle = '#ffd700';
-  cctx.lineWidth = 4;
-  cctx.strokeRect(8, 8, 164, 124);
-  cctx.lineWidth = 1;
-  cctx.strokeRect(14, 14, 152, 112);
-  cctx.fillStyle = '#ffd700';
-  cctx.font = 'bold 24px serif';
-  cctx.textAlign = 'center';
-  cctx.fillText(label, 90, 75);
-  cctx.font = '12px serif';
-  cctx.fillText('TEXTBOOK', 90, 98);
-  const coverTex = new THREE.CanvasTexture(coverCanvas);
-  const coverLabel = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.38, 0.28),
-    new THREE.MeshBasicMaterial({ map: coverTex, transparent: true })
-  );
-  coverLabel.position.set(bookWidth / 2, 0.005, 0);
-  coverLabel.rotation.x = -Math.PI / 2;
-  frontCoverGroup.add(coverLabel);
+  // Cover design - embossed frame
+  const frameThickness = 0.003;
+  const frameMat = new THREE.MeshStandardMaterial({ color: goldColor, metalness: 0.6, roughness: 0.3 });
+  
+  // Outer frame
+  const frameTop = new THREE.Mesh(new THREE.BoxGeometry(bookWidth * 0.85, frameThickness, 0.015), frameMat);
+  frameTop.position.set(bookWidth / 2, 0.006, bookDepth * 0.38);
+  frontCoverGroup.add(frameTop);
+  
+  const frameBottom = new THREE.Mesh(new THREE.BoxGeometry(bookWidth * 0.85, frameThickness, 0.015), frameMat);
+  frameBottom.position.set(bookWidth / 2, 0.006, -bookDepth * 0.38);
+  frontCoverGroup.add(frameBottom);
+  
+  const frameLeft = new THREE.Mesh(new THREE.BoxGeometry(0.015, frameThickness, bookDepth * 0.7), frameMat);
+  frameLeft.position.set(bookWidth * 0.12, 0.006, 0);
+  frontCoverGroup.add(frameLeft);
+  
+  const frameRight = new THREE.Mesh(new THREE.BoxGeometry(0.015, frameThickness, bookDepth * 0.7), frameMat);
+  frameRight.position.set(bookWidth * 0.88, 0.006, 0);
+  frontCoverGroup.add(frameRight);
 
+  // Inner decorative frame
+  const innerFrameTop = new THREE.Mesh(new THREE.BoxGeometry(bookWidth * 0.65, frameThickness, 0.008), frameMat);
+  innerFrameTop.position.set(bookWidth / 2, 0.006, bookDepth * 0.28);
+  frontCoverGroup.add(innerFrameTop);
+  
+  const innerFrameBottom = new THREE.Mesh(new THREE.BoxGeometry(bookWidth * 0.65, frameThickness, 0.008), frameMat);
+  innerFrameBottom.position.set(bookWidth / 2, 0.006, -bookDepth * 0.28);
+  frontCoverGroup.add(innerFrameBottom);
+
+  // 3D Title on cover (larger, centered)
+  const coverTitleGroup = new THREE.Group();
+  const coverLetters = label.toUpperCase().split('');
+  const coverLetterWidth = 0.05;
+  const coverStartX = bookWidth / 2 - (coverLetters.length - 1) * coverLetterWidth / 2;
+
+  coverLetters.forEach((letter, i) => {
+    // Embossed letter base
+    const letterBase = new THREE.Mesh(
+      new THREE.BoxGeometry(0.04, 0.008, 0.05),
+      goldMat
+    );
+    letterBase.position.set(coverStartX + i * coverLetterWidth, 0.009, 0);
+    coverTitleGroup.add(letterBase);
+    
+    // Letter texture
+    const letterCanvas = document.createElement('canvas');
+    letterCanvas.width = 40;
+    letterCanvas.height = 50;
+    const lCtx = letterCanvas.getContext('2d')!;
+    lCtx.fillStyle = '#8B6914';
+    lCtx.font = 'bold 36px Georgia';
+    lCtx.textAlign = 'center';
+    lCtx.fillText(letter, 20, 38);
+    const letterTex = new THREE.CanvasTexture(letterCanvas);
+    
+    const letterFace = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.04, 0.05),
+      new THREE.MeshBasicMaterial({ map: letterTex, transparent: true })
+    );
+    letterFace.rotation.x = -Math.PI / 2;
+    letterFace.position.set(coverStartX + i * coverLetterWidth, 0.014, 0);
+    coverTitleGroup.add(letterFace);
+  });
+  frontCoverGroup.add(coverTitleGroup);
+
+  // "A NOVEL" or subtitle
+  const subtitleCanvas = document.createElement('canvas');
+  subtitleCanvas.width = 150;
+  subtitleCanvas.height = 30;
+  const stCtx = subtitleCanvas.getContext('2d')!;
+  stCtx.fillStyle = goldColor;
+  stCtx.font = 'italic 16px Georgia';
+  stCtx.textAlign = 'center';
+  stCtx.fillText('— A Classic —', 75, 22);
+  const subtitleTex = new THREE.CanvasTexture(subtitleCanvas);
+  const subtitle = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.2, 0.04),
+    new THREE.MeshBasicMaterial({ map: subtitleTex, transparent: true })
+  );
+  subtitle.rotation.x = -Math.PI / 2;
+  subtitle.position.set(bookWidth / 2, 0.006, -bookDepth * 0.15);
+  frontCoverGroup.add(subtitle);
+
+  // Corner decorations
+  const cornerDeco = (x: number, z: number, rotZ: number) => {
+    const corner = new THREE.Mesh(
+      new THREE.BoxGeometry(0.03, frameThickness, 0.03),
+      goldMat
+    );
+    corner.position.set(x, 0.006, z);
+    corner.rotation.y = rotZ;
+    frontCoverGroup.add(corner);
+  };
+  cornerDeco(bookWidth * 0.15, bookDepth * 0.35, Math.PI / 4);
+  cornerDeco(bookWidth * 0.85, bookDepth * 0.35, Math.PI / 4);
+  cornerDeco(bookWidth * 0.15, -bookDepth * 0.35, Math.PI / 4);
+  cornerDeco(bookWidth * 0.85, -bookDepth * 0.35, Math.PI / 4);
+
+  // Opening animation
   if (isOpen && openAmount > 0) {
     const easedOpen = openAmount < 0.5 ? 2 * openAmount * openAmount : 1 - Math.pow(-2 * openAmount + 2, 2) / 2;
     frontCoverGroup.rotation.z = easedOpen * Math.PI * 0.55;
@@ -969,13 +1122,24 @@ function createBook(label: string, color: string, isHighlighted: boolean, isOpen
 
   book.add(frontCoverGroup);
 
+  // Bookmark ribbon
+  const ribbonMat = new THREE.MeshStandardMaterial({ color: '#8B0000', roughness: 0.6 });
   const ribbon = new THREE.Mesh(
-    new THREE.BoxGeometry(0.015, 0.12, 0.003),
-    new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.6 })
+    new THREE.BoxGeometry(0.018, 0.14, 0.004),
+    ribbonMat
   );
-  ribbon.position.set(0.08, 0, bookDepth / 2 + 0.002);
+  ribbon.position.set(0.08, 0.02, bookDepth / 2 + 0.003);
   book.add(ribbon);
 
+  // Ribbon end (triangle shape using small boxes)
+  const ribbonEnd = new THREE.Mesh(
+    new THREE.BoxGeometry(0.018, 0.025, 0.004),
+    ribbonMat
+  );
+  ribbonEnd.position.set(0.08, -0.04, bookDepth / 2 + 0.003);
+  book.add(ribbonEnd);
+
+  // Highlight glow
   if (isHighlighted && !isOpen) {
     const glow = new THREE.Mesh(
       new THREE.BoxGeometry(bookWidth + 0.05, bookHeight + 0.02, bookDepth + 0.04),
@@ -2215,7 +2379,6 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   const cardboardColor = '#c4a060';
   const cardboardDark = '#a8894d';
   const cardboardInner = '#d4b896';
-  const tapeColor = '#d4c4a0';
 
   const cardboardMat = new THREE.MeshStandardMaterial({
     color: cardboardColor,
@@ -2227,7 +2390,6 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   const innerMat = new THREE.MeshStandardMaterial({ color: cardboardInner, roughness: 0.95 });
   const flapMat = new THREE.MeshStandardMaterial({ color: cardboardColor, roughness: 0.9, side: THREE.DoubleSide });
   const edgeMat = new THREE.MeshStandardMaterial({ color: cardboardDark, roughness: 0.85 });
-  const tapeMat = new THREE.MeshStandardMaterial({ color: tapeColor, roughness: 0.6, transparent: true, opacity: 0.85 });
 
   // Bottom
   const bottom = new THREE.Mesh(new THREE.BoxGeometry(boxW, wallThickness, boxD), cardboardMat);
@@ -2316,32 +2478,6 @@ function createCardboardBox(label: string, color: string, isHighlighted: boolean
   
   rightFlapPivot.rotation.z = -flapAngle;
   box.add(rightFlapPivot);
-
-  // Packing tape in the middle (only when closed)
-  if (openAmount < 0.1) {
-    const tapeWidth = 0.07;
-    // Center tape (vertical)
-    const tape = new THREE.Mesh(new THREE.BoxGeometry(tapeWidth, 0.004, flapDepth * 0.95), tapeMat);
-    tape.position.set(0, topY + flapThickness + 0.002, 0);
-    box.add(tape);
-
-    // Side tapes (horizontal, on flaps)
-    const sideTape1 = new THREE.Mesh(new THREE.BoxGeometry(flapWidth * 0.6, 0.004, 0.05), tapeMat);
-    sideTape1.position.set(-flapWidth / 2.5, topY + flapThickness + 0.002, flapDepth * 0.35);
-    box.add(sideTape1);
-
-    const sideTape2 = new THREE.Mesh(new THREE.BoxGeometry(flapWidth * 0.6, 0.004, 0.05), tapeMat);
-    sideTape2.position.set(flapWidth / 2.5, topY + flapThickness + 0.002, flapDepth * 0.35);
-    box.add(sideTape2);
-
-    const sideTape3 = new THREE.Mesh(new THREE.BoxGeometry(flapWidth * 0.6, 0.004, 0.05), tapeMat);
-    sideTape3.position.set(-flapWidth / 2.5, topY + flapThickness + 0.002, -flapDepth * 0.35);
-    box.add(sideTape3);
-
-    const sideTape4 = new THREE.Mesh(new THREE.BoxGeometry(flapWidth * 0.6, 0.004, 0.05), tapeMat);
-    sideTape4.position.set(flapWidth / 2.5, topY + flapThickness + 0.002, -flapDepth * 0.35);
-    box.add(sideTape4);
-  }
 
   // Shipping label on front
   const labelCanvas = document.createElement('canvas');
