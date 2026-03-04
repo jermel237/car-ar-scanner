@@ -1931,20 +1931,14 @@ function createTicketDispenser(tickets: DataItem[], highlightIndex: number | nul
   const ticketZ = -0.6;
 
   const easeInOut = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 
-const isSliding = animPhase === 'queue-dequeue-slide';
-const isExiting = animPhase === 'queue-dequeue-exit';
+  const isSliding = animPhase === 'queue-dequeue-slide';
+  const isExiting = animPhase === 'queue-dequeue-exit';
+  const isSettling = animPhase === 'queue-ticket-settle';
 
-let slideOffset = 0;
-const slideDistance = totalTicketLength;
-
-if (isSliding) {
-  const easedProgress = easeInOut(animProgress || 0);
-  slideOffset = -easedProgress * slideDistance;
-} else if (isExiting) {
-  // Keep tickets at slid position during exit
-  slideOffset = -slideDistance;
-}
+  const slideDistance = totalTicketLength;
+  const progress = animProgress || 0;
 
   tickets.forEach((ticket, i) => {
     const isHl = highlightIndex === i;
@@ -1952,25 +1946,43 @@ if (isSliding) {
 
     const ticketGroup = new THREE.Group();
 
-let ticketX = ticketStartX + i * totalTicketLength;
-if (isSliding || isExiting) {
-  ticketX += slideOffset;
-}
-    
+    let ticketX = ticketStartX + i * totalTicketLength;
     let ticketScale = 1;
     let ticketOpacity = 1;
     let shouldRender = true;
 
-    if (isFront && isExiting) {
-      const progress = animProgress || 0;
-      const easedProgress = easeInOut(progress);
-      
-      ticketX = ticketStartX - slideDistance - easedProgress * 0.2;
-      ticketScale = Math.max(0.01, 1 - easedProgress * 0.95);
-      ticketOpacity = Math.max(0, 1 - easedProgress);
-      
-      if (progress > 0.95) {
+    if (isFront) {
+      // FRONT TICKET
+      if (isSliding) {
+        // Slide left with everyone
+        const easedProgress = easeInOut(progress);
+        ticketX = ticketStartX - easedProgress * slideDistance;
+      } else if (isExiting) {
+        // Exit/dispense animation
+        const easedProgress = easeInOut(progress);
+        ticketX = ticketStartX - slideDistance - easedProgress * 0.2;
+        ticketScale = Math.max(0.01, 1 - easedProgress * 0.95);
+        ticketOpacity = Math.max(0, 1 - easedProgress);
+        if (progress > 0.95) shouldRender = false;
+      } else if (isSettling) {
+        // Front is gone during settle
         shouldRender = false;
+      }
+    } else {
+      // OTHER TICKETS
+      if (isSliding) {
+        // Slide left with everyone
+        const easedProgress = easeInOut(progress);
+        ticketX = ticketStartX + i * totalTicketLength - easedProgress * slideDistance;
+      } else if (isExiting) {
+        // Stay at slid position while front exits
+        ticketX = ticketStartX + i * totalTicketLength - slideDistance;
+      } else if (isSettling) {
+        // Move to new position (i-1)
+        const settleProgress = easeOut(progress);
+        const currentPos = ticketStartX + i * totalTicketLength - slideDistance;
+        const targetPos = ticketStartX + (i - 1) * totalTicketLength;
+        ticketX = currentPos + (targetPos - currentPos) * settleProgress;
       }
     }
 
@@ -1989,6 +2001,7 @@ if (isSliding || isExiting) {
     const ticketBody = new THREE.Mesh(new THREE.BoxGeometry(ticketWidth, ticketThickness, ticketHeight), ticketMat);
     ticketGroup.add(ticketBody);
 
+    // Connector to next ticket (not for front during exit, not for last ticket)
     if (i < tickets.length - 1 && !(isFront && isExiting)) {
       const connectorMat = new THREE.MeshStandardMaterial({
         color: ticket.color,
@@ -2037,27 +2050,58 @@ if (isSliding || isExiting) {
     dispenser.add(ticketGroup);
   });
 
+  // FRONT and REAR labels
   if (tickets.length > 0) {
     let frontLabelX = ticketStartX;
+    let showFrontLabel = true;
+
     if (isSliding) {
-      frontLabelX += slideOffset;
+      const easedProgress = easeInOut(progress);
+      frontLabelX = ticketStartX - easedProgress * slideDistance;
+    } else if (isExiting) {
+      frontLabelX = ticketStartX - slideDistance;
+      showFrontLabel = progress < 0.5;
+    } else if (isSettling) {
+      if (tickets.length > 1) {
+        // Follow the new front (was index 1)
+        const settleProgress = easeOut(progress);
+        const currentPos = ticketStartX + totalTicketLength - slideDistance;
+        const targetPos = ticketStartX;
+        frontLabelX = currentPos + (targetPos - currentPos) * settleProgress;
+      } else {
+        showFrontLabel = false;
+      }
     }
-    
-    if (!isExiting) {
+
+    if (showFrontLabel) {
       const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
       frontSprite.position.set(frontLabelX, groundY + 0.2, ticketZ);
       frontSprite.scale.set(0.22, 0.08, 1);
       dispenser.add(frontSprite);
     }
 
+    // REAR label
     let rearLabelX = ticketStartX + (tickets.length - 1) * totalTicketLength;
+    let showRearLabel = tickets.length > 1;
+
     if (isSliding) {
-      rearLabelX += slideOffset;
+      const easedProgress = easeInOut(progress);
+      rearLabelX = ticketStartX + (tickets.length - 1) * totalTicketLength - easedProgress * slideDistance;
+    } else if (isExiting) {
+      rearLabelX = ticketStartX + (tickets.length - 1) * totalTicketLength - slideDistance;
+    } else if (isSettling && tickets.length > 1) {
+      const settleProgress = easeOut(progress);
+      const currentPos = ticketStartX + (tickets.length - 1) * totalTicketLength - slideDistance;
+      const targetPos = ticketStartX + (tickets.length - 2) * totalTicketLength;
+      rearLabelX = currentPos + (targetPos - currentPos) * settleProgress;
     }
-    const rearSprite = createTextSprite('REAR', '#ff6600', 16);
-    rearSprite.position.set(rearLabelX, groundY + 0.2, ticketZ);
-    rearSprite.scale.set(0.22, 0.08, 1);
-    dispenser.add(rearSprite);
+
+    if (showRearLabel) {
+      const rearSprite = createTextSprite('REAR', '#ff6600', 16);
+      rearSprite.position.set(rearLabelX, groundY + 0.2, ticketZ);
+      rearSprite.scale.set(0.22, 0.08, 1);
+      dispenser.add(rearSprite);
+    }
   }
 
   const counterWidth = Math.max(1.2, tickets.length * totalTicketLength + 0.6);
@@ -5170,12 +5214,15 @@ export default function Home() {
           action: () => { (setQueueData as any)((prev: DataItem[]) => prev.slice(1)); } },
         { title: "🚧 Closing Gate", description: `Gate closing.${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`, animPhase: 'queue-dequeue-gate-close', animDuration: 800 }
       );
-    } else if (queueEnv === 'tickets') {
-      steps.push(
-        { title: "🎫 Sliding Tickets", description: `All tickets sliding toward dispenser...`, highlightIndex: 0, animPhase: 'queue-dequeue-slide', animDuration: 2000 },
-        { title: "📤 Dispensing", description: `"${frontItem.label}" dispensed!${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`, highlightIndex: 0, animPhase: 'queue-dequeue-exit', animDuration: 1500,
-          action: () => { (setQueueData as any)((prev: DataItem[]) => prev.slice(1)); } }
-      );
+    }} else if (queueEnv === 'tickets') {
+  steps.push(
+    { title: "🎫 Sliding Tickets", description: `All tickets sliding toward dispenser...`, highlightIndex: 0, animPhase: 'queue-dequeue-slide', animDuration: 1500 },
+    { title: "📤 Dispensing", description: `"${frontItem.label}" being dispensed...`, highlightIndex: 0, animPhase: 'queue-dequeue-exit', animDuration: 1200 },
+    { title: "🎟️ Repositioning", description: `Tickets moving to new positions...${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`, animPhase: 'queue-ticket-settle', animDuration: 800 },
+    { title: "✅ Dequeued!", description: `"${frontItem.label}" dispensed!\n\nTime: O(1)\nFIFO: First In, First Out${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`,
+      action: () => { (setQueueData as any)((prev: DataItem[]) => prev.slice(1)); } }
+  );
+}
   } else {
   steps.push(
     { title: "🚶 Walking to Door", description: `"${frontItem.label}" walking toward entrance...`, highlightIndex: 0, animPhase: 'queue-student-walk', animDuration: 1800 },
