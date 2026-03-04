@@ -2872,7 +2872,7 @@ function applyItemAnimation(
   if (structure === 'queue') {
     if (animPhase === 'queue-enqueue-enter' && isTarget) {
       obj.position.x += 1.2 * (1 - p);
-      obj.scale.setScalar(0.6 + 0.4 * p);
+      obj.scale.setScalar(1 + 0.4 * p);
     } else if (animPhase === 'queue-enqueue-settle' && isTarget) {
       obj.position.x += 0.2 * (1 - p);
       obj.scale.setScalar(1 + 0.05 * (1 - p));
