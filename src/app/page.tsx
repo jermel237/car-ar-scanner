@@ -4667,6 +4667,8 @@ function buildSceneContent(
       pathway.position.set(0.3, groundY - 0.01, 0);
       group.add(pathway);
     }
+  }
+}
 // ==================== HOME COMPONENT ====================
 
 export default function Home() {
