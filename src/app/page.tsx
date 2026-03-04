@@ -4683,17 +4683,6 @@ if (isFront) {
     walkPhase = Math.PI * 6 + progress * Math.PI * 4;
     extraX = -spacing * 0.5 - progress * spacing * 0.5;
   }
-} else {
-            if (animPhase === 'queue-dequeue-walk') {
-              const progress = animProgress || 0;
-              walkPhase = progress * Math.PI * 6;
-              extraX = -progress * spacing * 0.5;
-            } else if (animPhase === 'queue-dequeue-enter') {
-              const progress = animProgress || 0;
-              walkPhase = Math.PI * 6 + progress * Math.PI * 4;
-              extraX = -spacing * 0.5 - progress * spacing * 0.5;
-            }
-          }
 
           if (shouldRender) {
             const human = createHuman3D(item.appearance, item.label, isHl, false, walkPhase);
