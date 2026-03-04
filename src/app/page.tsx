@@ -4664,35 +4664,48 @@ if (isFront) {
       group.add(schoolBuilding);
 
       data.forEach((item, i) => {
-        const isHl = highlightIndex === i;
-        const isFront = i === 0;
+  const isHl = highlightIndex === i;
+  const isFront = i === 0;
 
-        if (item.appearance) {
-          let walkPhase = 0;
-          let extraX = 0;
-          let studentScale = 0.55;
-          let shouldRender = true;
+  if (item.appearance) {
+    let walkPhase = 0;
+    let extraX = 0;
+    let studentScale = 0.55;
+    let shouldRender = true;
 
-} else {
-  if (animPhase === 'queue-dequeue-walk') {
-    const progress = animProgress || 0;
-    walkPhase = progress * Math.PI * 6;
-    extraX = -progress * spacing * 0.5;
-  } else if (animPhase === 'queue-dequeue-enter') {
-    const progress = animProgress || 0;
-    walkPhase = Math.PI * 6 + progress * Math.PI * 4;
-    extraX = -spacing * 0.5 - progress * spacing * 0.5;
+    if (isFront) {
+      if (animPhase === 'queue-dequeue-walk') {
+        const progress = animProgress || 0;
+        walkPhase = progress * Math.PI * 10;
+        extraX = -progress * 1.2;
+      } else if (animPhase === 'queue-dequeue-enter') {
+        const progress = animProgress || 0;
+        walkPhase = Math.PI * 10 + progress * Math.PI * 4;
+        extraX = -1.2 - progress * 0.4;
+        studentScale = 0.55 * Math.max(0.01, 1 - progress * 0.95);
+        if (progress > 0.95) shouldRender = false;
+      }
+    } else {
+      if (animPhase === 'queue-dequeue-walk') {
+        const progress = animProgress || 0;
+        walkPhase = progress * Math.PI * 6;
+        extraX = -progress * spacing * 0.5;
+      } else if (animPhase === 'queue-dequeue-enter') {
+        const progress = animProgress || 0;
+        walkPhase = Math.PI * 6 + progress * Math.PI * 4;
+        extraX = -spacing * 0.5 - progress * spacing * 0.5;
+      }
+    }
+
+    if (shouldRender) {
+      const human = createHuman3D(item.appearance, item.label, isHl, false, walkPhase);
+      human.position.set(startX + i * spacing + 0.6 + extraX, groundY, 0);
+      human.scale.setScalar(studentScale);
+      human.rotation.y = -Math.PI / 2;
+      group.add(human);
+    }
   }
-
-          if (shouldRender) {
-            const human = createHuman3D(item.appearance, item.label, isHl, false, walkPhase);
-            human.position.set(startX + i * spacing + 0.6 + extraX, groundY, 0);
-            human.scale.setScalar(studentScale);
-            human.rotation.y = -Math.PI / 2;
-            group.add(human);
-          }
-        }
-      });
+});
 
       if (data.length > 0) {
         const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
