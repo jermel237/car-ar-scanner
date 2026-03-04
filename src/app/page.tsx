@@ -4485,7 +4485,7 @@ function buildSceneContent(
       const ticketDispenserGroup = createTicketDispenser(data, highlightIndex, animPhase || '', animProgress || 0);
       group.add(ticketDispenserGroup);
 
-    } else if (environment === 'students') {
+      } else if (environment === 'students') {
       const schoolBuilding = createSchoolBuilding();
       schoolBuilding.position.set(startX - 0.8, groundY, 0);
       schoolBuilding.scale.setScalar(0.5);
@@ -4519,12 +4519,14 @@ function buildSceneContent(
 
           if (isFront) {
             if (isWalking) {
+              // Front student walks toward door
               const walkProgress = easeOut(progress);
               const startStudentX = startX + 0.6;
               studentX = startStudentX + (doorX - startStudentX) * walkProgress;
               walkPhase = progress * Math.PI * 8;
               studentY = groundY + Math.abs(Math.sin(progress * Math.PI * 8)) * 0.015;
             } else if (isEntering) {
+              // Front student enters building (shrink + fade)
               const enterProgress = easeInOut(progress);
               studentX = doorX;
               walkPhase = Math.PI * 8 + progress * Math.PI * 3;
@@ -4532,19 +4534,33 @@ function buildSceneContent(
               studentScale = 0.55 * Math.max(0.01, 1 - enterProgress * 0.9);
               studentOpacity = Math.max(0, 1 - enterProgress);
               if (progress > 0.9) shouldRender = false;
-            } else if (isShifting || isSettling) {
+            } else if (isShifting) {
+              // Original front is gone during shift (data not yet removed)
               shouldRender = false;
+            } else if (isSettling) {
+              // NEW front student (data already removed, this is the new index 0)
+              // They should be visible and settle at position 0
+              studentX = startX + 0.6;
+              const settleProgress = easeOut(progress);
+              const bounce = Math.sin(settleProgress * Math.PI) * (1 - settleProgress) * 0.02;
+              studentY = groundY + bounce;
+              walkPhase = 0;
+              // shouldRender stays TRUE - this is the new front!
             }
           } else {
+            // Non-front students
             if (isWalking) {
+              // Slight anticipation while waiting
               const anticipation = Math.sin(progress * Math.PI) * 0.02;
               studentX = startX + i * spacing + 0.6 + anticipation;
               walkPhase = Math.sin(progress * Math.PI * 2) * 0.3;
             } else if (isEntering) {
+              // Impatient shuffle while front enters
               studentX = startX + i * spacing + 0.6;
               walkPhase = Math.sin(progress * Math.PI * 3) * 0.4;
               studentY = groundY + Math.abs(Math.sin(progress * Math.PI * 2)) * 0.005;
             } else if (isShifting) {
+              // Move forward one position (data not yet removed)
               const shiftProgress = easeInOut(progress);
               const currentPos = startX + i * spacing + 0.6;
               const targetPos = startX + (i - 1) * spacing + 0.6;
@@ -4552,8 +4568,9 @@ function buildSceneContent(
               walkPhase = progress * Math.PI * 6;
               studentY = groundY + Math.abs(Math.sin(progress * Math.PI * 6)) * 0.012;
             } else if (isSettling) {
+              // Settle at new position (data already removed, use i directly)
               const settleProgress = easeOut(progress);
-              studentX = startX + (i - 1) * spacing + 0.6;
+              studentX = startX + i * spacing + 0.6;
               const bounce = Math.sin(settleProgress * Math.PI) * (1 - settleProgress) * 0.02;
               studentY = groundY + bounce;
               walkPhase = 0;
@@ -4581,6 +4598,7 @@ function buildSceneContent(
         }
       });
 
+      // Labels
       if (data.length > 0) {
         let frontLabelX = startX + 0.6;
 
@@ -4590,6 +4608,7 @@ function buildSceneContent(
         } else if (isEntering) {
           frontLabelX = doorX;
         } else if (isShifting) {
+          // During shift, front label follows what will become new front
           if (data.length > 1) {
             const shiftProgress = easeInOut(progress);
             const currentPos = startX + spacing + 0.6;
@@ -4597,11 +4616,11 @@ function buildSceneContent(
             frontLabelX = currentPos + (targetPos - currentPos) * shiftProgress;
           }
         } else if (isSettling) {
-          if (data.length > 1) {
-            frontLabelX = startX + 0.6;
-          }
+          // Front label at position 0
+          frontLabelX = startX + 0.6;
         }
 
+        // Show front label if there are/will be students
         if (!(isShifting || isSettling) || data.length > 1) {
           const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
           frontSprite.position.set(frontLabelX, groundY - 0.18, 0);
@@ -4609,17 +4628,21 @@ function buildSceneContent(
           group.add(frontSprite);
         }
 
+        // Rear label
         let rearLabelX = startX + (data.length - 1) * spacing + 0.6;
 
         if (isShifting) {
+          // During shift, rear moves from (length-1) to (length-2)
           const shiftProgress = easeInOut(progress);
           const currentPos = startX + (data.length - 1) * spacing + 0.6;
           const targetPos = startX + (data.length - 2) * spacing + 0.6;
           rearLabelX = currentPos + (targetPos - currentPos) * shiftProgress;
         } else if (isSettling) {
-          rearLabelX = startX + (data.length - 2) * spacing + 0.6;
+          // After data removed, rear is at (data.length - 1)
+          rearLabelX = startX + (data.length - 1) * spacing + 0.6;
         }
 
+        // Show rear if more than 1 student
         if (data.length > 1 || !(isShifting || isSettling)) {
           const rearSprite = createTextSprite('REAR', '#ff6600', 16);
           rearSprite.position.set(rearLabelX, groundY - 0.18, 0);
@@ -4628,6 +4651,7 @@ function buildSceneContent(
         }
       }
 
+      // Pathway
       const pathway = new THREE.Mesh(
         new THREE.PlaneGeometry(Math.max(2.5, data.length * spacing + 2.5), 0.5),
         new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
