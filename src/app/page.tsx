@@ -4648,227 +4648,158 @@ function buildSceneContent(
       const ticketDispenserGroup = createTicketDispenser(data, highlightIndex, animPhase || '', animProgress || 0);
       group.add(ticketDispenserGroup);
 
-} else if (environment === 'students') {
-  // School building
-  const schoolBuilding = createSchoolBuilding();
-  schoolBuilding.position.set(startX - 0.8, groundY, 0);
-  schoolBuilding.scale.setScalar(0.5);
-  schoolBuilding.rotation.y = 0;
-  group.add(schoolBuilding);
+     } else if (environment === 'students') {
+      const schoolBuilding = createSchoolBuilding();
+      schoolBuilding.position.set(startX - 0.8, groundY, 0);
+      schoolBuilding.scale.setScalar(0.5);
+      schoolBuilding.rotation.y = 0;
+      group.add(schoolBuilding);
 
-  // Animation state detection
-  const isWalking = animPhase === 'queue-student-walk';
-  const isEntering = animPhase === 'queue-student-enter';
-  const isShifting = animPhase === 'queue-student-shift';
-  const isSettling = animPhase === 'queue-student-settle';
-  const progress = animProgress || 0;
-  
-  // Easing function for smooth animation
-  const easeInOut = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-  const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
-  const easedProgress = easeInOut(progress);
+      const isWalking = animPhase === 'queue-student-walk';
+      const isEntering = animPhase === 'queue-student-enter';
+      const isShifting = animPhase === 'queue-student-shift';
+      const isSettling = animPhase === 'queue-student-settle';
+      const progress = animProgress || 0;
 
-  // Door position (where students walk to)
-  const doorX = startX - 0.6;
+      const easeInOut = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+      const easedProgress = easeInOut(progress);
 
-  data.forEach((item, i) => {
-    const isHl = highlightIndex === i;
-    const isFront = i === 0;
+      const doorX = startX - 0.6;
 
-    if (item.appearance) {
-      let walkPhase = 0;
-      let studentX = startX + i * spacing + 0.6;
-      let studentY = groundY;
-      let studentZ = 0;
-      let studentScale = 0.55;
-      let studentRotationY = -Math.PI / 2; // Face toward school
-      let shouldRender = true;
-      let studentOpacity = 1;
+      data.forEach((item, i) => {
+        const isHl = highlightIndex === i;
+        const isFront = i === 0;
 
-      if (isFront) {
-        // ===== FRONT STUDENT ANIMATION =====
-        
-        if (isWalking) {
-          // Phase 1: Walk from queue position toward the door
-          const walkProgress = easeOut(progress);
-          const targetX = doorX;
-          const startStudentX = startX + 0.6;
-          
-          // Move toward door
-          studentX = startStudentX + (targetX - startStudentX) * walkProgress;
-          
-          // Walking leg animation - continuous walking
-          walkPhase = progress * Math.PI * 8;
-          
-          // Slight bounce while walking
-          studentY = groundY + Math.abs(Math.sin(progress * Math.PI * 8)) * 0.015;
-          
-        } else if (isEntering) {
-          // Phase 2: Enter the building (shrink and fade)
-          const enterProgress = easeInOut(progress);
-          
-          // Stay at door position
-          studentX = doorX;
-          
-          // Continue walking animation but slower
-          walkPhase = Math.PI * 8 + progress * Math.PI * 3;
-          
-          // Move slightly forward (into the door)
-          studentZ = -enterProgress * 0.3;
-          
-          // Scale down as entering
-          studentScale = 0.55 * Math.max(0.01, 1 - enterProgress * 0.9);
-          
-          // Fade out
-          studentOpacity = Math.max(0, 1 - enterProgress);
-          
-          // Stop rendering when almost gone
-          if (progress > 0.9) shouldRender = false;
-          
-        } else if (isShifting || isSettling) {
-          // Front student is already gone during shift/settle
-          shouldRender = false;
-        }
-        
-      } else {
-        // ===== OTHER STUDENTS ANIMATION =====
-        
-        if (isWalking) {
-          // Phase 1: Stay in place, maybe small anticipation
-          const anticipation = Math.sin(progress * Math.PI) * 0.02;
-          studentX = startX + i * spacing + 0.6 + anticipation;
-          
-          // Small weight shift animation
-          walkPhase = Math.sin(progress * Math.PI * 2) * 0.3;
-          
-        } else if (isEntering) {
-          // Phase 2: Still waiting, getting ready to move
-          studentX = startX + i * spacing + 0.6;
-          
-          // Subtle impatient shuffle
-          walkPhase = Math.sin(progress * Math.PI * 3) * 0.4;
-          studentY = groundY + Math.abs(Math.sin(progress * Math.PI * 2)) * 0.005;
-          
-        } else if (isShifting) {
-          // Phase 3: Move forward one position
-          const shiftProgress = easeInOut(progress);
-          const currentPos = startX + i * spacing + 0.6;
-          const targetPos = startX + (i - 1) * spacing + 0.6;
-          
-          // Move to new position
-          studentX = currentPos + (targetPos - currentPos) * shiftProgress;
-          
-          // Walking animation while shifting
-          walkPhase = progress * Math.PI * 6;
-          
-          // Slight bounce while walking
-          studentY = groundY + Math.abs(Math.sin(progress * Math.PI * 6)) * 0.012;
-          
-        } else if (isSettling) {
-          // Phase 4: Small settle bounce at new position
-          const settleProgress = easeOut(progress);
-          
-          // Already at new position (i-1), but since data hasn't been removed yet
-          // we're still at visual position i-1
-          studentX = startX + (i - 1) * spacing + 0.6;
-          
-          // Settle bounce
-          const bounce = Math.sin(settleProgress * Math.PI) * (1 - settleProgress) * 0.02;
-          studentY = groundY + bounce;
-          
-          // Stop walking
-          walkPhase = 0;
-        }
-      }
+        if (item.appearance) {
+          let walkPhase = 0;
+          let studentX = startX + i * spacing + 0.6;
+          let studentY = groundY;
+          let studentZ = 0;
+          let studentScale = 0.55;
+          const studentRotationY = -Math.PI / 2;
+          let shouldRender = true;
+          let studentOpacity = 1;
 
-      if (shouldRender) {
-        const human = createHuman3D(item.appearance, item.label, isHl, false, walkPhase);
-        human.position.set(studentX, studentY, studentZ);
-        human.scale.setScalar(studentScale);
-        human.rotation.y = studentRotationY;
-        
-        // Apply opacity if fading
-        if (studentOpacity < 1) {
-          human.traverse((child) => {
-            if (child instanceof THREE.Mesh && child.material) {
-              const mat = child.material as THREE.MeshStandardMaterial;
-              mat.transparent = true;
-              mat.opacity = studentOpacity;
+          if (isFront) {
+            if (isWalking) {
+              const walkProgress = easeOut(progress);
+              const startStudentX = startX + 0.6;
+              studentX = startStudentX + (doorX - startStudentX) * walkProgress;
+              walkPhase = progress * Math.PI * 8;
+              studentY = groundY + Math.abs(Math.sin(progress * Math.PI * 8)) * 0.015;
+            } else if (isEntering) {
+              const enterProgress = easeInOut(progress);
+              studentX = doorX;
+              walkPhase = Math.PI * 8 + progress * Math.PI * 3;
+              studentZ = -enterProgress * 0.3;
+              studentScale = 0.55 * Math.max(0.01, 1 - enterProgress * 0.9);
+              studentOpacity = Math.max(0, 1 - enterProgress);
+              if (progress > 0.9) shouldRender = false;
+            } else if (isShifting || isSettling) {
+              shouldRender = false;
             }
-          });
-        }
-        
-        group.add(human);
-      }
-    }
-  });
+          } else {
+            if (isWalking) {
+              const anticipation = Math.sin(progress * Math.PI) * 0.02;
+              studentX = startX + i * spacing + 0.6 + anticipation;
+              walkPhase = Math.sin(progress * Math.PI * 2) * 0.3;
+            } else if (isEntering) {
+              studentX = startX + i * spacing + 0.6;
+              walkPhase = Math.sin(progress * Math.PI * 3) * 0.4;
+              studentY = groundY + Math.abs(Math.sin(progress * Math.PI * 2)) * 0.005;
+            } else if (isShifting) {
+              const shiftProgress = easeInOut(progress);
+              const currentPos = startX + i * spacing + 0.6;
+              const targetPos = startX + (i - 1) * spacing + 0.6;
+              studentX = currentPos + (targetPos - currentPos) * shiftProgress;
+              walkPhase = progress * Math.PI * 6;
+              studentY = groundY + Math.abs(Math.sin(progress * Math.PI * 6)) * 0.012;
+            } else if (isSettling) {
+              const settleProgress = easeOut(progress);
+              studentX = startX + (i - 1) * spacing + 0.6;
+              const bounce = Math.sin(settleProgress * Math.PI) * (1 - settleProgress) * 0.02;
+              studentY = groundY + bounce;
+              walkPhase = 0;
+            }
+          }
 
-  // FRONT and REAR labels (with animation awareness)
-  if (data.length > 0) {
-    // Front label follows the front person or shows at new front after shift
-    let frontLabelX = startX + 0.6;
-    
-    if (isWalking) {
-      const walkProgress = easeOut(progress);
-      frontLabelX = startX + 0.6 + (doorX - startX - 0.6) * walkProgress;
-    } else if (isEntering) {
-      frontLabelX = doorX;
-    } else if (isShifting || isSettling) {
-      // During shift, show front label at the NEW front position
-      if (data.length > 1) {
-        frontLabelX = startX + 0.6; // Will be position of what was index 1
+          if (shouldRender) {
+            const human = createHuman3D(item.appearance, item.label, isHl, false, walkPhase);
+            human.position.set(studentX, studentY, studentZ);
+            human.scale.setScalar(studentScale);
+            human.rotation.y = studentRotationY;
+
+            if (studentOpacity < 1) {
+              human.traverse((child) => {
+                if (child instanceof THREE.Mesh && child.material) {
+                  const mat = child.material as THREE.MeshStandardMaterial;
+                  mat.transparent = true;
+                  mat.opacity = studentOpacity;
+                }
+              });
+            }
+
+            group.add(human);
+          }
+        }
+      });
+
+      if (data.length > 0) {
+        let frontLabelX = startX + 0.6;
+
+        if (isWalking) {
+          const walkProgress = easeOut(progress);
+          frontLabelX = startX + 0.6 + (doorX - startX - 0.6) * walkProgress;
+        } else if (isEntering) {
+          frontLabelX = doorX;
+        } else if (isShifting) {
+          if (data.length > 1) {
+            const shiftProgress = easeInOut(progress);
+            const currentPos = startX + spacing + 0.6;
+            const targetPos = startX + 0.6;
+            frontLabelX = currentPos + (targetPos - currentPos) * shiftProgress;
+          }
+        } else if (isSettling) {
+          if (data.length > 1) {
+            frontLabelX = startX + 0.6;
+          }
+        }
+
+        if (!(isShifting || isSettling) || data.length > 1) {
+          const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
+          frontSprite.position.set(frontLabelX, groundY - 0.18, 0);
+          frontSprite.scale.set(0.26, 0.09, 1);
+          group.add(frontSprite);
+        }
+
+        let rearLabelX = startX + (data.length - 1) * spacing + 0.6;
+
         if (isShifting) {
           const shiftProgress = easeInOut(progress);
-          frontLabelX = startX + spacing + 0.6 + (startX + 0.6 - startX - spacing - 0.6) * shiftProgress;
+          const currentPos = startX + (data.length - 1) * spacing + 0.6;
+          const targetPos = startX + (data.length - 2) * spacing + 0.6;
+          rearLabelX = currentPos + (targetPos - currentPos) * shiftProgress;
+        } else if (isSettling) {
+          rearLabelX = startX + (data.length - 2) * spacing + 0.6;
+        }
+
+        if (data.length > 1 || !(isShifting || isSettling)) {
+          const rearSprite = createTextSprite('REAR', '#ff6600', 16);
+          rearSprite.position.set(rearLabelX, groundY - 0.18, 0);
+          rearSprite.scale.set(0.26, 0.09, 1);
+          group.add(rearSprite);
         }
       }
-    }
-    
-    // Only show front label if there will still be students
-    if (!(isShifting || isSettling) || data.length > 1) {
-      const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
-      frontSprite.position.set(frontLabelX, groundY - 0.18, 0);
-      frontSprite.scale.set(0.26, 0.09, 1);
-      
-      // Fade out during entering phase
-      if (isEntering) {
-        frontSprite.material.opacity = Math.max(0, 1 - progress);
-      }
-      
-      group.add(frontSprite);
-    }
 
-    // Rear label
-    let rearLabelX = startX + (data.length - 1) * spacing + 0.6;
-    
-    if (isShifting) {
-      const shiftProgress = easeInOut(progress);
-      const currentPos = startX + (data.length - 1) * spacing + 0.6;
-      const targetPos = startX + (data.length - 2) * spacing + 0.6;
-      rearLabelX = currentPos + (targetPos - currentPos) * shiftProgress;
-    } else if (isSettling) {
-      rearLabelX = startX + (data.length - 2) * spacing + 0.6;
+      const pathway = new THREE.Mesh(
+        new THREE.PlaneGeometry(Math.max(2.5, data.length * spacing + 2.5), 0.5),
+        new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
+      );
+      pathway.rotation.x = -Math.PI / 2;
+      pathway.position.set(0.3, groundY - 0.01, 0);
+      group.add(pathway);
     }
-    
-    // Only show rear if more than 1 student (or will be 0 after dequeue)
-    if (data.length > 1 || !(isShifting || isSettling)) {
-      const rearSprite = createTextSprite('REAR', '#ff6600', 16);
-      rearSprite.position.set(rearLabelX, groundY - 0.18, 0);
-      rearSprite.scale.set(0.26, 0.09, 1);
-      group.add(rearSprite);
-    }
-  }
-
-  // Pathway
-  const pathway = new THREE.Mesh(
-    new THREE.PlaneGeometry(Math.max(2.5, data.length * spacing + 2.5), 0.5),
-    new THREE.MeshStandardMaterial({ color: '#bdc3c7', side: THREE.DoubleSide })
-  );
-  pathway.rotation.x = -Math.PI / 2;
-  pathway.position.set(0.3, groundY - 0.01, 0);
-  group.add(pathway);
-}
-
 // ==================== HOME COMPONENT ====================
 
 export default function Home() {
@@ -5376,7 +5307,7 @@ export default function Home() {
         { title: "📤 Dispensing", description: `"${frontItem.label}" dispensed!${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`, highlightIndex: 0, animPhase: 'queue-dequeue-exit', animDuration: 1500,
           action: () => { (setQueueData as any)((prev: DataItem[]) => prev.slice(1)); } }
       );
-} else {
+    } else {
   steps.push(
     { title: "🚶 Walking to Door", description: `"${frontItem.label}" walking toward entrance...`, highlightIndex: 0, animPhase: 'queue-student-walk', animDuration: 1800 },
     { title: "🚪 Entering Building", description: `"${frontItem.label}" entering the university...`, highlightIndex: 0, animPhase: 'queue-student-enter', animDuration: 1000 },
