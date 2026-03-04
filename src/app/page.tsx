@@ -2958,8 +2958,13 @@ function buildSceneContent(
     highlightIndex = null;
     highlightIndex2 = null;
   }
-  const spacing = structure === 'linkedlist' ? 1.1 : structure === 'queue' ? 1.5 : 0.85;
-  const startX = -((data.length - 1) * spacing) / 2;
+// Limit items for WebXR performance
+const maxItems = 5;
+const limitedData = data.length > maxItems ? data.slice(0, maxItems) : data;
+const renderData = limitedData;
+
+const spacing = structure === 'linkedlist' ? 1.1 : structure === 'queue' ? 1.0 : 0.85;
+const startX = -((renderData.length - 1) * spacing) / 2;
   const groundY = 0;
 
   if (tutorialText) {
@@ -4382,12 +4387,7 @@ function buildSceneContent(
       rockRight2.position.set(0, (tunnelHeight + 0.15) / 2, -tunnelWidth / 2 - 0.35);
       tunnel.add(rockRight2);
 
-      const extraRockMat = new THREE.MeshStandardMaterial({ color: '#8a8a8a', roughness: 0.95 });
-      [[-0.25, 0.7, 0.42, 0.15, 0.1, 0.12], [-0.3, 0.65, -0.45, 0.12, 0.12, 0.1], [-0.15, 0.75, 0.25, 0.1, 0.08, 0.15], [-0.2, 0.72, -0.28, 0.12, 0.1, 0.12], [-0.35, 0.6, 0.38, 0.1, 0.1, 0.08], [-0.1, 0.8, 0, 0.2, 0.08, 0.25]].forEach(([x, y, z, w, h, d]) => {
-        const rock = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), extraRockMat);
-        rock.position.set(x, y, z);
-        tunnel.add(rock);
-      });
+
 
       tunnel.position.set(tunnelX, groundY, 0);
       tunnel.scale.setScalar(0.85);
@@ -5451,7 +5451,7 @@ const startWebXR = async () => {
     const session = await xr.requestSession('immersive-ar', sessionInit);
     xrSessionRef.current = session;
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(1);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.xr.enabled = true;
     renderer.xr.setReferenceSpaceType('local');
@@ -5460,11 +5460,8 @@ const startWebXR = async () => {
     await renderer.xr.setSession(session);
     const scene = new THREE.Scene();
     xrSceneRef.current = scene;
-    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    dirLight.position.set(5, 10, 7);
-    dirLight.castShadow = true;
-    scene.add(dirLight);
+    scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+// dirLight.castShadow = true; // Disabled for performance    scene.add(dirLight);
     const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 100);
     xrCameraRef.current = camera;
     const group = new THREE.Group();
@@ -5787,15 +5784,13 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
     camera.lookAt(0, 0, 0);
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setClearColor(0x000000, 0);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(1);
     renderer.setSize(renderWidth, renderHeight);
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled = false;
     container.appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    dirLight.position.set(5, 10, 7); dirLight.castShadow = true; scene.add(dirLight);
-
+    scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+    
     const group = new THREE.Group(); groupRef.current = group; scene.add(group);
 
     let isDragging = false, lastX = 0, lastY = 0, pinchDist: number | null = null, pinchZoom = 1;
