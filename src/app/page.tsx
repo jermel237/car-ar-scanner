@@ -4206,224 +4206,263 @@ function buildSceneContent(
         group.add(sideLine);
       });
 
-      // ==================== ARCH TUNNEL ∩ ====================
+      // ==================== BOX ARCH TUNNEL ∩ ====================
       const tunnel = new THREE.Group();
       const tunnelX = startX - 1.2;
-      const tunnelRadius = 0.35;
-      const tunnelWidth = 0.55;
-      const tunnelLength = 1.2;
+      const tunnelHeight = 0.55;
+      const tunnelWidth = 0.6;
+      const tunnelLength = 2.5; // Long to hide back road
+      const wallThickness = 0.08;
 
       // Tunnel materials
       const tunnelConcreteMat = new THREE.MeshStandardMaterial({ color: '#888888', roughness: 0.85 });
       const tunnelDarkConcrete = new THREE.MeshStandardMaterial({ color: '#666666', roughness: 0.9 });
-      const tunnelInsideMat = new THREE.MeshBasicMaterial({ color: '#0a0a0a' });
+      const tunnelInsideMat = new THREE.MeshBasicMaterial({ color: '#080808' });
       const greyRockMat = new THREE.MeshStandardMaterial({ color: '#9a9a9a', roughness: 0.95 });
       const darkGreyMat = new THREE.MeshStandardMaterial({ color: '#7a7a7a', roughness: 0.9 });
 
-      // Arch roof (half cylinder) - outside
-      const archGeometry = new THREE.CylinderGeometry(tunnelRadius, tunnelRadius, tunnelLength, 32, 1, true, 0, Math.PI);
-      const archRoof = new THREE.Mesh(archGeometry, tunnelConcreteMat);
-      archRoof.rotation.x = Math.PI / 2;
-      archRoof.rotation.z = Math.PI;
-      archRoof.position.set(-tunnelLength / 2, tunnelRadius, 0);
-      tunnel.add(archRoof);
+      // ===== TUNNEL STRUCTURE (∩ shape with boxes) =====
 
-      // Arch inside (dark)
-      const archInsideGeo = new THREE.CylinderGeometry(tunnelRadius - 0.03, tunnelRadius - 0.03, tunnelLength + 0.1, 32, 1, true, 0, Math.PI);
-      const archInside = new THREE.Mesh(archInsideGeo, tunnelInsideMat);
-      archInside.rotation.x = Math.PI / 2;
-      archInside.rotation.z = Math.PI;
-      archInside.position.set(-tunnelLength / 2, tunnelRadius - 0.03, 0);
-      tunnel.add(archInside);
-
-      // Left wall
-      const leftWall = new THREE.Mesh(
-        new THREE.BoxGeometry(tunnelLength, tunnelRadius, 0.06),
+      // Left wall (outside)
+      const leftWallOuter = new THREE.Mesh(
+        new THREE.BoxGeometry(tunnelLength, tunnelHeight, wallThickness),
         tunnelConcreteMat
       );
-      leftWall.position.set(-tunnelLength / 2, tunnelRadius / 2, tunnelWidth / 2 - 0.03);
-      tunnel.add(leftWall);
+      leftWallOuter.position.set(-tunnelLength / 2, tunnelHeight / 2, tunnelWidth / 2);
+      tunnel.add(leftWallOuter);
 
-      // Right wall
-      const rightWall = new THREE.Mesh(
-        new THREE.BoxGeometry(tunnelLength, tunnelRadius, 0.06),
+      // Right wall (outside)
+      const rightWallOuter = new THREE.Mesh(
+        new THREE.BoxGeometry(tunnelLength, tunnelHeight, wallThickness),
         tunnelConcreteMat
       );
-      rightWall.position.set(-tunnelLength / 2, tunnelRadius / 2, -tunnelWidth / 2 + 0.03);
-      tunnel.add(rightWall);
+      rightWallOuter.position.set(-tunnelLength / 2, tunnelHeight / 2, -tunnelWidth / 2);
+      tunnel.add(rightWallOuter);
 
-      // Inside left wall (dark)
-      const leftWallInside = new THREE.Mesh(
-        new THREE.BoxGeometry(tunnelLength + 0.1, tunnelRadius - 0.02, 0.02),
+      // Top/roof (outside)
+      const roofOuter = new THREE.Mesh(
+        new THREE.BoxGeometry(tunnelLength, wallThickness, tunnelWidth + wallThickness * 2),
+        tunnelConcreteMat
+      );
+      roofOuter.position.set(-tunnelLength / 2, tunnelHeight, 0);
+      tunnel.add(roofOuter);
+
+      // Top corners (to make it look more like ∩)
+      [-1, 1].forEach(side => {
+        const corner1 = new THREE.Mesh(
+          new THREE.BoxGeometry(tunnelLength, wallThickness * 0.7, wallThickness * 0.7),
+          tunnelDarkConcrete
+        );
+        corner1.position.set(-tunnelLength / 2, tunnelHeight - wallThickness * 0.5, side * (tunnelWidth / 2 - wallThickness * 0.3));
+        corner1.rotation.x = Math.PI / 4;
+        tunnel.add(corner1);
+      });
+
+      // Inside walls (dark)
+      const leftWallInner = new THREE.Mesh(
+        new THREE.BoxGeometry(tunnelLength + 0.1, tunnelHeight - 0.02, 0.01),
         tunnelInsideMat
       );
-      leftWallInside.position.set(-tunnelLength / 2, tunnelRadius / 2, tunnelWidth / 2 - 0.08);
-      tunnel.add(leftWallInside);
+      leftWallInner.position.set(-tunnelLength / 2, tunnelHeight / 2, tunnelWidth / 2 - wallThickness - 0.01);
+      tunnel.add(leftWallInner);
 
-      // Inside right wall (dark)
-      const rightWallInside = new THREE.Mesh(
-        new THREE.BoxGeometry(tunnelLength + 0.1, tunnelRadius - 0.02, 0.02),
+      const rightWallInner = new THREE.Mesh(
+        new THREE.BoxGeometry(tunnelLength + 0.1, tunnelHeight - 0.02, 0.01),
         tunnelInsideMat
       );
-      rightWallInside.position.set(-tunnelLength / 2, tunnelRadius / 2, -tunnelWidth / 2 + 0.08);
-      tunnel.add(rightWallInside);
+      rightWallInner.position.set(-tunnelLength / 2, tunnelHeight / 2, -tunnelWidth / 2 + wallThickness + 0.01);
+      tunnel.add(rightWallInner);
 
-      // Back wall (closes the tunnel - not visible from front)
+      // Inside ceiling (dark)
+      const ceilingInner = new THREE.Mesh(
+        new THREE.BoxGeometry(tunnelLength + 0.1, 0.01, tunnelWidth - wallThickness * 2),
+        tunnelInsideMat
+      );
+      ceilingInner.position.set(-tunnelLength / 2, tunnelHeight - wallThickness - 0.01, 0);
+      tunnel.add(ceilingInner);
+
+      // Back wall (closes tunnel completely)
       const backWall = new THREE.Mesh(
-        new THREE.BoxGeometry(0.05, tunnelRadius * 2, tunnelWidth),
+        new THREE.BoxGeometry(0.1, tunnelHeight + 0.2, tunnelWidth + wallThickness * 2 + 0.2),
         tunnelInsideMat
       );
-      backWall.position.set(-tunnelLength - 0.02, tunnelRadius / 2 + 0.1, 0);
+      backWall.position.set(-tunnelLength - 0.05, tunnelHeight / 2, 0);
       tunnel.add(backWall);
-
-      // Entrance arch frame (concrete ring)
-      const entranceFrameTop = new THREE.Mesh(
-        new THREE.TorusGeometry(tunnelRadius, 0.05, 8, 32, Math.PI),
-        tunnelConcreteMat
-      );
-      entranceFrameTop.rotation.x = Math.PI / 2;
-      entranceFrameTop.rotation.z = Math.PI;
-      entranceFrameTop.position.set(0.03, tunnelRadius, 0);
-      tunnel.add(entranceFrameTop);
-
-      // Entrance pillar left
-      const entrancePillarLeft = new THREE.Mesh(
-        new THREE.BoxGeometry(0.08, tunnelRadius, 0.1),
-        tunnelConcreteMat
-      );
-      entrancePillarLeft.position.set(0.03, tunnelRadius / 2, tunnelWidth / 2 - 0.02);
-      tunnel.add(entrancePillarLeft);
-
-      // Entrance pillar right
-      const entrancePillarRight = new THREE.Mesh(
-        new THREE.BoxGeometry(0.08, tunnelRadius, 0.1),
-        tunnelConcreteMat
-      );
-      entrancePillarRight.position.set(0.03, tunnelRadius / 2, -tunnelWidth / 2 + 0.02);
-      tunnel.add(entrancePillarRight);
 
       // Tunnel floor (road inside)
       const tunnelFloor = new THREE.Mesh(
-        new THREE.BoxGeometry(tunnelLength + 0.1, 0.02, tunnelWidth - 0.1),
+        new THREE.BoxGeometry(tunnelLength + 0.1, 0.02, tunnelWidth - wallThickness),
         new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.95 })
       );
       tunnelFloor.position.set(-tunnelLength / 2, 0.01, 0);
       tunnel.add(tunnelFloor);
 
-      // Road markings inside tunnel (fading)
-      for (let i = 0; i < 5; i++) {
+      // ===== ENTRANCE FRAME =====
+
+      // Entrance frame - left pillar
+      const entranceLeft = new THREE.Mesh(
+        new THREE.BoxGeometry(0.1, tunnelHeight + 0.05, wallThickness + 0.04),
+        tunnelConcreteMat
+      );
+      entranceLeft.position.set(0.05, tunnelHeight / 2, tunnelWidth / 2 + 0.02);
+      tunnel.add(entranceLeft);
+
+      // Entrance frame - right pillar
+      const entranceRight = new THREE.Mesh(
+        new THREE.BoxGeometry(0.1, tunnelHeight + 0.05, wallThickness + 0.04),
+        tunnelConcreteMat
+      );
+      entranceRight.position.set(0.05, tunnelHeight / 2, -tunnelWidth / 2 - 0.02);
+      tunnel.add(entranceRight);
+
+      // Entrance frame - top beam
+      const entranceTop = new THREE.Mesh(
+        new THREE.BoxGeometry(0.1, wallThickness + 0.04, tunnelWidth + wallThickness * 2 + 0.08),
+        tunnelConcreteMat
+      );
+      entranceTop.position.set(0.05, tunnelHeight + 0.02, 0);
+      tunnel.add(entranceTop);
+
+      // Inner entrance edge
+      const entranceInnerTop = new THREE.Mesh(
+        new THREE.BoxGeometry(0.05, 0.03, tunnelWidth - wallThickness),
+        tunnelDarkConcrete
+      );
+      entranceInnerTop.position.set(0.08, tunnelHeight - wallThickness - 0.02, 0);
+      tunnel.add(entranceInnerTop);
+
+      // ===== ROAD MARKINGS INSIDE (fading) =====
+      for (let i = 0; i < 8; i++) {
+        const brightness = Math.max(30, 70 - i * 8);
         const marking = new THREE.Mesh(
           new THREE.BoxGeometry(0.1, 0.005, 0.02),
-          new THREE.MeshStandardMaterial({ color: `rgb(${80 - i * 12}, ${80 - i * 12}, ${80 - i * 12})`, roughness: 0.8 })
+          new THREE.MeshStandardMaterial({ color: `rgb(${brightness}, ${brightness}, ${brightness})`, roughness: 0.8 })
         );
-        marking.position.set(-0.1 - i * 0.22, 0.02, 0);
+        marking.position.set(-0.1 - i * 0.28, 0.02, 0);
         tunnel.add(marking);
       }
 
-      // Ceiling lights inside tunnel
-      for (let i = 0; i < 4; i++) {
+      // ===== CEILING LIGHTS INSIDE =====
+      for (let i = 0; i < 6; i++) {
+        const intensity = Math.max(0.1, 0.6 - i * 0.09);
         const ceilingLight = new THREE.Mesh(
-          new THREE.BoxGeometry(0.05, 0.02, 0.1),
+          new THREE.BoxGeometry(0.06, 0.025, 0.12),
           new THREE.MeshStandardMaterial({ 
             color: '#ffeecc', 
             emissive: '#ffdd88', 
-            emissiveIntensity: 0.5 - i * 0.1
+            emissiveIntensity: intensity
           })
         );
-        ceilingLight.position.set(-0.15 - i * 0.28, tunnelRadius * 1.85, 0);
+        ceilingLight.position.set(-0.2 - i * 0.35, tunnelHeight - wallThickness - 0.04, 0);
         tunnel.add(ceilingLight);
+
+        // Light glow
+        if (i < 4) {
+          const glow = new THREE.Mesh(
+            new THREE.BoxGeometry(0.15, 0.01, 0.2),
+            new THREE.MeshBasicMaterial({ color: '#ffeeaa', transparent: true, opacity: 0.1 - i * 0.02 })
+          );
+          glow.position.set(-0.2 - i * 0.35, tunnelHeight - wallThickness - 0.08, 0);
+          tunnel.add(glow);
+        }
       }
 
-      // Side reflectors inside tunnel
-      for (let i = 0; i < 3; i++) {
-        [-tunnelWidth / 2 + 0.12, tunnelWidth / 2 - 0.12].forEach((z, idx) => {
+      // ===== SIDE REFLECTORS =====
+      for (let i = 0; i < 5; i++) {
+        const opacity = Math.max(0.1, 0.4 - i * 0.07);
+        [-tunnelWidth / 2 + wallThickness + 0.03, tunnelWidth / 2 - wallThickness - 0.03].forEach((z, idx) => {
           const reflector = new THREE.Mesh(
-            new THREE.BoxGeometry(0.015, 0.03, 0.015),
+            new THREE.BoxGeometry(0.02, 0.04, 0.02),
             new THREE.MeshStandardMaterial({ 
               color: idx === 0 ? '#ff6600' : '#ffffff',
               emissive: idx === 0 ? '#ff4400' : '#aaaaaa',
-              emissiveIntensity: 0.3 - i * 0.08
+              emissiveIntensity: opacity
             })
           );
-          reflector.position.set(-0.25 - i * 0.35, 0.08, z);
+          reflector.position.set(-0.3 - i * 0.4, 0.1, z);
           tunnel.add(reflector);
         });
       }
 
-      // Warning stripes at entrance (yellow/black)
+      // ===== WARNING STRIPES AT ENTRANCE =====
       const yellowMat = new THREE.MeshStandardMaterial({ color: '#f4d03f', roughness: 0.5 });
       const blackMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.6 });
 
-      [-tunnelWidth / 2 + 0.02, tunnelWidth / 2 - 0.02].forEach(z => {
-        for (let i = 0; i < 4; i++) {
+      [-tunnelWidth / 2 - 0.02, tunnelWidth / 2 + 0.02].forEach(z => {
+        for (let i = 0; i < 5; i++) {
           const stripeMat = i % 2 === 0 ? yellowMat : blackMat;
-          const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.08, 0.04), stripeMat);
-          stripe.position.set(0.055, 0.06 + i * 0.1, z);
+          const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.09, 0.05), stripeMat);
+          stripe.position.set(0.08, 0.07 + i * 0.11, z);
           tunnel.add(stripe);
         }
       });
 
-      // Mountain/rock around tunnel (LIGHT GREY)
-      // Top rock
-      const rockTop = new THREE.Mesh(
-        new THREE.BoxGeometry(0.5, 0.3, 0.75),
+      // ===== GREY ROCK/MOUNTAIN AROUND TUNNEL =====
+
+      // Top rock mass
+      const rockTop1 = new THREE.Mesh(
+        new THREE.BoxGeometry(0.6, 0.25, 0.9),
         greyRockMat
       );
-      rockTop.position.set(-0.15, tunnelRadius * 2 + 0.08, 0);
-      tunnel.add(rockTop);
+      rockTop1.position.set(-0.2, tunnelHeight + 0.15, 0);
+      tunnel.add(rockTop1);
 
-      // Top rock detail
-      const rockTopDetail = new THREE.Mesh(
-        new THREE.BoxGeometry(0.35, 0.15, 0.6),
+      const rockTop2 = new THREE.Mesh(
+        new THREE.BoxGeometry(0.4, 0.15, 0.7),
         darkGreyMat
       );
-      rockTopDetail.position.set(-0.05, tunnelRadius * 2 + 0.25, 0);
-      tunnel.add(rockTopDetail);
+      rockTop2.position.set(-0.1, tunnelHeight + 0.3, 0);
+      tunnel.add(rockTop2);
 
-      // Left rock
-      const rockLeft = new THREE.Mesh(
-        new THREE.BoxGeometry(0.4, tunnelRadius * 2.2, 0.2),
+      const rockTop3 = new THREE.Mesh(
+        new THREE.BoxGeometry(0.25, 0.1, 0.5),
         greyRockMat
       );
-      rockLeft.position.set(-0.1, tunnelRadius, tunnelWidth / 2 + 0.15);
-      tunnel.add(rockLeft);
+      rockTop3.position.set(0, tunnelHeight + 0.38, 0);
+      tunnel.add(rockTop3);
 
-      // Left rock detail
-      const rockLeftDetail = new THREE.Mesh(
-        new THREE.BoxGeometry(0.25, tunnelRadius * 1.8, 0.1),
-        darkGreyMat
-      );
-      rockLeftDetail.position.set(0.02, tunnelRadius, tunnelWidth / 2 + 0.28);
-      tunnel.add(rockLeftDetail);
-
-      // Right rock
-      const rockRight = new THREE.Mesh(
-        new THREE.BoxGeometry(0.4, tunnelRadius * 2.2, 0.2),
+      // Left rock mass
+      const rockLeft1 = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, tunnelHeight + 0.3, 0.25),
         greyRockMat
       );
-      rockRight.position.set(-0.1, tunnelRadius, -tunnelWidth / 2 - 0.15);
-      tunnel.add(rockRight);
+      rockLeft1.position.set(-0.15, (tunnelHeight + 0.3) / 2, tunnelWidth / 2 + 0.2);
+      tunnel.add(rockLeft1);
 
-      // Right rock detail
-      const rockRightDetail = new THREE.Mesh(
-        new THREE.BoxGeometry(0.25, tunnelRadius * 1.8, 0.1),
+      const rockLeft2 = new THREE.Mesh(
+        new THREE.BoxGeometry(0.35, tunnelHeight + 0.15, 0.15),
         darkGreyMat
       );
-      rockRightDetail.position.set(0.02, tunnelRadius, -tunnelWidth / 2 - 0.28);
-      tunnel.add(rockRightDetail);
+      rockLeft2.position.set(0, (tunnelHeight + 0.15) / 2, tunnelWidth / 2 + 0.35);
+      tunnel.add(rockLeft2);
 
-      // Extra rock pieces for natural look
+      // Right rock mass
+      const rockRight1 = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, tunnelHeight + 0.3, 0.25),
+        greyRockMat
+      );
+      rockRight1.position.set(-0.15, (tunnelHeight + 0.3) / 2, -tunnelWidth / 2 - 0.2);
+      tunnel.add(rockRight1);
+
+      const rockRight2 = new THREE.Mesh(
+        new THREE.BoxGeometry(0.35, tunnelHeight + 0.15, 0.15),
+        darkGreyMat
+      );
+      rockRight2.position.set(0, (tunnelHeight + 0.15) / 2, -tunnelWidth / 2 - 0.35);
+      tunnel.add(rockRight2);
+
+      // Extra rock details
       const extraRockMat = new THREE.MeshStandardMaterial({ color: '#8a8a8a', roughness: 0.95 });
       [
-        [-0.2, 0.85, 0.38, 0.12, 0.08, 0.1],
-        [-0.25, 0.75, -0.4, 0.1, 0.1, 0.08],
-        [-0.1, 0.92, 0.2, 0.08, 0.06, 0.12],
-        [-0.15, 0.88, -0.22, 0.1, 0.07, 0.1],
-        [-0.3, 0.7, 0.32, 0.08, 0.08, 0.06],
+        [-0.25, 0.7, 0.42, 0.15, 0.1, 0.12],
+        [-0.3, 0.65, -0.45, 0.12, 0.12, 0.1],
+        [-0.15, 0.75, 0.25, 0.1, 0.08, 0.15],
+        [-0.2, 0.72, -0.28, 0.12, 0.1, 0.12],
+        [-0.35, 0.6, 0.38, 0.1, 0.1, 0.08],
+        [-0.1, 0.8, 0, 0.2, 0.08, 0.25],
       ].forEach(([x, y, z, w, h, d]) => {
         const rock = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), extraRockMat);
         rock.position.set(x, y, z);
-        rock.rotation.y = Math.random() * 0.3;
         tunnel.add(rock);
       });
 
@@ -4465,15 +4504,13 @@ function buildSceneContent(
         return barrier;
       };
 
-      // Calculate barrier positions to connect to tunnel rock
-      const tunnelEdgeX = tunnelX + 0.05;
+      // Barriers connect to tunnel
+      const tunnelEdgeX = tunnelX + 0.08;
       const barrierEndX = startX + data.length * spacing + 1.5;
 
-      // Left barrier (connects to tunnel)
       const leftBarrier = createBarrier(tunnelEdgeX, barrierEndX, 0.32);
       group.add(leftBarrier);
 
-      // Right barrier (connects to tunnel)
       const rightBarrier = createBarrier(tunnelEdgeX, barrierEndX, -0.32);
       group.add(rightBarrier);
 
@@ -4549,10 +4586,8 @@ function buildSceneContent(
         if (isFront) {
           if (animPhase === 'queue-dequeue-drive') {
             const progress = animProgress || 0;
-            // Car drives toward tunnel
             extraX = -progress * 1.8;
             
-            // Ghost effect - fade and shrink as entering tunnel
             if (progress > 0.3) {
               const fadeProgress = (progress - 0.3) / 0.7;
               carOpacity = 1 - fadeProgress;
@@ -4578,7 +4613,6 @@ function buildSceneContent(
           carObj.position.set(startX + i * spacing + 0.5 + extraX, groundY + (isHl ? 0.03 : 0), 0);
           carObj.scale.setScalar(carScale * carScaleEffect);
           
-          // Apply ghost/fade effect when entering tunnel
           if (carOpacity < 1 && isFront) {
             carObj.traverse((child) => {
               if (child instanceof THREE.Mesh && child.material) {
