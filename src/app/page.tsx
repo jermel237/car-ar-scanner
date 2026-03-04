@@ -4172,17 +4172,14 @@ function buildSceneContent(
     }
 
     if (environment === 'tollgate') {
-      // ==================== REALISTIC ROAD (SINGLE LANE) ====================
       const roadLength = Math.max(4.5, data.length * spacing + 4);
       
-      // Asphalt road (single lane)
       const asphaltMat = new THREE.MeshStandardMaterial({ color: '#2a2a2a', roughness: 0.9 });
       const road = new THREE.Mesh(new THREE.PlaneGeometry(roadLength + 2, 0.55), asphaltMat);
       road.rotation.x = -Math.PI / 2;
       road.position.set(roadLength / 2 - 2.8, groundY - 0.01, 0);
       group.add(road);
 
-      // Road texture
       const roadGrain = new THREE.Mesh(new THREE.PlaneGeometry(roadLength + 2, 0.55), 
         new THREE.MeshStandardMaterial({ color: '#333333', roughness: 1, transparent: true, opacity: 0.3 })
       );
@@ -4190,7 +4187,6 @@ function buildSceneContent(
       roadGrain.position.set(roadLength / 2 - 2.8, groundY - 0.008, 0);
       group.add(roadGrain);
 
-      // Center dashed lines
       const dashMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.5 });
       const numDashes = Math.floor((roadLength + 1.5) / 0.3);
       for (let i = 0; i < numDashes; i++) {
@@ -4199,192 +4195,109 @@ function buildSceneContent(
         group.add(dash);
       }
 
-      // Side lines (solid white)
       [-0.24, 0.24].forEach(z => {
         const sideLine = new THREE.Mesh(new THREE.BoxGeometry(roadLength + 1.5, 0.005, 0.025), dashMat);
         sideLine.position.set(roadLength / 2 - 2.5, groundY, z);
         group.add(sideLine);
       });
 
-      // ==================== BOX ARCH TUNNEL ∩ ====================
       const tunnel = new THREE.Group();
       const tunnelX = startX - 1.2;
       const tunnelHeight = 0.55;
       const tunnelWidth = 0.6;
-      const tunnelLength = 2.5; // Long to hide back road
+      const tunnelLength = 2.5;
       const wallThickness = 0.08;
 
-      // Tunnel materials
       const tunnelConcreteMat = new THREE.MeshStandardMaterial({ color: '#888888', roughness: 0.85 });
       const tunnelDarkConcrete = new THREE.MeshStandardMaterial({ color: '#666666', roughness: 0.9 });
       const tunnelInsideMat = new THREE.MeshBasicMaterial({ color: '#080808' });
       const greyRockMat = new THREE.MeshStandardMaterial({ color: '#9a9a9a', roughness: 0.95 });
       const darkGreyMat = new THREE.MeshStandardMaterial({ color: '#7a7a7a', roughness: 0.9 });
 
-      // ===== TUNNEL STRUCTURE (∩ shape with boxes) =====
-
-      // Left wall (outside)
-      const leftWallOuter = new THREE.Mesh(
-        new THREE.BoxGeometry(tunnelLength, tunnelHeight, wallThickness),
-        tunnelConcreteMat
-      );
+      const leftWallOuter = new THREE.Mesh(new THREE.BoxGeometry(tunnelLength, tunnelHeight, wallThickness), tunnelConcreteMat);
       leftWallOuter.position.set(-tunnelLength / 2, tunnelHeight / 2, tunnelWidth / 2);
       tunnel.add(leftWallOuter);
 
-      // Right wall (outside)
-      const rightWallOuter = new THREE.Mesh(
-        new THREE.BoxGeometry(tunnelLength, tunnelHeight, wallThickness),
-        tunnelConcreteMat
-      );
+      const rightWallOuter = new THREE.Mesh(new THREE.BoxGeometry(tunnelLength, tunnelHeight, wallThickness), tunnelConcreteMat);
       rightWallOuter.position.set(-tunnelLength / 2, tunnelHeight / 2, -tunnelWidth / 2);
       tunnel.add(rightWallOuter);
 
-      // Top/roof (outside)
-      const roofOuter = new THREE.Mesh(
-        new THREE.BoxGeometry(tunnelLength, wallThickness, tunnelWidth + wallThickness * 2),
-        tunnelConcreteMat
-      );
+      const roofOuter = new THREE.Mesh(new THREE.BoxGeometry(tunnelLength, wallThickness, tunnelWidth + wallThickness * 2), tunnelConcreteMat);
       roofOuter.position.set(-tunnelLength / 2, tunnelHeight, 0);
       tunnel.add(roofOuter);
 
-      // Top corners (to make it look more like ∩)
       [-1, 1].forEach(side => {
-        const corner1 = new THREE.Mesh(
-          new THREE.BoxGeometry(tunnelLength, wallThickness * 0.7, wallThickness * 0.7),
-          tunnelDarkConcrete
-        );
+        const corner1 = new THREE.Mesh(new THREE.BoxGeometry(tunnelLength, wallThickness * 0.7, wallThickness * 0.7), tunnelDarkConcrete);
         corner1.position.set(-tunnelLength / 2, tunnelHeight - wallThickness * 0.5, side * (tunnelWidth / 2 - wallThickness * 0.3));
         corner1.rotation.x = Math.PI / 4;
         tunnel.add(corner1);
       });
 
-      // Inside walls (dark)
-      const leftWallInner = new THREE.Mesh(
-        new THREE.BoxGeometry(tunnelLength + 0.1, tunnelHeight - 0.02, 0.01),
-        tunnelInsideMat
-      );
+      const leftWallInner = new THREE.Mesh(new THREE.BoxGeometry(tunnelLength + 0.1, tunnelHeight - 0.02, 0.01), tunnelInsideMat);
       leftWallInner.position.set(-tunnelLength / 2, tunnelHeight / 2, tunnelWidth / 2 - wallThickness - 0.01);
       tunnel.add(leftWallInner);
 
-      const rightWallInner = new THREE.Mesh(
-        new THREE.BoxGeometry(tunnelLength + 0.1, tunnelHeight - 0.02, 0.01),
-        tunnelInsideMat
-      );
+      const rightWallInner = new THREE.Mesh(new THREE.BoxGeometry(tunnelLength + 0.1, tunnelHeight - 0.02, 0.01), tunnelInsideMat);
       rightWallInner.position.set(-tunnelLength / 2, tunnelHeight / 2, -tunnelWidth / 2 + wallThickness + 0.01);
       tunnel.add(rightWallInner);
 
-      // Inside ceiling (dark)
-      const ceilingInner = new THREE.Mesh(
-        new THREE.BoxGeometry(tunnelLength + 0.1, 0.01, tunnelWidth - wallThickness * 2),
-        tunnelInsideMat
-      );
+      const ceilingInner = new THREE.Mesh(new THREE.BoxGeometry(tunnelLength + 0.1, 0.01, tunnelWidth - wallThickness * 2), tunnelInsideMat);
       ceilingInner.position.set(-tunnelLength / 2, tunnelHeight - wallThickness - 0.01, 0);
       tunnel.add(ceilingInner);
 
-      // Back wall (closes tunnel completely)
-      const backWall = new THREE.Mesh(
-        new THREE.BoxGeometry(0.1, tunnelHeight + 0.2, tunnelWidth + wallThickness * 2 + 0.2),
-        tunnelInsideMat
-      );
+      const backWall = new THREE.Mesh(new THREE.BoxGeometry(0.1, tunnelHeight + 0.2, tunnelWidth + wallThickness * 2 + 0.2), tunnelInsideMat);
       backWall.position.set(-tunnelLength - 0.05, tunnelHeight / 2, 0);
       tunnel.add(backWall);
 
-      // Tunnel floor (road inside)
-      const tunnelFloor = new THREE.Mesh(
-        new THREE.BoxGeometry(tunnelLength + 0.1, 0.02, tunnelWidth - wallThickness),
-        new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.95 })
-      );
+      const tunnelFloor = new THREE.Mesh(new THREE.BoxGeometry(tunnelLength + 0.1, 0.02, tunnelWidth - wallThickness), new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.95 }));
       tunnelFloor.position.set(-tunnelLength / 2, 0.01, 0);
       tunnel.add(tunnelFloor);
 
-      // ===== ENTRANCE FRAME =====
-
-      // Entrance frame - left pillar
-      const entranceLeft = new THREE.Mesh(
-        new THREE.BoxGeometry(0.1, tunnelHeight + 0.05, wallThickness + 0.04),
-        tunnelConcreteMat
-      );
+      const entranceLeft = new THREE.Mesh(new THREE.BoxGeometry(0.1, tunnelHeight + 0.05, wallThickness + 0.04), tunnelConcreteMat);
       entranceLeft.position.set(0.05, tunnelHeight / 2, tunnelWidth / 2 + 0.02);
       tunnel.add(entranceLeft);
 
-      // Entrance frame - right pillar
-      const entranceRight = new THREE.Mesh(
-        new THREE.BoxGeometry(0.1, tunnelHeight + 0.05, wallThickness + 0.04),
-        tunnelConcreteMat
-      );
+      const entranceRight = new THREE.Mesh(new THREE.BoxGeometry(0.1, tunnelHeight + 0.05, wallThickness + 0.04), tunnelConcreteMat);
       entranceRight.position.set(0.05, tunnelHeight / 2, -tunnelWidth / 2 - 0.02);
       tunnel.add(entranceRight);
 
-      // Entrance frame - top beam
-      const entranceTop = new THREE.Mesh(
-        new THREE.BoxGeometry(0.1, wallThickness + 0.04, tunnelWidth + wallThickness * 2 + 0.08),
-        tunnelConcreteMat
-      );
+      const entranceTop = new THREE.Mesh(new THREE.BoxGeometry(0.1, wallThickness + 0.04, tunnelWidth + wallThickness * 2 + 0.08), tunnelConcreteMat);
       entranceTop.position.set(0.05, tunnelHeight + 0.02, 0);
       tunnel.add(entranceTop);
 
-      // Inner entrance edge
-      const entranceInnerTop = new THREE.Mesh(
-        new THREE.BoxGeometry(0.05, 0.03, tunnelWidth - wallThickness),
-        tunnelDarkConcrete
-      );
+      const entranceInnerTop = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.03, tunnelWidth - wallThickness), tunnelDarkConcrete);
       entranceInnerTop.position.set(0.08, tunnelHeight - wallThickness - 0.02, 0);
       tunnel.add(entranceInnerTop);
 
-      // ===== ROAD MARKINGS INSIDE (fading) =====
       for (let i = 0; i < 8; i++) {
         const brightness = Math.max(30, 70 - i * 8);
-        const marking = new THREE.Mesh(
-          new THREE.BoxGeometry(0.1, 0.005, 0.02),
-          new THREE.MeshStandardMaterial({ color: `rgb(${brightness}, ${brightness}, ${brightness})`, roughness: 0.8 })
-        );
+        const marking = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.005, 0.02), new THREE.MeshStandardMaterial({ color: `rgb(${brightness}, ${brightness}, ${brightness})`, roughness: 0.8 }));
         marking.position.set(-0.1 - i * 0.28, 0.02, 0);
         tunnel.add(marking);
       }
 
-      // ===== CEILING LIGHTS INSIDE =====
       for (let i = 0; i < 6; i++) {
         const intensity = Math.max(0.1, 0.6 - i * 0.09);
-        const ceilingLight = new THREE.Mesh(
-          new THREE.BoxGeometry(0.06, 0.025, 0.12),
-          new THREE.MeshStandardMaterial({ 
-            color: '#ffeecc', 
-            emissive: '#ffdd88', 
-            emissiveIntensity: intensity
-          })
-        );
+        const ceilingLight = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.025, 0.12), new THREE.MeshStandardMaterial({ color: '#ffeecc', emissive: '#ffdd88', emissiveIntensity: intensity }));
         ceilingLight.position.set(-0.2 - i * 0.35, tunnelHeight - wallThickness - 0.04, 0);
         tunnel.add(ceilingLight);
 
-        // Light glow
         if (i < 4) {
-          const glow = new THREE.Mesh(
-            new THREE.BoxGeometry(0.15, 0.01, 0.2),
-            new THREE.MeshBasicMaterial({ color: '#ffeeaa', transparent: true, opacity: 0.1 - i * 0.02 })
-          );
+          const glow = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.01, 0.2), new THREE.MeshBasicMaterial({ color: '#ffeeaa', transparent: true, opacity: 0.1 - i * 0.02 }));
           glow.position.set(-0.2 - i * 0.35, tunnelHeight - wallThickness - 0.08, 0);
           tunnel.add(glow);
         }
       }
 
-      // ===== SIDE REFLECTORS =====
       for (let i = 0; i < 5; i++) {
         const opacity = Math.max(0.1, 0.4 - i * 0.07);
         [-tunnelWidth / 2 + wallThickness + 0.03, tunnelWidth / 2 - wallThickness - 0.03].forEach((z, idx) => {
-          const reflector = new THREE.Mesh(
-            new THREE.BoxGeometry(0.02, 0.04, 0.02),
-            new THREE.MeshStandardMaterial({ 
-              color: idx === 0 ? '#ff6600' : '#ffffff',
-              emissive: idx === 0 ? '#ff4400' : '#aaaaaa',
-              emissiveIntensity: opacity
-            })
-          );
+          const reflector = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.04, 0.02), new THREE.MeshStandardMaterial({ color: idx === 0 ? '#ff6600' : '#ffffff', emissive: idx === 0 ? '#ff4400' : '#aaaaaa', emissiveIntensity: opacity }));
           reflector.position.set(-0.3 - i * 0.4, 0.1, z);
           tunnel.add(reflector);
         });
       }
 
-      // ===== WARNING STRIPES AT ENTRANCE =====
       const yellowMat = new THREE.MeshStandardMaterial({ color: '#f4d03f', roughness: 0.5 });
       const blackMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.6 });
 
@@ -4397,70 +4310,36 @@ function buildSceneContent(
         }
       });
 
-      // ===== GREY ROCK/MOUNTAIN AROUND TUNNEL =====
-
-      // Top rock mass
-      const rockTop1 = new THREE.Mesh(
-        new THREE.BoxGeometry(0.6, 0.25, 0.9),
-        greyRockMat
-      );
+      const rockTop1 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.25, 0.9), greyRockMat);
       rockTop1.position.set(-0.2, tunnelHeight + 0.15, 0);
       tunnel.add(rockTop1);
 
-      const rockTop2 = new THREE.Mesh(
-        new THREE.BoxGeometry(0.4, 0.15, 0.7),
-        darkGreyMat
-      );
+      const rockTop2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 0.7), darkGreyMat);
       rockTop2.position.set(-0.1, tunnelHeight + 0.3, 0);
       tunnel.add(rockTop2);
 
-      const rockTop3 = new THREE.Mesh(
-        new THREE.BoxGeometry(0.25, 0.1, 0.5),
-        greyRockMat
-      );
+      const rockTop3 = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.1, 0.5), greyRockMat);
       rockTop3.position.set(0, tunnelHeight + 0.38, 0);
       tunnel.add(rockTop3);
 
-      // Left rock mass
-      const rockLeft1 = new THREE.Mesh(
-        new THREE.BoxGeometry(0.5, tunnelHeight + 0.3, 0.25),
-        greyRockMat
-      );
+      const rockLeft1 = new THREE.Mesh(new THREE.BoxGeometry(0.5, tunnelHeight + 0.3, 0.25), greyRockMat);
       rockLeft1.position.set(-0.15, (tunnelHeight + 0.3) / 2, tunnelWidth / 2 + 0.2);
       tunnel.add(rockLeft1);
 
-      const rockLeft2 = new THREE.Mesh(
-        new THREE.BoxGeometry(0.35, tunnelHeight + 0.15, 0.15),
-        darkGreyMat
-      );
+      const rockLeft2 = new THREE.Mesh(new THREE.BoxGeometry(0.35, tunnelHeight + 0.15, 0.15), darkGreyMat);
       rockLeft2.position.set(0, (tunnelHeight + 0.15) / 2, tunnelWidth / 2 + 0.35);
       tunnel.add(rockLeft2);
 
-      // Right rock mass
-      const rockRight1 = new THREE.Mesh(
-        new THREE.BoxGeometry(0.5, tunnelHeight + 0.3, 0.25),
-        greyRockMat
-      );
+      const rockRight1 = new THREE.Mesh(new THREE.BoxGeometry(0.5, tunnelHeight + 0.3, 0.25), greyRockMat);
       rockRight1.position.set(-0.15, (tunnelHeight + 0.3) / 2, -tunnelWidth / 2 - 0.2);
       tunnel.add(rockRight1);
 
-      const rockRight2 = new THREE.Mesh(
-        new THREE.BoxGeometry(0.35, tunnelHeight + 0.15, 0.15),
-        darkGreyMat
-      );
+      const rockRight2 = new THREE.Mesh(new THREE.BoxGeometry(0.35, tunnelHeight + 0.15, 0.15), darkGreyMat);
       rockRight2.position.set(0, (tunnelHeight + 0.15) / 2, -tunnelWidth / 2 - 0.35);
       tunnel.add(rockRight2);
 
-      // Extra rock details
       const extraRockMat = new THREE.MeshStandardMaterial({ color: '#8a8a8a', roughness: 0.95 });
-      [
-        [-0.25, 0.7, 0.42, 0.15, 0.1, 0.12],
-        [-0.3, 0.65, -0.45, 0.12, 0.12, 0.1],
-        [-0.15, 0.75, 0.25, 0.1, 0.08, 0.15],
-        [-0.2, 0.72, -0.28, 0.12, 0.1, 0.12],
-        [-0.35, 0.6, 0.38, 0.1, 0.1, 0.08],
-        [-0.1, 0.8, 0, 0.2, 0.08, 0.25],
-      ].forEach(([x, y, z, w, h, d]) => {
+      [[-0.25, 0.7, 0.42, 0.15, 0.1, 0.12], [-0.3, 0.65, -0.45, 0.12, 0.12, 0.1], [-0.15, 0.75, 0.25, 0.1, 0.08, 0.15], [-0.2, 0.72, -0.28, 0.12, 0.1, 0.12], [-0.35, 0.6, 0.38, 0.1, 0.1, 0.08], [-0.1, 0.8, 0, 0.2, 0.08, 0.25]].forEach(([x, y, z, w, h, d]) => {
         const rock = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), extraRockMat);
         rock.position.set(x, y, z);
         tunnel.add(rock);
@@ -4470,113 +4349,77 @@ function buildSceneContent(
       tunnel.scale.setScalar(0.85);
       group.add(tunnel);
 
-      // ==================== SAFETY BARRIERS (CONNECTED TO TUNNEL) ====================
-      const createBarrier = (startX: number, endX: number, z: number) => {
+      const createBarrier = (barrierStartX: number, endX: number, z: number) => {
         const barrier = new THREE.Group();
-        const length = endX - startX;
-        
+        const length = endX - barrierStartX;
         const barrierMat = new THREE.MeshStandardMaterial({ color: '#808080', roughness: 0.8 });
-        
         const barrierBottom = new THREE.Mesh(new THREE.BoxGeometry(length, 0.04, 0.08), barrierMat);
         barrierBottom.position.set(length / 2, 0.02, 0);
         barrier.add(barrierBottom);
-        
         const barrierMiddle = new THREE.Mesh(new THREE.BoxGeometry(length, 0.05, 0.06), barrierMat);
         barrierMiddle.position.set(length / 2, 0.055, 0);
         barrier.add(barrierMiddle);
-        
         const barrierTop = new THREE.Mesh(new THREE.BoxGeometry(length, 0.03, 0.04), barrierMat);
         barrierTop.position.set(length / 2, 0.09, 0);
         barrier.add(barrierTop);
-        
         const stripeMat1 = new THREE.MeshStandardMaterial({ color: '#cc0000', roughness: 0.5 });
         const stripeMat2 = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.5 });
-        
         const numStripes = Math.floor(length / 0.15);
         for (let i = 0; i < numStripes; i++) {
           const stripeColor = i % 2 === 0 ? stripeMat1 : stripeMat2;
-          const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.04, 0.002), stripeColor);
-          stripe.position.set(0.08 + i * 0.15, 0.06, z > 0 ? -0.031 : 0.031);
-          barrier.add(stripe);
+          const stripeBox = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.04, 0.002), stripeColor);
+          stripeBox.position.set(0.08 + i * 0.15, 0.06, z > 0 ? -0.031 : 0.031);
+          barrier.add(stripeBox);
         }
-        
-        barrier.position.set(startX, groundY, z);
+        barrier.position.set(barrierStartX, groundY, z);
         return barrier;
       };
 
-      // Barriers connect to tunnel
       const tunnelEdgeX = tunnelX + 0.08;
       const barrierEndX = startX + data.length * spacing + 1.5;
+      group.add(createBarrier(tunnelEdgeX, barrierEndX, 0.32));
+      group.add(createBarrier(tunnelEdgeX, barrierEndX, -0.32));
 
-      const leftBarrier = createBarrier(tunnelEdgeX, barrierEndX, 0.32);
-      group.add(leftBarrier);
-
-      const rightBarrier = createBarrier(tunnelEdgeX, barrierEndX, -0.32);
-      group.add(rightBarrier);
-
-      // ==================== TOLL BOOTH ====================
       const tollBooth = createTollBooth(gateOpenAmount);
       tollBooth.position.set(startX - 0.3, groundY, 0);
       tollBooth.scale.setScalar(0.7);
       group.add(tollBooth);
 
-      // ==================== STREET LIGHTS ====================
       const createStreetLight = (x: number, z: number) => {
         const light = new THREE.Group();
-        
         const poleMat = new THREE.MeshStandardMaterial({ color: '#3a3a3a', metalness: 0.6, roughness: 0.4 });
         const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 1.2, 12), poleMat);
         pole.position.y = 0.6;
         light.add(pole);
-
         const base = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.06, 12), poleMat);
         base.position.y = 0.03;
         light.add(base);
-
         const arm = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.02, 0.02), poleMat);
         arm.position.set(0.1, 1.18, 0);
         arm.rotation.z = 0.1;
         light.add(arm);
-
         const housingMat = new THREE.MeshStandardMaterial({ color: '#2a2a2a', metalness: 0.5, roughness: 0.5 });
         const housing = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.04, 0.07), housingMat);
         housing.position.set(0.2, 1.15, 0);
         light.add(housing);
-
-        const lightPanel = new THREE.Mesh(
-          new THREE.BoxGeometry(0.08, 0.01, 0.055),
-          new THREE.MeshStandardMaterial({ 
-            color: '#ffffee', 
-            emissive: '#ffff99', 
-            emissiveIntensity: 0.8 
-          })
-        );
+        const lightPanel = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.01, 0.055), new THREE.MeshStandardMaterial({ color: '#ffffee', emissive: '#ffff99', emissiveIntensity: 0.8 }));
         lightPanel.position.set(0.2, 1.12, 0);
         light.add(lightPanel);
-
-        const glow = new THREE.Mesh(
-          new THREE.SphereGeometry(0.05, 16, 16),
-          new THREE.MeshBasicMaterial({ color: '#ffffaa', transparent: true, opacity: 0.15 })
-        );
-        glow.position.set(0.2, 1.08, 0);
-        light.add(glow);
-
+        const glowMesh = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 16), new THREE.MeshBasicMaterial({ color: '#ffffaa', transparent: true, opacity: 0.15 }));
+        glowMesh.position.set(0.2, 1.08, 0);
+        light.add(glowMesh);
         light.position.set(x, groundY, z);
         return light;
       };
 
-      const streetLight1 = createStreetLight(startX + 0.5, 0.55);
-      group.add(streetLight1);
-
+      group.add(createStreetLight(startX + 0.5, 0.55));
       const streetLight2 = createStreetLight(startX + data.length * spacing + 0.8, 0.55);
       streetLight2.rotation.y = Math.PI;
       group.add(streetLight2);
 
-      // ==================== CARS (GHOST EFFECT INTO TUNNEL) ====================
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const isFront = i === 0;
-        
         let extraX = 0;
         let carScale = 0.55;
         let shouldRender = true;
@@ -4587,7 +4430,6 @@ function buildSceneContent(
           if (animPhase === 'queue-dequeue-drive') {
             const progress = animProgress || 0;
             extraX = -progress * 1.8;
-            
             if (progress > 0.3) {
               const fadeProgress = (progress - 0.3) / 0.7;
               carOpacity = 1 - fadeProgress;
@@ -4612,7 +4454,6 @@ function buildSceneContent(
           const carObj = createCar(item.color, item.label, isHl);
           carObj.position.set(startX + i * spacing + 0.5 + extraX, groundY + (isHl ? 0.03 : 0), 0);
           carObj.scale.setScalar(carScale * carScaleEffect);
-          
           if (carOpacity < 1 && isFront) {
             carObj.traverse((child) => {
               if (child instanceof THREE.Mesh && child.material) {
@@ -4622,22 +4463,18 @@ function buildSceneContent(
               }
             });
           }
-          
           if (!animPhase?.startsWith('queue-dequeue')) {
             applyItemAnimation(carObj, i, animPhase || '', animData || {}, 'queue', animProgress);
           }
-          
           group.add(carObj);
         }
       });
 
-      // FRONT and REAR labels
       if (data.length > 0) {
         const frontSprite = createTextSprite('FRONT', '#00ff00', 18);
         frontSprite.position.set(startX + 0.5, groundY + 0.25, 0);
         frontSprite.scale.set(0.26, 0.09, 1);
         group.add(frontSprite);
-
         const rearSprite = createTextSprite('REAR', '#ff6600', 18);
         rearSprite.position.set(startX + (data.length - 1) * spacing + 0.5, groundY + 0.25, 0);
         rearSprite.scale.set(0.26, 0.09, 1);
@@ -4648,7 +4485,7 @@ function buildSceneContent(
       const ticketDispenserGroup = createTicketDispenser(data, highlightIndex, animPhase || '', animProgress || 0);
       group.add(ticketDispenserGroup);
 
-     } else if (environment === 'students') {
+    } else if (environment === 'students') {
       const schoolBuilding = createSchoolBuilding();
       schoolBuilding.position.set(startX - 0.8, groundY, 0);
       schoolBuilding.scale.setScalar(0.5);
@@ -4663,7 +4500,6 @@ function buildSceneContent(
 
       const easeInOut = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
       const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
-      const easedProgress = easeInOut(progress);
 
       const doorX = startX - 0.6;
 
@@ -4800,6 +4636,8 @@ function buildSceneContent(
       pathway.position.set(0.3, groundY - 0.01, 0);
       group.add(pathway);
     }
+  }
+}
 // ==================== HOME COMPONENT ====================
 
 export default function Home() {
