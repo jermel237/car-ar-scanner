@@ -4409,6 +4409,26 @@ function buildSceneContent(
       const streetLight2 = createStreetLight(startX + data.length * spacing + 0.8, 0.55);
       streetLight2.rotation.y = Math.PI;
       group.add(streetLight2);
+
+      // ==================== TRAFFIC LIGHT ====================
+      const trafficLight = new THREE.Group();
+      
+      // Traffic light pole
+      const tlPoleMat = new THREE.MeshStandardMaterial({ color: '#333333', metalness: 0.6, roughness: 0.4 });
+      const tlPole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 1.3, 12), tlPoleMat);
+      tlPole.position.y = 0.65;
+      trafficLight.add(tlPole);
+
+      // Traffic light arm
+      const tlArm = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.02, 0.02), tlPoleMat);
+      tlArm.position.set(-0.15, 1.28, 0);
+      tlArm.rotation.z = 0.1;
+      trafficLight.add(tlArm);
+
+      // Traffic light housing
+      const tlHousing = new THREE.Mesh(
+        new THREE.BoxGeometry(0.07, 0.22, 0.06),
+        new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.5 })
       );
       tlHousing.position.set(-0.3, 1.2, 0);
       trafficLight.add(tlHousing);
