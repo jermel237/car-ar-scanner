@@ -4470,29 +4470,40 @@ function buildSceneContent(
         let carOpacity = 1;
         let carScaleEffect = 1;
 
-        if (isFront) {
-          if (animPhase === 'queue-dequeue-drive') {
-            const progress = animProgress || 0;
-            extraX = -progress * 1.8;
-            if (progress > 0.3) {
-              const fadeProgress = (progress - 0.3) / 0.7;
-              carOpacity = 1 - fadeProgress;
-              carScaleEffect = 1 - fadeProgress * 0.4;
-            }
-          } else if (animPhase === 'queue-dequeue-gate-close') {
-            shouldRender = false;
-          }
-        } else {
-          if (animPhase === 'queue-dequeue-gate-open') {
-            const progress = animProgress || 0;
-            extraX = -progress * spacing * 0.3;
-          } else if (animPhase === 'queue-dequeue-drive') {
-            const progress = animProgress || 0;
-            extraX = -spacing * 0.3 - progress * spacing * 0.7;
-          } else if (animPhase === 'queue-dequeue-gate-close') {
-            extraX = -spacing;
-          }
-        }
+       if (isFront) {
+  if (animPhase === 'queue-dequeue-drive') {
+    const prog = animProgress || 0;
+    extraX = -prog * 1.8;
+    if (prog > 0.3) {
+      const fadeProgress = (prog - 0.3) / 0.7;
+      carOpacity = 1 - fadeProgress;
+      carScaleEffect = 1 - fadeProgress * 0.4;
+    }
+    if (prog > 0.95) shouldRender = false;
+  } else if (animPhase === 'queue-dequeue-gate-close' || animPhase === 'queue-toll-settle') {
+    shouldRender = false;
+  }
+  } else {
+    // NON-FRONT CARS
+    if (animPhase === 'queue-dequeue-gate-open') {
+      const prog = animProgress || 0;
+      extraX = -prog * spacing * 0.3;
+    } else if (animPhase === 'queue-dequeue-drive') {
+      const prog = animProgress || 0;
+      extraX = -spacing * 0.3 - prog * spacing * 0.7;
+    } else if (animPhase === 'queue-dequeue-gate-close') {
+  extraX = -spacing;
+} else if (animPhase === 'queue-toll-settle') {
+  extraX = -spacing;
+
+  } else if (animPhase === 'queue-toll-settle') {
+    const prog = animProgress || 0;
+    const easeOut = 1 - Math.pow(1 - prog, 3);
+    const currentOffset = -spacing;
+    const targetOffset = -spacing;
+    extraX = currentOffset + (targetOffset - currentOffset) * easeOut;
+  }
+}
 
         if (shouldRender && carOpacity > 0.02) {
           const carObj = createCar(item.color, item.label, isHl);
@@ -5210,10 +5221,11 @@ export default function Home() {
   if (queueEnv === 'tollgate') {
     steps.push(
       { title: "🚧 Opening Gate", description: `Gate opening...`, highlightIndex: 0, animPhase: 'queue-dequeue-gate-open', animDuration: 1000 },
-      { title: "🚗 Driving Through", description: `"${frontItem.label}" passing...`, highlightIndex: 0, animPhase: 'queue-dequeue-drive', animDuration: 1500,
-        action: () => { (setQueueData as any)((prev: DataItem[]) => prev.slice(1)); } },
-      { title: "🚧 Closing Gate", description: `Gate closing.${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`, animPhase: 'queue-dequeue-gate-close', animDuration: 800 },
-      { title: "✅ Dequeued!", description: `Done! Time: O(1)\nFIFO: First In, First Out` }
+      { title: "🚗 Driving Through", description: `"${frontItem.label}" passing through...`, highlightIndex: 0, animPhase: 'queue-dequeue-drive', animDuration: 1500 },
+      { title: "🚧 Closing Gate", description: `Gate closing...`, animPhase: 'queue-dequeue-gate-close', animDuration: 800 },
+      { title: "🚗 Cars Moving Forward", description: `Other cars moving up...${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`, animPhase: 'queue-toll-settle', animDuration: 800 },
+      { title: "✅ Dequeued!", description: `"${frontItem.label}" passed through!\n\nTime: O(1)\nFIFO: First In, First Out${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`,
+        action: () => { (setQueueData as any)((prev: DataItem[]) => prev.slice(1)); } }
     );
   } else if (queueEnv === 'tickets') {
     steps.push(
