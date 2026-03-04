@@ -4410,15 +4410,6 @@ function buildSceneContent(
       streetLight2.rotation.y = Math.PI;
       group.add(streetLight2);
 
-      // ==================== TRAFFIC LIGHT ====================
-      const trafficLight = new THREE.Group();
-      
-      // Traffic light pole
-      const tlPoleMat = new THREE.MeshStandardMaterial({ color: '#333333', metalness: 0.6, roughness: 0.4 });
-      const tlPole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 1.3, 12), tlPoleMat);
-      tlPole.position.y = 0.65;
-      trafficLight.add(tlPole);
-
       // Traffic light arm
       const tlArm = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.02, 0.02), tlPoleMat);
       tlArm.position.set(-0.15, 1.28, 0);
