@@ -4465,7 +4465,7 @@ function buildSceneContent(
         const isHl = highlightIndex === i;
         const isFront = i === 0;
         let extraX = 0;
-        let carScale = 0.90;
+        let carScale = 0.93;
         let shouldRender = true;
         let carOpacity = 1;
         let carScaleEffect = 1;
