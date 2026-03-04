@@ -5451,7 +5451,7 @@ const startWebXR = async () => {
     const session = await xr.requestSession('immersive-ar', sessionInit);
     xrSessionRef.current = session;
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(1);
+    renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.xr.enabled = true;
     renderer.xr.setReferenceSpaceType('local');
@@ -5784,7 +5784,7 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
     camera.lookAt(0, 0, 0);
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setClearColor(0x000000, 0);
-    renderer.setPixelRatio(1);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(renderWidth, renderHeight);
     renderer.shadowMap.enabled = false;
     container.appendChild(renderer.domElement);
