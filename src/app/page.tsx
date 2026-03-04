@@ -5181,7 +5181,8 @@ export default function Home() {
     { title: "🚶 Walking to Door", description: `"${frontItem.label}" walking toward entrance...`, highlightIndex: 0, animPhase: 'queue-student-walk', animDuration: 1800 },
     { title: "🚪 Entering Building", description: `"${frontItem.label}" entering the university...`, highlightIndex: 0, animPhase: 'queue-student-enter', animDuration: 1000 },
     { title: "👥 Line Moving Forward", description: `Other students moving up in line...${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`, animPhase: 'queue-student-shift', animDuration: 1200 },
-    { title: "✅ Settled", description: `Queue updated! Next in line ready.`, animPhase: 'queue-student-settle', animDuration: 600,
+    { title: "✅ Settling", description: `Students taking their new positions...`, animPhase: 'queue-student-settle', animDuration: 600 },
+    { title: "✅ Dequeued!", description: `"${frontItem.label}" has entered!\n\nTime: O(1)\nFIFO: First In, First Out${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`,
       action: () => { (setQueueData as any)((prev: DataItem[]) => prev.slice(1)); } }
   );
 }
