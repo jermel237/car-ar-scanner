@@ -2958,7 +2958,7 @@ function buildSceneContent(
     highlightIndex = null;
     highlightIndex2 = null;
   }
-  const spacing = structure === 'linkedlist' ? 1.1 : structure === 'queue' ? 1.0 : 0.85;
+  const spacing = structure === 'linkedlist' ? 1.1 : structure === 'queue' ? 1.5 : 0.85;
   const startX = -((data.length - 1) * spacing) / 2;
   const groundY = 0;
 
