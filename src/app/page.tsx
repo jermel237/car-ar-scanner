@@ -4485,7 +4485,7 @@ function buildSceneContent(
       const ticketDispenserGroup = createTicketDispenser(data, highlightIndex, animPhase || '', animProgress || 0);
       group.add(ticketDispenserGroup);
 
-      } else if (environment === 'students') {
+       } else if (environment === 'students') {
       const schoolBuilding = createSchoolBuilding();
       schoolBuilding.position.set(startX - 0.8, groundY, 0);
       schoolBuilding.scale.setScalar(0.5);
@@ -4503,6 +4503,10 @@ function buildSceneContent(
 
       const doorX = startX - 0.6;
 
+      // During walk/enter/shift/settle - data has NOT been removed yet
+      // After settle action completes - data is removed
+      // So during all animation phases, index 0 is still the ORIGINAL front
+
       data.forEach((item, i) => {
         const isHl = highlightIndex === i;
         const isFront = i === 0;
@@ -4518,15 +4522,16 @@ function buildSceneContent(
           let studentOpacity = 1;
 
           if (isFront) {
+            // ORIGINAL FRONT STUDENT
             if (isWalking) {
-              // Front student walks toward door
+              // Walk toward door
               const walkProgress = easeOut(progress);
               const startStudentX = startX + 0.6;
               studentX = startStudentX + (doorX - startStudentX) * walkProgress;
               walkPhase = progress * Math.PI * 8;
               studentY = groundY + Math.abs(Math.sin(progress * Math.PI * 8)) * 0.015;
             } else if (isEntering) {
-              // Front student enters building (shrink + fade)
+              // Enter building (shrink + fade)
               const enterProgress = easeInOut(progress);
               studentX = doorX;
               walkPhase = Math.PI * 8 + progress * Math.PI * 3;
@@ -4534,21 +4539,12 @@ function buildSceneContent(
               studentScale = 0.55 * Math.max(0.01, 1 - enterProgress * 0.9);
               studentOpacity = Math.max(0, 1 - enterProgress);
               if (progress > 0.9) shouldRender = false;
-            } else if (isShifting) {
-              // Original front is gone during shift (data not yet removed)
+            } else if (isShifting || isSettling) {
+              // Front is gone (entered building)
               shouldRender = false;
-            } else if (isSettling) {
-              // NEW front student (data already removed, this is the new index 0)
-              // They should be visible and settle at position 0
-              studentX = startX + 0.6;
-              const settleProgress = easeOut(progress);
-              const bounce = Math.sin(settleProgress * Math.PI) * (1 - settleProgress) * 0.02;
-              studentY = groundY + bounce;
-              walkPhase = 0;
-              // shouldRender stays TRUE - this is the new front!
             }
           } else {
-            // Non-front students
+            // OTHER STUDENTS (will move forward)
             if (isWalking) {
               // Slight anticipation while waiting
               const anticipation = Math.sin(progress * Math.PI) * 0.02;
@@ -4560,7 +4556,7 @@ function buildSceneContent(
               walkPhase = Math.sin(progress * Math.PI * 3) * 0.4;
               studentY = groundY + Math.abs(Math.sin(progress * Math.PI * 2)) * 0.005;
             } else if (isShifting) {
-              // Move forward one position (data not yet removed)
+              // Walk forward one position
               const shiftProgress = easeInOut(progress);
               const currentPos = startX + i * spacing + 0.6;
               const targetPos = startX + (i - 1) * spacing + 0.6;
@@ -4568,9 +4564,10 @@ function buildSceneContent(
               walkPhase = progress * Math.PI * 6;
               studentY = groundY + Math.abs(Math.sin(progress * Math.PI * 6)) * 0.012;
             } else if (isSettling) {
-              // Settle at new position (data already removed, use i directly)
+              // Settle at new position (i-1) with small bounce
+              // Data NOT yet removed, so use i-1
               const settleProgress = easeOut(progress);
-              studentX = startX + i * spacing + 0.6;
+              studentX = startX + (i - 1) * spacing + 0.6;
               const bounce = Math.sin(settleProgress * Math.PI) * (1 - settleProgress) * 0.02;
               studentY = groundY + bounce;
               walkPhase = 0;
@@ -4598,52 +4595,62 @@ function buildSceneContent(
         }
       });
 
-      // Labels
+      // FRONT and REAR labels
       if (data.length > 0) {
         let frontLabelX = startX + 0.6;
+        let showFrontLabel = true;
 
         if (isWalking) {
+          // Label follows front student walking
           const walkProgress = easeOut(progress);
           frontLabelX = startX + 0.6 + (doorX - startX - 0.6) * walkProgress;
         } else if (isEntering) {
+          // Label at door
           frontLabelX = doorX;
+          // Fade out as student enters
+          showFrontLabel = progress < 0.7;
         } else if (isShifting) {
-          // During shift, front label follows what will become new front
+          // Label follows NEW front (index 1 moving to position 0)
           if (data.length > 1) {
             const shiftProgress = easeInOut(progress);
             const currentPos = startX + spacing + 0.6;
             const targetPos = startX + 0.6;
             frontLabelX = currentPos + (targetPos - currentPos) * shiftProgress;
+          } else {
+            showFrontLabel = false;
           }
         } else if (isSettling) {
-          // Front label at position 0
-          frontLabelX = startX + 0.6;
+          // Label at position 0 (new front's position)
+          if (data.length > 1) {
+            frontLabelX = startX + 0.6;
+          } else {
+            showFrontLabel = false;
+          }
         }
 
-        // Show front label if there are/will be students
-        if (!(isShifting || isSettling) || data.length > 1) {
+        if (showFrontLabel) {
           const frontSprite = createTextSprite('FRONT', '#00ff00', 16);
           frontSprite.position.set(frontLabelX, groundY - 0.18, 0);
           frontSprite.scale.set(0.26, 0.09, 1);
           group.add(frontSprite);
         }
 
-        // Rear label
+        // REAR label
         let rearLabelX = startX + (data.length - 1) * spacing + 0.6;
+        let showRearLabel = data.length > 1;
 
-        if (isShifting) {
-          // During shift, rear moves from (length-1) to (length-2)
+        if (isShifting && data.length > 1) {
+          // Rear moves from (length-1) to (length-2)
           const shiftProgress = easeInOut(progress);
           const currentPos = startX + (data.length - 1) * spacing + 0.6;
           const targetPos = startX + (data.length - 2) * spacing + 0.6;
           rearLabelX = currentPos + (targetPos - currentPos) * shiftProgress;
-        } else if (isSettling) {
-          // After data removed, rear is at (data.length - 1)
-          rearLabelX = startX + (data.length - 1) * spacing + 0.6;
+        } else if (isSettling && data.length > 1) {
+          // Rear at position (length-2) since everyone moved forward
+          rearLabelX = startX + (data.length - 2) * spacing + 0.6;
         }
 
-        // Show rear if more than 1 student
-        if (data.length > 1 || !(isShifting || isSettling)) {
+        if (showRearLabel) {
           const rearSprite = createTextSprite('REAR', '#ff6600', 16);
           rearSprite.position.set(rearLabelX, groundY - 0.18, 0);
           rearSprite.scale.set(0.26, 0.09, 1);
@@ -4660,8 +4667,6 @@ function buildSceneContent(
       pathway.position.set(0.3, groundY - 0.01, 0);
       group.add(pathway);
     }
-  }
-}
 // ==================== HOME COMPONENT ====================
 
 export default function Home() {
@@ -5169,13 +5174,13 @@ export default function Home() {
         { title: "📤 Dispensing", description: `"${frontItem.label}" dispensed!${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`, highlightIndex: 0, animPhase: 'queue-dequeue-exit', animDuration: 1500,
           action: () => { (setQueueData as any)((prev: DataItem[]) => prev.slice(1)); } }
       );
-    } else {
+  } else {
   steps.push(
     { title: "🚶 Walking to Door", description: `"${frontItem.label}" walking toward entrance...`, highlightIndex: 0, animPhase: 'queue-student-walk', animDuration: 1800 },
     { title: "🚪 Entering Building", description: `"${frontItem.label}" entering the university...`, highlightIndex: 0, animPhase: 'queue-student-enter', animDuration: 1000 },
-    { title: "👥 Line Moving Forward", description: `Other students moving up in line...${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`, animPhase: 'queue-student-shift', animDuration: 1200,
-      action: () => { (setQueueData as any)((prev: DataItem[]) => prev.slice(1)); } },
-    { title: "✅ Settled", description: `Queue updated! Next in line ready.`, animPhase: 'queue-student-settle', animDuration: 500 }
+    { title: "👥 Line Moving Forward", description: `Other students moving up in line...${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`, animPhase: 'queue-student-shift', animDuration: 1200 },
+    { title: "✅ Settled", description: `Queue updated! Next in line ready.`, animPhase: 'queue-student-settle', animDuration: 600,
+      action: () => { (setQueueData as any)((prev: DataItem[]) => prev.slice(1)); } }
   );
 }
 
