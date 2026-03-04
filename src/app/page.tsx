@@ -4472,14 +4472,10 @@ function buildSceneContent(
 
        if (isFront) {
   if (animPhase === 'queue-dequeue-drive') {
-    const prog = animProgress || 0;
-    extraX = -prog * 1.8;
-    if (prog > 0.3) {
-      const fadeProgress = (prog - 0.3) / 0.7;
-      carOpacity = 1 - fadeProgress;
-      carScaleEffect = 1 - fadeProgress * 0.4;
-    }
-    if (prog > 0.95) shouldRender = false;
+  const prog = animProgress || 0;
+  extraX = -prog * 1.8;
+  // Just disappear when entering tunnel
+  if (prog > 0.5) shouldRender = false;
   } else if (animPhase === 'queue-dequeue-gate-close' || animPhase === 'queue-toll-settle') {
     shouldRender = false;
   }
@@ -4556,7 +4552,7 @@ function buildSceneContent(
       const easeInOut = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
       const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 
-      const doorX = startX - 0.6;
+      const doorX = startX - 1.0;
 
       // During walk/enter/shift/settle - data has NOT been removed yet
       // After settle action completes - data is removed
@@ -4585,16 +4581,14 @@ function buildSceneContent(
               studentX = startStudentX + (doorX - startStudentX) * walkProgress;
               walkPhase = progress * Math.PI * 8;
               studentY = groundY + Math.abs(Math.sin(progress * Math.PI * 8)) * 0.015;
-            } else if (isEntering) {
-              // Enter building (shrink + fade)
-              const enterProgress = easeInOut(progress);
-              studentX = doorX;
-              walkPhase = Math.PI * 8 + progress * Math.PI * 3;
-              studentZ = -enterProgress * 0.3;
-              studentScale = 0.55 * Math.max(0.01, 1 - enterProgress * 0.9);
-              studentOpacity = Math.max(0, 1 - enterProgress);
-              if (progress > 0.9) shouldRender = false;
-            } else if (isShifting || isSettling) {
+} else if (isEntering) {
+  const enterProgress = easeInOut(progress);
+  // Walk further into the school building
+  studentX = doorX - enterProgress * 0.5;
+  walkPhase = Math.PI * 8 + progress * Math.PI * 3;
+  // No fade, no scale - just walk in and disappear
+  if (progress > 0.7) shouldRender = false;
+} else if (isShifting || isSettling) {
               // Front is gone (entered building)
               shouldRender = false;
             }
