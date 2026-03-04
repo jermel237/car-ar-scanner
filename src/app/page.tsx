@@ -4603,7 +4603,7 @@ if (isFront) {
       carScaleEffect = 1 - fadeProgress * 0.4;
     }
   } else if (animPhase === 'queue-dequeue-gate-close') {
-    shouldRender = false;
+    // After action, new front should render normally
   }
 } else {
   if (animPhase === 'queue-dequeue-gate-open') {
