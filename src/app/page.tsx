@@ -5191,53 +5191,51 @@ export default function Home() {
   };
 
   const queueDequeueTutorial = () => {
-    if (isAnimating || tutorialActive) return;
-    
-    const data = getQueueData();
-    
-    if (data.length === 0) {
-      startTutorial([{ title: "⚠️ Queue Empty!", description: "Queue is EMPTY!\n\nNo one to dequeue.\nEnqueue first!" }]);
-      return;
-    }
-    
-    const frontItem = data[0];
-    
-    let steps: TutorialStep[] = [
-      { title: "➖ Queue DEQUEUE", description: `Removing from FRONT.\n\nFirst in line served first!`, highlightIndex: 0 },
-      { title: "🎯 Identify FRONT", description: `front = "${frontItem.label}"`, highlightIndex: 0 },
-    ];
+  if (isAnimating || tutorialActive) return;
+  
+  const data = getQueueData();
+  
+  if (data.length === 0) {
+    startTutorial([{ title: "⚠️ Queue Empty!", description: "Queue is EMPTY!\n\nNo one to dequeue.\nEnqueue first!" }]);
+    return;
+  }
+  
+  const frontItem = data[0];
+  
+  let steps: TutorialStep[] = [
+    { title: "➖ Queue DEQUEUE", description: `Removing from FRONT.\n\nFirst in line served first!`, highlightIndex: 0 },
+    { title: "🎯 Identify FRONT", description: `front = "${frontItem.label}"`, highlightIndex: 0 },
+  ];
 
-    if (queueEnv === 'tollgate') {
-      steps.push(
-        { title: "🚧 Opening Gate", description: `Gate opening...`, highlightIndex: 0, animPhase: 'queue-dequeue-gate-open', animDuration: 1000 },
-        { title: "🚗 Driving Through", description: `"${frontItem.label}" passing...`, highlightIndex: 0, animPhase: 'queue-dequeue-drive', animDuration: 1500,
-          action: () => { (setQueueData as any)((prev: DataItem[]) => prev.slice(1)); } },
-        { title: "🚧 Closing Gate", description: `Gate closing.${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`, animPhase: 'queue-dequeue-gate-close', animDuration: 800 }
-      );
-    }} else if (queueEnv === 'tickets') {
-  steps.push(
-    { title: "🎫 Sliding Tickets", description: `All tickets sliding toward dispenser...`, highlightIndex: 0, animPhase: 'queue-dequeue-slide', animDuration: 1500 },
-    { title: "📤 Dispensing", description: `"${frontItem.label}" being dispensed...`, highlightIndex: 0, animPhase: 'queue-dequeue-exit', animDuration: 1200 },
-    { title: "🎟️ Repositioning", description: `Tickets moving to new positions...${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`, animPhase: 'queue-ticket-settle', animDuration: 800 },
-    { title: "✅ Dequeued!", description: `"${frontItem.label}" dispensed!\n\nTime: O(1)\nFIFO: First In, First Out${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`,
-      action: () => { (setQueueData as any)((prev: DataItem[]) => prev.slice(1)); } }
-  );
-}
+  if (queueEnv === 'tollgate') {
+    steps.push(
+      { title: "🚧 Opening Gate", description: `Gate opening...`, highlightIndex: 0, animPhase: 'queue-dequeue-gate-open', animDuration: 1000 },
+      { title: "🚗 Driving Through", description: `"${frontItem.label}" passing...`, highlightIndex: 0, animPhase: 'queue-dequeue-drive', animDuration: 1500,
+        action: () => { (setQueueData as any)((prev: DataItem[]) => prev.slice(1)); } },
+      { title: "🚧 Closing Gate", description: `Gate closing.${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`, animPhase: 'queue-dequeue-gate-close', animDuration: 800 },
+      { title: "✅ Dequeued!", description: `Done! Time: O(1)\nFIFO: First In, First Out` }
+    );
+  } else if (queueEnv === 'tickets') {
+    steps.push(
+      { title: "🎫 Sliding Tickets", description: `All tickets sliding toward dispenser...`, highlightIndex: 0, animPhase: 'queue-dequeue-slide', animDuration: 1500 },
+      { title: "📤 Dispensing", description: `"${frontItem.label}" being dispensed...`, highlightIndex: 0, animPhase: 'queue-dequeue-exit', animDuration: 1200 },
+      { title: "🎟️ Repositioning", description: `Tickets moving to new positions...${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`, animPhase: 'queue-ticket-settle', animDuration: 800 },
+      { title: "✅ Dequeued!", description: `"${frontItem.label}" dispensed!\n\nTime: O(1)\nFIFO: First In, First Out${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`,
+        action: () => { (setQueueData as any)((prev: DataItem[]) => prev.slice(1)); } }
+    );
   } else {
-  steps.push(
-    { title: "🚶 Walking to Door", description: `"${frontItem.label}" walking toward entrance...`, highlightIndex: 0, animPhase: 'queue-student-walk', animDuration: 1800 },
-    { title: "🚪 Entering Building", description: `"${frontItem.label}" entering the university...`, highlightIndex: 0, animPhase: 'queue-student-enter', animDuration: 1000 },
-    { title: "👥 Line Moving Forward", description: `Other students moving up in line...${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`, animPhase: 'queue-student-shift', animDuration: 1200 },
-    { title: "✅ Settling", description: `Students taking their new positions...`, animPhase: 'queue-student-settle', animDuration: 600 },
-    { title: "✅ Dequeued!", description: `"${frontItem.label}" has entered!\n\nTime: O(1)\nFIFO: First In, First Out${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`,
-      action: () => { (setQueueData as any)((prev: DataItem[]) => prev.slice(1)); } }
-  );
-}
+    steps.push(
+      { title: "🚶 Walking to Door", description: `"${frontItem.label}" walking toward entrance...`, highlightIndex: 0, animPhase: 'queue-student-walk', animDuration: 1800 },
+      { title: "🚪 Entering Building", description: `"${frontItem.label}" entering the university...`, highlightIndex: 0, animPhase: 'queue-student-enter', animDuration: 1000 },
+      { title: "👥 Line Moving Forward", description: `Other students moving up in line...${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`, animPhase: 'queue-student-shift', animDuration: 1200 },
+      { title: "✅ Settling", description: `Students taking their new positions...`, animPhase: 'queue-student-settle', animDuration: 600 },
+      { title: "✅ Dequeued!", description: `"${frontItem.label}" has entered!\n\nTime: O(1)\nFIFO: First In, First Out${data.length - 1 === 0 ? '\n\n⚠️ Queue EMPTY!' : ''}`,
+        action: () => { (setQueueData as any)((prev: DataItem[]) => prev.slice(1)); } }
+    );
+  }
 
-    steps.push({ title: "✅ Dequeued!", description: `Done! Time: O(1)\nFIFO: First In, First Out` });
-
-    startTutorial(steps);
-  };
+  startTutorial(steps);
+};
 
   const queueFrontTutorial = () => {
     if (isAnimating || tutorialActive) return;
