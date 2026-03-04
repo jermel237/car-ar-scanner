@@ -1953,8 +1953,17 @@ if (isSliding) {
     const ticketGroup = new THREE.Group();
 
 let ticketX = ticketStartX + i * totalTicketLength;
-if (isSliding || isExiting) {
-  ticketX += slideOffset;
+const isSliding = animPhase === 'queue-dequeue-slide';
+const isExiting = animPhase === 'queue-dequeue-exit';
+
+let slideOffset = 0;
+const slideDistance = totalTicketLength;
+
+if (isSliding) {
+  const easedProgress = easeInOut(animProgress || 0);
+  slideOffset = -easedProgress * slideDistance;
+} else if (isExiting && !isFront) {
+  slideOffset = 0;
 }
     
     let ticketScale = 1;
@@ -4583,31 +4592,30 @@ function buildSceneContent(
         let carOpacity = 1;
         let carScaleEffect = 1;
 
-        if (isFront) {
-          if (animPhase === 'queue-dequeue-drive') {
-            const progress = animProgress || 0;
-            extraX = -progress * 1.8;
-            
-            if (progress > 0.3) {
-              const fadeProgress = (progress - 0.3) / 0.7;
-              carOpacity = 1 - fadeProgress;
-              carScaleEffect = 1 - fadeProgress * 0.4;
-            }
-          } else if (animPhase === 'queue-dequeue-gate-close') {
-            shouldRender = false;
-          }
-        } else {
-          if (animPhase === 'queue-dequeue-gate-open') {
-            const progress = animProgress || 0;
-            extraX = -progress * spacing * 0.3;
-          } else if (animPhase === 'queue-dequeue-drive') {
-            const progress = animProgress || 0;
-            extraX = -spacing * 0.3 - progress * spacing * 0.7;
-          } else if (animPhase === 'queue-dequeue-gate-close') {
-            extraX = -spacing;
-          }
-        }
-
+if (isFront) {
+  if (animPhase === 'queue-dequeue-drive') {
+    const progress = animProgress || 0;
+    extraX = -progress * 1.8;
+    
+    if (progress > 0.3) {
+      const fadeProgress = (progress - 0.3) / 0.7;
+      carOpacity = 1 - fadeProgress;
+      carScaleEffect = 1 - fadeProgress * 0.4;
+    }
+  } else if (animPhase === 'queue-dequeue-gate-close') {
+    shouldRender = false;
+  }
+} else {
+  if (animPhase === 'queue-dequeue-gate-open') {
+    const progress = animProgress || 0;
+    extraX = -progress * spacing * 0.3;
+  } else if (animPhase === 'queue-dequeue-drive') {
+    const progress = animProgress || 0;
+    extraX = -spacing * 0.3 - progress * spacing * 0.7;
+  } else if (animPhase === 'queue-dequeue-gate-close') {
+    extraX = 0;
+  }
+}
         if (shouldRender && carOpacity > 0.02) {
           const carObj = createCar(item.color, item.label, isHl);
           carObj.position.set(startX + i * spacing + 0.5 + extraX, groundY + (isHl ? 0.03 : 0), 0);
@@ -4665,19 +4673,17 @@ function buildSceneContent(
           let studentScale = 0.55;
           let shouldRender = true;
 
-          if (isFront) {
-            if (animPhase === 'queue-dequeue-walk') {
-              const progress = animProgress || 0;
-              walkPhase = progress * Math.PI * 10;
-              extraX = -progress * 1.2;
-            } else if (animPhase === 'queue-dequeue-enter') {
-              const progress = animProgress || 0;
-              walkPhase = Math.PI * 10 + progress * Math.PI * 4;
-              extraX = -1.2 - progress * 0.4;
-              studentScale = 0.55 * Math.max(0.01, 1 - progress * 0.95);
-              if (progress > 0.95) shouldRender = false;
-            }
-          } else {
+} else {
+  if (animPhase === 'queue-dequeue-walk') {
+    const progress = animProgress || 0;
+    walkPhase = progress * Math.PI * 6;
+    extraX = -progress * spacing * 0.5;
+  } else if (animPhase === 'queue-dequeue-enter') {
+    const progress = animProgress || 0;
+    walkPhase = Math.PI * 6 + progress * Math.PI * 4;
+    extraX = -spacing * 0.5 - progress * spacing * 0.5;
+  }
+} else {
             if (animPhase === 'queue-dequeue-walk') {
               const progress = animProgress || 0;
               walkPhase = progress * Math.PI * 6;
