@@ -42,6 +42,17 @@ interface DataItem {
   appearance?: HumanAppearance;
 }
 
+interface TutorialStep {
+  title: string;
+  description: string;
+  codeSnippet?: string;
+  highlightIndex?: number;
+  highlightIndex2?: number;
+  animPhase?: string;
+  animDuration?: number;
+  action?: () => void;
+}
+
 // ==================== EDUCAR INTERFACES ====================
 
 interface QuizQuestion {
@@ -75,7 +86,6 @@ interface UserProgress {
 }
 
 // ==================== 3D TEXT SPRITE ====================
-
 function createTextSprite(text: string, color: string, fontSize: number = 20): THREE.Sprite {
   const canvas = document.createElement('canvas');
   canvas.width = 512;
