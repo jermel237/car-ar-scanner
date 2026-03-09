@@ -4763,7 +4763,7 @@ export default function Home() {
   const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [personPosition, setPersonPosition] = useState<Position | null>(null);
-const [rotationY, setRotationY] = useState(0);
+
   
   const [currentStructure, setCurrentStructure] = useState<DataStructure>('array');
   const [arrayEnv, setArrayEnv] = useState<ArrayEnvironment>('grocery');
