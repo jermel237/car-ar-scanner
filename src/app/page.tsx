@@ -6825,7 +6825,11 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
   const containerRef = useRef<HTMLDivElement>(null);
   const groupRef = useRef<THREE.Group | null>(null);
   const rotationRef = useRef({ x: 0.15, y: 0 });
-  const rotationYRef = useRef(rotationY);
+  
+ const zoomRef = useRef(zoomLevel);
+useEffect(() => { zoomRef.current = zoomLevel; }, [zoomLevel]);
+
+const rotationYRef = useRef(rotationY);
 useEffect(() => { rotationYRef.current = rotationY; }, [rotationY]);
 
   const renderWidth = window.innerWidth;
