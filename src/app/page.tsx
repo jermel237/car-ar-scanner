@@ -4763,8 +4763,8 @@ export default function Home() {
   const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [personPosition, setPersonPosition] = useState<Position | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(1.0);
 
-  
   const [currentStructure, setCurrentStructure] = useState<DataStructure>('array');
   const [arrayEnv, setArrayEnv] = useState<ArrayEnvironment>('grocery');
   const [linkedListEnv, setLinkedListEnv] = useState<LinkedListEnvironment>('train');
@@ -4777,8 +4777,6 @@ export default function Home() {
   const [animPhase, setAnimPhase] = useState('');
   const [animData, setAnimData] = useState<Record<string, any>>({});
   const [animProgress, setAnimProgress] = useState(1);
-  const [zoomLevel, setZoomLevel] = useState(1.0);
-  const [rotationY, setRotationY] = useState(0);
 
   const [tutorialActive, setTutorialActive] = useState(false);
   const [tutorialSteps, setTutorialSteps] = useState<TutorialStep[]>([]);
@@ -5411,9 +5409,9 @@ class Queue {
   const setCurrentEnv = currentStructure === 'array' ? setArrayEnv : currentStructure === 'linkedlist' ? setLinkedListEnv : currentStructure === 'stack' ? setStackEnv : setQueueEnv;
   const currentData = getCurrentData();
 
-  const rotateLeft = useCallback(() => setRotationY(prev => prev - 0.3), []);
-  const rotateRight = useCallback(() => setRotationY(prev => prev + 0.3), []);
-  const resetRotation = useCallback(() => setRotationY(0), []);
+  const zoomIn = useCallback(() => setZoomLevel(prev => Math.min(prev + 0.25, 3)), []);
+  const zoomOut = useCallback(() => setZoomLevel(prev => Math.max(prev - 0.25, 0.3)), []);
+  const resetZoom = useCallback(() => setZoomLevel(1.0), []);
 
   const generateNewItem = (): DataItem => {
     if (arrayEnv === 'classroom') {
@@ -5809,14 +5807,6 @@ class Queue {
     setPendingOperation('Select FIRST index to swap:');
   };
 
-    const zoomIn = useCallback(() => setZoomLevel(prev => Math.min(prev + 0.25, 3)), []);
-  const zoomOut = useCallback(() => setZoomLevel(prev => Math.max(prev - 0.25, 0.3)), []);
-  const resetZoom = useCallback(() => setZoomLevel(1.0), []);
-
-  const rotateLeft = useCallback(() => setRotationY(prev => prev - 0.3), []);
-  const rotateRight = useCallback(() => setRotationY(prev => prev + 0.3), []);
-  const resetRotation = useCallback(() => setRotationY(0), []);
-
   const handleIndexSelect = (index: number) => {
     if (selectionMode === 'insert') {
       setSelectionMode('none');
@@ -6136,8 +6126,8 @@ const startWebXR = async () => {
 
       {!webxrActive && showVisualization && activePosition && (
         <Visualization3D position={activePosition} data={currentData} highlightIndex={highlightIndex} highlightIndex2={highlightIndex2}
-  structure={currentStructure} environment={currentEnvId} zoomLevel={zoomLevel} setZoomLevel={setZoomLevel}
-  rotationY={rotationY} isSurfaceMode={appMode === 'surface'} animPhase={animPhase} animData={animData} animProgress={animProgress} tutorialText={tutorialText} />
+          structure={currentStructure} environment={currentEnvId} zoomLevel={zoomLevel} setZoomLevel={setZoomLevel}
+          isSurfaceMode={appMode === 'surface'} animPhase={animPhase} animData={animData} animProgress={animProgress} tutorialText={tutorialText} />
       )}
 
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: 10, zIndex: 100 }}>
@@ -6174,22 +6164,13 @@ const startWebXR = async () => {
         </div>
 
         {showControls && !tutorialActive && (
-  <div style={{ position: 'absolute', top: 50, left: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-    {/* Zoom Controls */}
-    <button onPointerDown={zoomIn} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#667eea', color: 'white', fontSize: 28, fontWeight: 'bold' }}>+</button>
-    <div style={{ width: 50, height: 50, borderRadius: '50%', background: '#000', border: '3px solid #0f0', color: '#0f0', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{Math.round(zoomLevel * 100)}%</div>
-    <button onPointerDown={zoomOut} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#f5576c', color: 'white', fontSize: 32, fontWeight: 'bold' }}>−</button>
-    <button onPointerDown={resetZoom} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#4facfe', color: 'white', fontSize: 20 }}>⟲</button>
-    
-    {/* Divider */}
-    <div style={{ width: 50, height: 2, background: 'rgba(255,255,255,0.3)', margin: '4px 0' }}></div>
-    
-    {/* Rotation Controls */}
-    <button onPointerDown={rotateLeft} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#f39c12', color: 'white', fontSize: 24, fontWeight: 'bold' }}>↺</button>
-    <button onPointerDown={rotateRight} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#f39c12', color: 'white', fontSize: 24, fontWeight: 'bold' }}>↻</button>
-    <button onPointerDown={resetRotation} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#9b59b6', color: 'white', fontSize: 16 }}>🔄</button>
-  </div>
-)}
+          <div style={{ position: 'absolute', top: 50, left: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button onPointerDown={zoomIn} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#667eea', color: 'white', fontSize: 28, fontWeight: 'bold' }}>+</button>
+            <div style={{ width: 50, height: 50, borderRadius: '50%', background: '#000', border: '3px solid #0f0', color: '#0f0', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{Math.round(zoomLevel * 100)}%</div>
+            <button onPointerDown={zoomOut} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#f5576c', color: 'white', fontSize: 32, fontWeight: 'bold' }}>−</button>
+            <button onPointerDown={resetZoom} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#4facfe', color: 'white', fontSize: 20 }}>⟲</button>
+          </div>
+        )}
 
         {!tutorialActive && (
           <div style={{ position: 'absolute', top: 48, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 4, background: 'rgba(0,0,0,0.8)', padding: 4, borderRadius: 25 }}>
@@ -6827,18 +6808,17 @@ function OpBtn({ onClick, disabled, color, label }: { onClick: () => void; disab
   );
 }
 
-function Visualization3D({ position, data, highlightIndex, highlightIndex2, structure, environment, zoomLevel, setZoomLevel, rotationY, isSurfaceMode, animPhase, animData, animProgress, tutorialText }: {
+function Visualization3D({ position, data, highlightIndex, highlightIndex2, structure, environment, zoomLevel, setZoomLevel, isSurfaceMode, animPhase, animData, animProgress, tutorialText }: {
   position: Position; data: DataItem[]; highlightIndex: number | null; highlightIndex2: number | null;
   structure: DataStructure; environment: string; zoomLevel: number; setZoomLevel: (z: number) => void;
-  rotationY: number; isSurfaceMode: boolean; animPhase: string; animData: Record<string, any>; animProgress: number;
+  isSurfaceMode: boolean; animPhase: string; animData: Record<string, any>; animProgress: number;
   tutorialText?: { title: string; description: string; step: string } | null;
 }) {
-  
   const containerRef = useRef<HTMLDivElement>(null);
   const groupRef = useRef<THREE.Group | null>(null);
   const rotationRef = useRef({ x: 0.15, y: 0 });
-  const rotationYRef = useRef(rotationY);
-  useEffect(() => { rotationYRef.current = rotationY; }, [rotationY]);
+  const zoomRef = useRef(zoomLevel);
+  useEffect(() => { zoomRef.current = zoomLevel; }, [zoomLevel]);
 
   const renderWidth = window.innerWidth;
   const renderHeight = window.innerHeight;
@@ -6881,15 +6861,15 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
     container.addEventListener('wheel', onWH, { passive: false });
 
     let animationId: number;
-const animate = () => {
-  if (groupRef.current) {
-    groupRef.current.rotation.x = rotationRef.current.x;
-    groupRef.current.rotation.y = rotationRef.current.y + rotationYRef.current;
-    groupRef.current.scale.setScalar(zoomRef.current);
-  }
-  renderer.render(scene, camera);
-  animationId = requestAnimationFrame(animate);
-};
+    const animate = () => {
+      if (groupRef.current) {
+        groupRef.current.rotation.x = rotationRef.current.x;
+        groupRef.current.rotation.y = rotationRef.current.y;
+        groupRef.current.scale.setScalar(zoomRef.current);
+      }
+      renderer.render(scene, camera);
+      animationId = requestAnimationFrame(animate);
+    };
     animate();
 
     return () => {
