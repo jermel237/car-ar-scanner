@@ -4764,6 +4764,7 @@ export default function Home() {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [personPosition, setPersonPosition] = useState<Position | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1.0);
+  const [rotationY, setRotationY] = useState(0);
 
   const [currentStructure, setCurrentStructure] = useState<DataStructure>('array');
   const [arrayEnv, setArrayEnv] = useState<ArrayEnvironment>('grocery');
@@ -5412,6 +5413,9 @@ class Queue {
   const zoomIn = useCallback(() => setZoomLevel(prev => Math.min(prev + 0.25, 3)), []);
   const zoomOut = useCallback(() => setZoomLevel(prev => Math.max(prev - 0.25, 0.3)), []);
   const resetZoom = useCallback(() => setZoomLevel(1.0), []);
+  const rotateLeft = useCallback(() => setRotationY(prev => prev - 0.3), []);
+const rotateRight = useCallback(() => setRotationY(prev => prev + 0.3), []);
+const resetRotation = useCallback(() => setRotationY(0), []);
 
   const generateNewItem = (): DataItem => {
     if (arrayEnv === 'classroom') {
@@ -6164,13 +6168,17 @@ const startWebXR = async () => {
         </div>
 
         {showControls && !tutorialActive && (
-          <div style={{ position: 'absolute', top: 50, left: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <button onPointerDown={zoomIn} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#667eea', color: 'white', fontSize: 28, fontWeight: 'bold' }}>+</button>
-            <div style={{ width: 50, height: 50, borderRadius: '50%', background: '#000', border: '3px solid #0f0', color: '#0f0', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{Math.round(zoomLevel * 100)}%</div>
-            <button onPointerDown={zoomOut} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#f5576c', color: 'white', fontSize: 32, fontWeight: 'bold' }}>−</button>
-            <button onPointerDown={resetZoom} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#4facfe', color: 'white', fontSize: 20 }}>⟲</button>
-          </div>
-        )}
+  <div style={{ position: 'absolute', top: 50, left: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <button onPointerDown={zoomIn} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#667eea', color: 'white', fontSize: 28, fontWeight: 'bold' }}>+</button>
+    <div style={{ width: 50, height: 50, borderRadius: '50%', background: '#000', border: '3px solid #0f0', color: '#0f0', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{Math.round(zoomLevel * 100)}%</div>
+    <button onPointerDown={zoomOut} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#f5576c', color: 'white', fontSize: 32, fontWeight: 'bold' }}>−</button>
+    <button onPointerDown={resetZoom} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#4facfe', color: 'white', fontSize: 20 }}>⟲</button>
+    <div style={{ width: 50, height: 2, background: 'rgba(255,255,255,0.3)', margin: '4px 0' }}></div>
+    <button onPointerDown={rotateLeft} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#f39c12', color: 'white', fontSize: 24, fontWeight: 'bold' }}>↺</button>
+    <button onPointerDown={rotateRight} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#f39c12', color: 'white', fontSize: 24, fontWeight: 'bold' }}>↻</button>
+    <button onPointerDown={resetRotation} style={{ width: 50, height: 50, borderRadius: '50%', border: '3px solid #fff', background: '#9b59b6', color: 'white', fontSize: 16 }}>🔄</button>
+  </div>
+)}
 
         {!tutorialActive && (
           <div style={{ position: 'absolute', top: 48, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 4, background: 'rgba(0,0,0,0.8)', padding: 4, borderRadius: 25 }}>
