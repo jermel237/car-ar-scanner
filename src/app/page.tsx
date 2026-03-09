@@ -6823,6 +6823,7 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
   rotationY: number; isSurfaceMode: boolean; animPhase: string; animData: Record<string, any>; animProgress: number;
   tutorialText?: { title: string; description: string; step: string } | null;
 }) {
+  
   const containerRef = useRef<HTMLDivElement>(null);
   const groupRef = useRef<THREE.Group | null>(null);
   const rotationRef = useRef({ x: 0.15, y: 0 });
@@ -6870,7 +6871,7 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
     container.addEventListener('wheel', onWH, { passive: false });
 
     let animationId: number;
-    const animate = () => {
+const animate = () => {
   if (groupRef.current) {
     groupRef.current.rotation.x = rotationRef.current.x;
     groupRef.current.rotation.y = rotationRef.current.y + rotationYRef.current;
