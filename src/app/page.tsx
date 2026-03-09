@@ -4777,6 +4777,8 @@ const [rotationY, setRotationY] = useState(0);
   const [animPhase, setAnimPhase] = useState('');
   const [animData, setAnimData] = useState<Record<string, any>>({});
   const [animProgress, setAnimProgress] = useState(1);
+  const [zoomLevel, setZoomLevel] = useState(1.0);
+  const [rotationY, setRotationY] = useState(0);
 
   const [tutorialActive, setTutorialActive] = useState(false);
   const [tutorialSteps, setTutorialSteps] = useState<TutorialStep[]>([]);
@@ -5806,6 +5808,14 @@ class Queue {
     setSwapFirstIndex(null);
     setPendingOperation('Select FIRST index to swap:');
   };
+
+    const zoomIn = useCallback(() => setZoomLevel(prev => Math.min(prev + 0.25, 3)), []);
+  const zoomOut = useCallback(() => setZoomLevel(prev => Math.max(prev - 0.25, 0.3)), []);
+  const resetZoom = useCallback(() => setZoomLevel(1.0), []);
+
+  const rotateLeft = useCallback(() => setRotationY(prev => prev - 0.3), []);
+  const rotateRight = useCallback(() => setRotationY(prev => prev + 0.3), []);
+  const resetRotation = useCallback(() => setRotationY(0), []);
 
   const handleIndexSelect = (index: number) => {
     if (selectionMode === 'insert') {
