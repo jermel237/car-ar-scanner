@@ -6784,6 +6784,9 @@ const startWebXR = async () => {
           </div>
         </div>
       )}
+    </div>
+  );
+}
 
 function OpBtn({ onClick, disabled, color, label }: { onClick: () => void; disabled: boolean; color: string; label: string }) {
   return (
