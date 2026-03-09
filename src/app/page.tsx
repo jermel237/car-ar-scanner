@@ -6129,9 +6129,9 @@ const startWebXR = async () => {
       <div ref={xrContainerRef} style={{ position: 'fixed', inset: 0, zIndex: webxrActive ? 1 : -1, pointerEvents: 'none' }} />
 
       {!webxrActive && showVisualization && activePosition && (
-        <Visualization3D position={activePosition} data={currentData} highlightIndex={highlightIndex} highlightIndex2={highlightIndex2}
-          structure={currentStructure} environment={currentEnvId} zoomLevel={zoomLevel} setZoomLevel={setZoomLevel}
-          isSurfaceMode={appMode === 'surface'} animPhase={animPhase} animData={animData} animProgress={animProgress} tutorialText={tutorialText} />
+       <Visualization3D position={activePosition} data={currentData} highlightIndex={highlightIndex} highlightIndex2={highlightIndex2}
+  structure={currentStructure} environment={currentEnvId} zoomLevel={zoomLevel} setZoomLevel={setZoomLevel}
+  rotationY={rotationY} isSurfaceMode={appMode === 'surface'} animPhase={animPhase} animData={animData} animProgress={animProgress} tutorialText={tutorialText} />
       )}
 
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: 10, zIndex: 100 }}>
@@ -6816,17 +6816,17 @@ function OpBtn({ onClick, disabled, color, label }: { onClick: () => void; disab
   );
 }
 
-function Visualization3D({ position, data, highlightIndex, highlightIndex2, structure, environment, zoomLevel, setZoomLevel, isSurfaceMode, animPhase, animData, animProgress, tutorialText }: {
+function Visualization3D({ position, data, highlightIndex, highlightIndex2, structure, environment, zoomLevel, setZoomLevel, rotationY, isSurfaceMode, animPhase, animData, animProgress, tutorialText }: {
   position: Position; data: DataItem[]; highlightIndex: number | null; highlightIndex2: number | null;
   structure: DataStructure; environment: string; zoomLevel: number; setZoomLevel: (z: number) => void;
-  isSurfaceMode: boolean; animPhase: string; animData: Record<string, any>; animProgress: number;
+  rotationY: number; isSurfaceMode: boolean; animPhase: string; animData: Record<string, any>; animProgress: number;
   tutorialText?: { title: string; description: string; step: string } | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const groupRef = useRef<THREE.Group | null>(null);
   const rotationRef = useRef({ x: 0.15, y: 0 });
-  const zoomRef = useRef(zoomLevel);
-  useEffect(() => { zoomRef.current = zoomLevel; }, [zoomLevel]);
+  const rotationYRef = useRef(rotationY);
+useEffect(() => { rotationYRef.current = rotationY; }, [rotationY]);
 
   const renderWidth = window.innerWidth;
   const renderHeight = window.innerHeight;
@@ -6870,14 +6870,14 @@ function Visualization3D({ position, data, highlightIndex, highlightIndex2, stru
 
     let animationId: number;
     const animate = () => {
-      if (groupRef.current) {
-        groupRef.current.rotation.x = rotationRef.current.x;
-        groupRef.current.rotation.y = rotationRef.current.y;
-        groupRef.current.scale.setScalar(zoomRef.current);
-      }
-      renderer.render(scene, camera);
-      animationId = requestAnimationFrame(animate);
-    };
+  if (groupRef.current) {
+    groupRef.current.rotation.x = rotationRef.current.x;
+    groupRef.current.rotation.y = rotationRef.current.y + rotationYRef.current;
+    groupRef.current.scale.setScalar(zoomRef.current);
+  }
+  renderer.render(scene, camera);
+  animationId = requestAnimationFrame(animate);
+};
     animate();
 
     return () => {
