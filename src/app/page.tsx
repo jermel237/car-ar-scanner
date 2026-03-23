@@ -4886,12 +4886,10 @@ export default function Home() {
     { id: 3, label: 'Stu 3', color: '#9b59b6', appearance: { skinTone: '#8d5524', shirtColor: '#9b59b6', pantsColor: '#2c3e50', hairColor: '#1a1a1a', hairStyle: 'short', gender: 'male' } },
   ]);
 
-    // ==================== EDUCAR STATES ====================
-  const [showEduAR, setShowEduAR] = useState(false);
+  // ==================== EDUCAR STATES ====================
+  const [showEduAR, setShowEduAR] = useState(true);
   const [eduARLoggedIn, setEduARLoggedIn] = useState(false);
-  const [eduARPassword, setEduARPassword] = useState('');
-  const [eduARPasswordError, setEduARPasswordError] = useState(false);
-  const [eduARScreen, setEduARScreen] = useState<'dashboard' | 'lesson' | 'quiz' | 'results'>('dashboard');
+  const [eduARScreen, setEduARScreen] = useState<'login' | 'register' | 'dashboard' | 'lesson' | 'quiz' | 'results'>('login');
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
   const [currentQuizIndex, setCurrentQuizIndex] = useState(0);
@@ -4903,6 +4901,36 @@ export default function Home() {
     quizScores: {},
     totalScore: 0
   });
+
+  // Login states
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+
+  // Register states
+  const [registerUsername, setRegisterUsername] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+  const [registerConfirmPassword, setRegisterConfirmPassword] = useState('');
+  const [registerError, setRegisterError] = useState('');
+
+  // Current user
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+
+  // Accounts storage
+  const [accounts, setAccounts] = useState<Record<string, string>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('eduARAccounts');
+      return saved ? JSON.parse(saved) : {};
+    }
+    return {};
+  });
+
+  // Save accounts to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('eduARAccounts', JSON.stringify(accounts));
+    }
+  }, [accounts]);
 
     // ==================== EDUCAR DATA ====================
   const eduARSubjects: SubjectData[] = [
@@ -5286,7 +5314,87 @@ class Queue {
 
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-    // ==================== EDUCAR FUNCTIONS ====================
+  // ==================== EDUCAR FUNCTIONS ====================
+
+  const handleRegister = () => {
+    setRegisterError('');
+    
+    if (!registerUsername.trim()) {
+      setRegisterError('Username is required');
+      return;
+    }
+    if (registerUsername.length < 3) {
+      setRegisterError('Username must be at least 3 characters');
+      return;
+    }
+    if (!registerPassword) {
+      setRegisterError('Password is required');
+      return;
+    }
+    if (registerPassword.length < 4) {
+      setRegisterError('Password must be at least 4 characters');
+      return;
+    }
+    if (registerPassword !== registerConfirmPassword) {
+      setRegisterError('Passwords do not match');
+      return;
+    }
+    if (accounts[registerUsername.toLowerCase()]) {
+      setRegisterError('Username already exists');
+      return;
+    }
+    
+    setAccounts(prev => ({
+      ...prev,
+      [registerUsername.toLowerCase()]: registerPassword
+    }));
+    
+    setRegisterUsername('');
+    setRegisterPassword('');
+    setRegisterConfirmPassword('');
+    setEduARScreen('login');
+    setLoginError('Account created! Please login.');
+  };
+
+  const handleLogin = () => {
+    setLoginError('');
+    
+    if (!loginUsername.trim() || !loginPassword) {
+      setLoginError('Please enter username and password');
+      return;
+    }
+    
+    const storedPassword = accounts[loginUsername.toLowerCase()];
+    
+    if (!storedPassword) {
+      setLoginError('Account not found. Please register first.');
+      return;
+    }
+    
+    if (storedPassword !== loginPassword) {
+      setLoginError('Incorrect password');
+      return;
+    }
+    
+    setCurrentUser(loginUsername);
+    setEduARLoggedIn(true);
+    setEduARScreen('dashboard');
+    setLoginUsername('');
+    setLoginPassword('');
+  };
+
+  const handleEduARLogout = () => {
+    setEduARLoggedIn(false);
+    setCurrentUser(null);
+    setEduARScreen('login');
+    setLoginUsername('');
+    setLoginPassword('');
+  };
+
+  const goToARMode = () => {
+    setShowEduAR(false);
+  };
+  // ==================== EDUCAR FUNCTIONS ====================
   
   const handleEduARLogin = () => {
     if (eduARPassword === '123') {
@@ -6135,29 +6243,29 @@ const startWebXR = async () => {
       )}
 
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: 10, zIndex: 100 }}>
-        {/* EduAR Button */}
-<button
-  onClick={() => setShowEduAR(true)}
-  style={{
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    padding: '10px 16px',
-    background: 'linear-gradient(135deg, #667eea, #764ba2)',
-    border: 'none',
-    borderRadius: 20,
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    zIndex: 200,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6
-  }}
->
-  🎓 EduAR
-</button>
+        {/* Back to EduAR Button */}
+        <button
+          onClick={() => setShowEduAR(true)}
+          style={{
+            position: 'absolute',
+            top: 10,
+            left: 10,
+            padding: '10px 16px',
+            background: 'linear-gradient(135deg, #667eea, #764ba2)',
+            border: 'none',
+            borderRadius: 20,
+            color: 'white',
+            fontSize: 14,
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            zIndex: 200,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6
+          }}
+        >
+          📚 Modules
+        </button>
         {!webxrActive && <button onClick={switchCamera} style={{ position: 'absolute', top: 10, right: 10, width: 50, height: 50, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 24, zIndex: 200 }}>🔄</button>}
         {webxrActive && <button onClick={stopWebXR} style={{ position: 'absolute', top: 10, right: 10, padding: '12px 20px', background: '#e74c3c', color: 'white', border: 'none', borderRadius: 20, fontSize: 14, fontWeight: 'bold', zIndex: 300 }}>✕ Exit AR</button>}
         
@@ -6801,11 +6909,807 @@ const startWebXR = async () => {
             
           </div>
         </div>
-      )}
-    </div>
-  );
-}
+      {/* ==================== EDUCAR MODAL ==================== */}
+      {showEduAR && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'auto'
+        }}>
+          {/* Header */}
+          <div style={{
+            padding: '15px 20px',
+            background: 'rgba(0,0,0,0.3)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderBottom: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            {/* AR Mode Button - Upper Left */}
+            {eduARLoggedIn ? (
+              <button
+                onClick={goToARMode}
+                style={{
+                  padding: '10px 20px',
+                  background: 'linear-gradient(135deg, #00b894, #00cec9)',
+                  border: 'none',
+                  borderRadius: 25,
+                  color: 'white',
+                  fontSize: 14,
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  boxShadow: '0 4px 15px rgba(0,184,148,0.4)'
+                }}
+              >
+                🌐 AR Mode
+              </button>
+            ) : (
+              <div style={{ width: 100 }}></div>
+            )}
+            
+            <h1 style={{ 
+              margin: 0, 
+              fontSize: 28, 
+              color: 'white',
+              fontWeight: 'bold'
+            }}>
+              🎓 EduAR
+            </h1>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: 15, minWidth: 100, justifyContent: 'flex-end' }}>
+              {eduARLoggedIn && (
+                <>
+                  <div style={{ color: 'white', fontSize: 14 }}>
+                    👤 {currentUser}
+                  </div>
+                  <div style={{ color: '#ffd700', fontSize: 14 }}>
+                    ⭐ {userProgress.totalScore}%
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
 
+          {/* Content */}
+          <div style={{ flex: 1, padding: 20, overflowY: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            
+            {/* LOGIN SCREEN */}
+            {!eduARLoggedIn && eduARScreen === 'login' && (
+              <div style={{
+                width: '100%',
+                maxWidth: 420,
+                background: 'rgba(255,255,255,0.08)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: 24,
+                padding: 40,
+                textAlign: 'center',
+                border: '1px solid rgba(255,255,255,0.1)',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+              }}>
+                <div style={{ 
+                  width: 80, 
+                  height: 80, 
+                  background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 25px',
+                  fontSize: 36
+                }}>
+                  👤
+                </div>
+                
+                <h2 style={{ color: 'white', marginBottom: 8, fontSize: 26 }}>Welcome Back!</h2>
+                <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 30, fontSize: 14 }}>
+                  Login to continue learning
+                </p>
+                
+                <div style={{ marginBottom: 20 }}>
+                  <input
+                    type="text"
+                    placeholder="Username"
+                    value={loginUsername}
+                    onChange={(e) => setLoginUsername(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: 16,
+                      fontSize: 16,
+                      borderRadius: 12,
+                      border: '2px solid rgba(255,255,255,0.2)',
+                      background: 'rgba(255,255,255,0.08)',
+                      color: 'white',
+                      marginBottom: 12,
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  
+                  <input
+                    type="password"
+                    placeholder="Password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                    style={{
+                      width: '100%',
+                      padding: 16,
+                      fontSize: 16,
+                      borderRadius: 12,
+                      border: '2px solid rgba(255,255,255,0.2)',
+                      background: 'rgba(255,255,255,0.08)',
+                      color: 'white',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+                
+                {loginError && (
+                  <p style={{ 
+                    color: loginError.includes('created') ? '#2ecc71' : '#e74c3c', 
+                    marginBottom: 15,
+                    fontSize: 14,
+                    padding: '10px',
+                    background: loginError.includes('created') ? 'rgba(46,204,113,0.1)' : 'rgba(231,76,60,0.1)',
+                    borderRadius: 8
+                  }}>
+                    {loginError.includes('created') ? '✅' : '❌'} {loginError}
+                  </p>
+                )}
+                
+                <button
+                  onClick={handleLogin}
+                  style={{
+                    width: '100%',
+                    padding: 16,
+                    fontSize: 18,
+                    fontWeight: 'bold',
+                    borderRadius: 12,
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                    color: 'white',
+                    cursor: 'pointer',
+                    marginBottom: 20,
+                    boxShadow: '0 4px 20px rgba(102,126,234,0.4)'
+                  }}
+                >
+                  🚀 Login
+                </button>
+                
+                <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>
+                  Don't have an account?{' '}
+                  <button
+                    onClick={() => {
+                      setEduARScreen('register');
+                      setLoginError('');
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#667eea',
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      fontSize: 14,
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    Register here
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* REGISTER SCREEN */}
+            {!eduARLoggedIn && eduARScreen === 'register' && (
+              <div style={{
+                width: '100%',
+                maxWidth: 420,
+                background: 'rgba(255,255,255,0.08)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: 24,
+                padding: 40,
+                textAlign: 'center',
+                border: '1px solid rgba(255,255,255,0.1)',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+              }}>
+                <div style={{ 
+                  width: 80, 
+                  height: 80, 
+                  background: 'linear-gradient(135deg, #2ecc71, #27ae60)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 25px',
+                  fontSize: 36
+                }}>
+                  ✨
+                </div>
+                
+                <h2 style={{ color: 'white', marginBottom: 8, fontSize: 26 }}>Create Account</h2>
+                <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 30, fontSize: 14 }}>
+                  Join EduAR and start learning!
+                </p>
+                
+                <div style={{ marginBottom: 20 }}>
+                  <input
+                    type="text"
+                    placeholder="Username"
+                    value={registerUsername}
+                    onChange={(e) => setRegisterUsername(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: 16,
+                      fontSize: 16,
+                      borderRadius: 12,
+                      border: '2px solid rgba(255,255,255,0.2)',
+                      background: 'rgba(255,255,255,0.08)',
+                      color: 'white',
+                      marginBottom: 12,
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  
+                  <input
+                    type="password"
+                    placeholder="Password"
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: 16,
+                      fontSize: 16,
+                      borderRadius: 12,
+                      border: '2px solid rgba(255,255,255,0.2)',
+                      background: 'rgba(255,255,255,0.08)',
+                      color: 'white',
+                      marginBottom: 12,
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  
+                  <input
+                    type="password"
+                    placeholder="Confirm Password"
+                    value={registerConfirmPassword}
+                    onChange={(e) => setRegisterConfirmPassword(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleRegister()}
+                    style={{
+                      width: '100%',
+                      padding: 16,
+                      fontSize: 16,
+                      borderRadius: 12,
+                      border: '2px solid rgba(255,255,255,0.2)',
+                      background: 'rgba(255,255,255,0.08)',
+                      color: 'white',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+                
+                {registerError && (
+                  <p style={{ 
+                    color: '#e74c3c', 
+                    marginBottom: 15,
+                    fontSize: 14,
+                    padding: '10px',
+                    background: 'rgba(231,76,60,0.1)',
+                    borderRadius: 8
+                  }}>
+                    ❌ {registerError}
+                  </p>
+                )}
+                
+                <button
+                  onClick={handleRegister}
+                  style={{
+                    width: '100%',
+                    padding: 16,
+                    fontSize: 18,
+                    fontWeight: 'bold',
+                    borderRadius: 12,
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #2ecc71, #27ae60)',
+                    color: 'white',
+                    cursor: 'pointer',
+                    marginBottom: 20,
+                    boxShadow: '0 4px 20px rgba(46,204,113,0.4)'
+                  }}
+                >
+                  ✅ Create Account
+                </button>
+                
+                <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>
+                  Already have an account?{' '}
+                  <button
+                    onClick={() => {
+                      setEduARScreen('login');
+                      setRegisterError('');
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#2ecc71',
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      fontSize: 14,
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    Login here
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* DASHBOARD / MODULE SCREEN */}
+            {eduARLoggedIn && eduARScreen === 'dashboard' && (
+              <div style={{ width: '100%', maxWidth: 1000 }}>
+                <div style={{ textAlign: 'center', marginBottom: 40 }}>
+                  <h2 style={{ color: 'white', fontSize: 32, marginBottom: 10 }}>
+                    📚 Learning Modules
+                  </h2>
+                  <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 16 }}>
+                    Choose a data structure to learn
+                  </p>
+                </div>
+                
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                  gap: 24,
+                }}>
+                  {eduARSubjects.map(subject => (
+                    <div
+                      key={subject.id}
+                      style={{
+                        background: `linear-gradient(135deg, ${subject.color}dd, ${subject.color}99)`,
+                        borderRadius: 20,
+                        padding: 28,
+                        color: 'white',
+                        boxShadow: `0 10px 40px ${subject.color}40`,
+                        border: '1px solid rgba(255,255,255,0.1)'
+                      }}
+                    >
+                      <div style={{ fontSize: 56, marginBottom: 18 }}>{subject.icon}</div>
+                      <h3 style={{ margin: '0 0 8px', fontSize: 26, fontWeight: 'bold' }}>{subject.name}</h3>
+                      <p style={{ opacity: 0.9, marginBottom: 20, fontSize: 14 }}>
+                        📖 {subject.lessons.length} Lessons • ✏️ {subject.quiz.length} Quiz Questions
+                      </p>
+                      
+                      {userProgress.quizScores[subject.id] !== undefined && (
+                        <div style={{
+                          background: 'rgba(255,255,255,0.2)',
+                          borderRadius: 12,
+                          padding: 12,
+                          marginBottom: 18,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 8
+                        }}>
+                          <span style={{ fontSize: 20 }}>⭐</span>
+                          <span style={{ fontWeight: 'bold' }}>Quiz Score: {userProgress.quizScores[subject.id]}%</span>
+                        </div>
+                      )}
+                      
+                      <div style={{ display: 'flex', gap: 12 }}>
+                        <button
+                          onClick={() => startLesson(subject.id)}
+                          style={{
+                            flex: 1,
+                            padding: 14,
+                            borderRadius: 12,
+                            border: '2px solid rgba(255,255,255,0.3)',
+                            background: 'rgba(255,255,255,0.15)',
+                            color: 'white',
+                            fontSize: 15,
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          📖 Lessons
+                        </button>
+                        <button
+                          onClick={() => startQuiz(subject.id)}
+                          style={{
+                            flex: 1,
+                            padding: 14,
+                            borderRadius: 12,
+                            border: 'none',
+                            background: 'white',
+                            color: subject.color,
+                            fontSize: 15,
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✏️ Quiz
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <div style={{ textAlign: 'center', marginTop: 50 }}>
+                  <button
+                    onClick={handleEduARLogout}
+                    style={{
+                      padding: '14px 40px',
+                      borderRadius: 12,
+                      border: '2px solid rgba(255,255,255,0.3)',
+                      background: 'rgba(255,255,255,0.1)',
+                      color: 'white',
+                      cursor: 'pointer',
+                      fontSize: 16
+                    }}
+                  >
+                    🚪 Logout
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* LESSON SCREEN */}
+            {eduARLoggedIn && eduARScreen === 'lesson' && getCurrentSubject() && (
+              <div style={{ width: '100%', maxWidth: 700 }}>
+                <button
+                  onClick={() => setEduARScreen('dashboard')}
+                  style={{
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: 12,
+                    padding: '12px 24px',
+                    color: 'white',
+                    cursor: 'pointer',
+                    marginBottom: 24,
+                    fontSize: 14
+                  }}
+                >
+                  ← Back to Modules
+                </button>
+                
+                <div style={{
+                  background: 'rgba(255,255,255,0.08)',
+                  borderRadius: 20,
+                  padding: 35,
+                  border: '1px solid rgba(255,255,255,0.1)'
+                }}>
+                  <div style={{ color: getCurrentSubject()!.color, marginBottom: 12, fontSize: 14, fontWeight: 'bold' }}>
+                    {getCurrentSubject()!.icon} {getCurrentSubject()!.name} • Lesson {currentLessonIndex + 1} of {getCurrentSubject()!.lessons.length}
+                  </div>
+                  
+                  <div style={{
+                    height: 6,
+                    background: 'rgba(255,255,255,0.1)',
+                    borderRadius: 3,
+                    marginBottom: 25,
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${((currentLessonIndex + 1) / getCurrentSubject()!.lessons.length) * 100}%`,
+                      background: getCurrentSubject()!.color,
+                      borderRadius: 3
+                    }}/>
+                  </div>
+                  
+                  <h2 style={{ color: 'white', marginBottom: 28, fontSize: 24 }}>
+                    {getCurrentSubject()!.lessons[currentLessonIndex].title}
+                  </h2>
+                  
+                  <div style={{ marginBottom: 28 }}>
+                    {getCurrentSubject()!.lessons[currentLessonIndex].content.map((line, idx) => (
+                      <p key={idx} style={{ color: 'rgba(255,255,255,0.9)', fontSize: 17, lineHeight: 1.9, marginBottom: 14 }}>
+                        {line}
+                      </p>
+                    ))}
+                  </div>
+                  
+                  {getCurrentSubject()!.lessons[currentLessonIndex].codeExample && (
+                    <pre style={{
+                      background: '#0d1117',
+                      borderRadius: 12,
+                      padding: 22,
+                      color: '#79c0ff',
+                      fontSize: 14,
+                      overflowX: 'auto',
+                      marginBottom: 28,
+                      border: '1px solid rgba(255,255,255,0.1)'
+                    }}>
+                      {getCurrentSubject()!.lessons[currentLessonIndex].codeExample}
+                    </pre>
+                  )}
+                  
+                  <button
+                    onClick={handleNextLesson}
+                    style={{
+                      width: '100%',
+                      padding: 16,
+                      borderRadius: 12,
+                      border: 'none',
+                      background: getCurrentSubject()!.color,
+                      color: 'white',
+                      fontSize: 17,
+                      fontWeight: 'bold',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {currentLessonIndex < getCurrentSubject()!.lessons.length - 1 ? 'Next Lesson →' : '✅ Complete Lessons'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* QUIZ SCREEN */}
+            {eduARLoggedIn && eduARScreen === 'quiz' && getCurrentSubject() && (
+              <div style={{ width: '100%', maxWidth: 700 }}>
+                <button
+                  onClick={() => setEduARScreen('dashboard')}
+                  style={{
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: 12,
+                    padding: '12px 24px',
+                    color: 'white',
+                    cursor: 'pointer',
+                    marginBottom: 24,
+                    fontSize: 14
+                  }}
+                >
+                  ← Exit Quiz
+                </button>
+                
+                <div style={{
+                  background: 'rgba(255,255,255,0.08)',
+                  borderRadius: 20,
+                  padding: 35,
+                  border: '1px solid rgba(255,255,255,0.1)'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 24
+                  }}>
+                    <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>
+                      {getCurrentSubject()!.icon} {getCurrentSubject()!.name} Quiz
+                    </span>
+                    <span style={{
+                      background: getCurrentSubject()!.color,
+                      padding: '8px 18px',
+                      borderRadius: 20,
+                      color: 'white',
+                      fontSize: 14,
+                      fontWeight: 'bold'
+                    }}>
+                      {currentQuizIndex + 1} / {getCurrentSubject()!.quiz.length}
+                    </span>
+                  </div>
+                  
+                  <div style={{
+                    height: 6,
+                    background: 'rgba(255,255,255,0.1)',
+                    borderRadius: 3,
+                    marginBottom: 28,
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${((currentQuizIndex + 1) / getCurrentSubject()!.quiz.length) * 100}%`,
+                      background: getCurrentSubject()!.color,
+                      borderRadius: 3
+                    }}/>
+                  </div>
+                  
+                  <h3 style={{ color: 'white', fontSize: 22, marginBottom: 28, lineHeight: 1.6 }}>
+                    {getCurrentSubject()!.quiz[currentQuizIndex].question}
+                  </h3>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {getCurrentSubject()!.quiz[currentQuizIndex].options.map((option, idx) => {
+                      const isSelected = selectedAnswer === idx;
+                      const isCorrect = idx === getCurrentSubject()!.quiz[currentQuizIndex].correctAnswer;
+                      const showResult = showExplanation;
+                      
+                      let bgColor = 'rgba(255,255,255,0.08)';
+                      let borderColor = 'rgba(255,255,255,0.2)';
+                      
+                      if (showResult) {
+                        if (isCorrect) {
+                          bgColor = 'rgba(46, 204, 113, 0.25)';
+                          borderColor = '#2ecc71';
+                        } else if (isSelected && !isCorrect) {
+                          bgColor = 'rgba(231, 76, 60, 0.25)';
+                          borderColor = '#e74c3c';
+                        }
+                      } else if (isSelected) {
+                        bgColor = `${getCurrentSubject()!.color}30`;
+                        borderColor = getCurrentSubject()!.color;
+                      }
+                      
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => handleAnswerSelect(idx)}
+                          style={{
+                            padding: 18,
+                            borderRadius: 14,
+                            border: `2px solid ${borderColor}`,
+                            background: bgColor,
+                            color: 'white',
+                            fontSize: 16,
+                            textAlign: 'left',
+                            cursor: showExplanation ? 'default' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 14
+                          }}
+                        >
+                          <span style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: '50%',
+                            background: isSelected ? getCurrentSubject()!.color : 'rgba(255,255,255,0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 15,
+                            fontWeight: 'bold',
+                            flexShrink: 0
+                          }}>
+                            {String.fromCharCode(65 + idx)}
+                          </span>
+                          <span style={{ flex: 1 }}>{option}</span>
+                          {showResult && isCorrect && <span style={{ fontSize: 22 }}>✅</span>}
+                          {showResult && isSelected && !isCorrect && <span style={{ fontSize: 22 }}>❌</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  {showExplanation && (
+                    <div style={{
+                      marginTop: 24,
+                      padding: 22,
+                      background: 'rgba(102, 126, 234, 0.15)',
+                      borderRadius: 14,
+                      borderLeft: '4px solid #667eea'
+                    }}>
+                      <strong style={{ color: '#667eea', fontSize: 16 }}>💡 Explanation:</strong>
+                      <p style={{ color: 'rgba(255,255,255,0.9)', margin: '12px 0 0', lineHeight: 1.7 }}>
+                        {getCurrentSubject()!.quiz[currentQuizIndex].explanation}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <button
+                    onClick={showExplanation ? handleNextQuestion : handleConfirmAnswer}
+                    disabled={selectedAnswer === null && !showExplanation}
+                    style={{
+                      width: '100%',
+                      marginTop: 28,
+                      padding: 18,
+                      borderRadius: 14,
+                      border: 'none',
+                      background: selectedAnswer === null && !showExplanation 
+                        ? 'rgba(255,255,255,0.2)' 
+                        : getCurrentSubject()!.color,
+                      color: 'white',
+                      fontSize: 17,
+                      fontWeight: 'bold',
+                      cursor: selectedAnswer === null && !showExplanation ? 'not-allowed' : 'pointer',
+                      opacity: selectedAnswer === null && !showExplanation ? 0.5 : 1
+                    }}
+                  >
+                    {showExplanation 
+                      ? (currentQuizIndex < getCurrentSubject()!.quiz.length - 1 ? 'Next Question →' : '📊 See Results')
+                      : '✓ Confirm Answer'
+                    }
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* RESULTS SCREEN */}
+            {eduARLoggedIn && eduARScreen === 'results' && getCurrentSubject() && (
+              <div style={{ width: '100%', maxWidth: 500, textAlign: 'center' }}>
+                <div style={{
+                  background: 'rgba(255,255,255,0.08)',
+                  borderRadius: 24,
+                  padding: 45,
+                  border: '1px solid rgba(255,255,255,0.1)'
+                }}>
+                  <div style={{ fontSize: 90, marginBottom: 24 }}>
+                    {userProgress.quizScores[selectedSubject!] >= 80 ? '🏆' : 
+                     userProgress.quizScores[selectedSubject!] >= 60 ? '🎉' : '📚'}
+                  </div>
+                  
+                  <h2 style={{ color: 'white', marginBottom: 12, fontSize: 28 }}>Quiz Complete!</h2>
+                  <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 35, fontSize: 16 }}>
+                    {getCurrentSubject()!.icon} {getCurrentSubject()!.name}
+                  </p>
+                  
+                  <div style={{
+                    fontSize: 72,
+                    fontWeight: 'bold',
+                    color: userProgress.quizScores[selectedSubject!] >= 80 ? '#2ecc71' : 
+                           userProgress.quizScores[selectedSubject!] >= 60 ? '#f39c12' : '#e74c3c',
+                    marginBottom: 15
+                  }}>
+                    {userProgress.quizScores[selectedSubject!]}%
+                  </div>
+                  
+                  <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 35, fontSize: 17 }}>
+                    {userProgress.quizScores[selectedSubject!] >= 80 ? 'Excellent work! 🌟' : 
+                     userProgress.quizScores[selectedSubject!] >= 60 ? 'Good job! Keep practicing! 💪' : 
+                     'Review the lessons and try again! 📖'}
+                  </p>
+                  
+                  <div style={{
+                    background: 'rgba(255,255,255,0.1)',
+                    borderRadius: 14,
+                    padding: 20,
+                    marginBottom: 30
+                  }}>
+                    <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, marginBottom: 5 }}>Overall Score</div>
+                    <div style={{ color: '#ffd700', fontSize: 28, fontWeight: 'bold' }}>
+                      ⭐ {userProgress.totalScore}%
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: 14 }}>
+                    <button
+                      onClick={() => startQuiz(selectedSubject!)}
+                      style={{
+                        flex: 1,
+                        padding: 16,
+                        borderRadius: 12,
+                        border: '2px solid rgba(255,255,255,0.3)',
+                        background: 'rgba(255,255,255,0.1)',
+                        color: 'white',
+                        cursor: 'pointer',
+                        fontSize: 16,
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      🔄 Retry
+                    </button>
+                    <button
+                      onClick={() => setEduARScreen('dashboard')}
+                      style={{
+                        flex: 1,
+                        padding: 16,
+                        borderRadius: 12,
+                        border: 'none',
+                        background: getCurrentSubject()!.color,
+                        color: 'white',
+                        cursor: 'pointer',
+                        fontSize: 16,
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      📚 Modules
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+          </div>
+        </div>
+      )}
 function OpBtn({ onClick, disabled, color, label }: { onClick: () => void; disabled: boolean; color: string; label: string }) {
   return (
     <button onClick={onClick} disabled={disabled} style={{
