@@ -6900,7 +6900,7 @@ const startWebXR = async () => {
                         cursor: 'pointer'
                       }}
                     >
-                      📚 Dashboard
+                      📚 Modules
                     </button>
                   </div>
                 </div>
@@ -6909,56 +6909,10 @@ const startWebXR = async () => {
             
           </div>
         </div>
-      {/* ==================== EDUCAR MODAL ==================== */}
-      {showEduAR && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-          zIndex: 9999,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'auto'
-        }}>
-          {/* Header */}
-          <div style={{
-            padding: '15px 20px',
-            background: 'rgba(0,0,0,0.3)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            borderBottom: '1px solid rgba(255,255,255,0.1)'
-          }}>
-            {/* AR Mode Button - Upper Left */}
-            {eduARLoggedIn ? (
-              <button
-                onClick={goToARMode}
-                style={{
-                  padding: '10px 20px',
-                  background: 'linear-gradient(135deg, #00b894, #00cec9)',
-                  border: 'none',
-                  borderRadius: 25,
-                  color: 'white',
-                  fontSize: 14,
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  boxShadow: '0 4px 15px rgba(0,184,148,0.4)'
-                }}
-              >
-                🌐 AR Mode
-              </button>
-            ) : (
-              <div style={{ width: 100 }}></div>
-            )}
-            
-            <h1 style={{ 
-              margin: 0, 
-              fontSize: 28, 
-              color: 'white',
-              fontWeight: 'bold'
+      )}
+    </div>
+  );
+}
             }}>
               🎓 EduAR
             </h1>
@@ -7705,20 +7659,12 @@ const startWebXR = async () => {
                   </div>
                 </div>
               </div>
-            )}
-            
-          </div>
-        </div>
       )}
-function OpBtn({ onClick, disabled, color, label }: { onClick: () => void; disabled: boolean; color: string; label: string }) {
-  return (
-    <button onClick={onClick} disabled={disabled} style={{
-      padding: '12px 16px', fontSize: 12, fontWeight: 'bold', border: 'none', borderRadius: 25,
-      background: disabled ? '#555' : color, color: 'white', opacity: disabled ? 0.5 : 1,
-      cursor: disabled ? 'not-allowed' : 'pointer', minWidth: 70,
-    }}>{label}</button>
+    </div>
   );
 }
+
+function OpBtn
 
 function Visualization3D({ position, data, highlightIndex, highlightIndex2, structure, environment, zoomLevel, setZoomLevel, rotationY, isSurfaceMode, animPhase, animData, animProgress, tutorialText }: {
   position: Position; data: DataItem[]; highlightIndex: number | null; highlightIndex2: number | null;
