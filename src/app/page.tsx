@@ -5295,7 +5295,147 @@ class Queue {
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   // ==================== AUTH FUNCTIONS ====================
-  
+   // Check for existing session on mount
+  useEffect(() => {
+    const savedUser = localStorage.getItem('eduarUser');
+    const savedSession = localStorage.getItem('eduarSession');
+    if (savedUser && savedSession) {
+      try {
+        const user = JSON.parse(savedUser);
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+      } catch (e) {
+        localStorage.removeItem('eduarUser');
+        localStorage.removeItem('eduarSession');
+      }
+    }
+  }, []);
+
+  const handleRegister = async () => {
+    setAuthError('');
+    
+    if (!registerName.trim()) {
+      setAuthError('Please enter your name');
+      return;
+    }
+    if (!registerEmail.trim()) {
+      setAuthError('Please enter your email');
+      return;
+    }
+    if (!registerEmail.includes('@')) {
+      setAuthError('Please enter a valid email');
+      return;
+    }
+    if (registerPassword.length < 6) {
+      setAuthError('Password must be at least 6 characters');
+      return;
+    }
+    if (registerPassword !== registerConfirmPassword) {
+      setAuthError('Passwords do not match');
+      return;
+    }
+
+    setAuthLoading(true);
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const existingUsers = JSON.parse(localStorage.getItem('eduarUsers') || '[]');
+    const userExists = existingUsers.find((u: any) => u.email.toLowerCase() === registerEmail.toLowerCase());
+    
+    if (userExists) {
+      setAuthError('An account with this email already exists');
+      setAuthLoading(false);
+      return;
+    }
+
+    const newUser = {
+      id: Date.now(),
+      name: registerName.trim(),
+      email: registerEmail.toLowerCase().trim(),
+      password: registerPassword,
+      createdAt: new Date().toISOString()
+    };
+
+    existingUsers.push(newUser);
+    localStorage.setItem('eduarUsers', JSON.stringify(existingUsers));
+
+    const sessionUser = { name: newUser.name, email: newUser.email };
+    localStorage.setItem('eduarUser', JSON.stringify(sessionUser));
+    localStorage.setItem('eduarSession', 'active');
+    
+    setCurrentUser(sessionUser);
+    setIsAuthenticated(true);
+    setAuthLoading(false);
+    
+    setRegisterName('');
+    setRegisterEmail('');
+    setRegisterPassword('');
+    setRegisterConfirmPassword('');
+  };
+
+  const handleLogin = async () => {
+    setAuthError('');
+    
+    if (!loginEmail.trim()) {
+      setAuthError('Please enter your email');
+      return;
+    }
+    if (!loginPassword) {
+      setAuthError('Please enter your password');
+      return;
+    }
+
+    setAuthLoading(true);
+    
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    const existingUsers = JSON.parse(localStorage.getItem('eduarUsers') || '[]');
+    const user = existingUsers.find((u: any) => 
+      u.email.toLowerCase() === loginEmail.toLowerCase().trim() && 
+      u.password === loginPassword
+    );
+
+    if (!user) {
+      setAuthError('Invalid email or password');
+      setAuthLoading(false);
+      return;
+    }
+
+    const sessionUser = { name: user.name, email: user.email };
+    localStorage.setItem('eduarUser', JSON.stringify(sessionUser));
+    localStorage.setItem('eduarSession', 'active');
+    
+    setCurrentUser(sessionUser);
+    setIsAuthenticated(true);
+    setAuthLoading(false);
+    
+    setLoginEmail('');
+    setLoginPassword('');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('eduarUser');
+    localStorage.removeItem('eduarSession');
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+    setShowARMode(false);
+    setEduARScreen('dashboard');
+    setSelectedSubject(null);
+  };
+
+  const enterARMode = () => {
+    setShowARMode(true);
+  };
+
+  const exitARMode = () => {
+    setShowARMode(false);
+    if (appMode === 'webxr') {
+      stopWebXR();
+    }
+    setAppMode('surface');
+    setSurfacePlaced(false);
+    setSurfacePosition(null);
+  };
   // ==================== AUTH SCREEN (BEFORE LOGIN) ====================
   if (!isAuthenticated) {
     return (
