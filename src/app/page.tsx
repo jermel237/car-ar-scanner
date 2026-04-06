@@ -5430,7 +5430,6 @@ const startWebXR = async () => {
   } catch (err: any) {
     console.error(err);
     alert('WebXR failed: ' + err.message);
-    setAppMode('surface');
   }
 };
 
