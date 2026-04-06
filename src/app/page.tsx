@@ -5361,7 +5361,7 @@ setWebxrActive(false); setWebxrPlaced(false);
 
 const startWebXR = async () => {
   const xr = (navigator as any).xr;
-  if (!xr) { alert('WebXR not available.'); setAppMode('surface'); return; }
+  if (!xr) { alert('WebXR not available.'); return; }
   try {
     const sessionInit: any = { requiredFeatures: ['hit-test'], optionalFeatures: ['dom-overlay'] };
     const overlayEl = document.getElementById('ar-overlay');
