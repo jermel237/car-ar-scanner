@@ -5427,7 +5427,6 @@ const startWebXR = async () => {
     });
     setWebxrActive(true);
     setWebxrPlaced(false);
-    setAppMode('webxr');
   } catch (err: any) {
     console.error(err);
     alert('WebXR failed: ' + err.message);
