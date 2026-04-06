@@ -5517,7 +5517,7 @@ const showControls = webxrPlaced;
 
       {showControls && !tutorialActive && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '20px 10px 30px', background: 'linear-gradient(to top, rgba(0,0,0,0.95), transparent)', zIndex: 100 }}>
-           {(appMode === 'webxr' && webxrPlaced) && (
+           {webxrPlaced && (
   <div style={{ textAlign: 'center', marginBottom: 10 }}>
     <button onClick={resetWebXRPlacement} style={{ padding: '8px 20px', fontSize: 12, fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, background: 'rgba(255,255,255,0.1)', color: 'white' }}>📍 Reposition AR</button>
   </div>
