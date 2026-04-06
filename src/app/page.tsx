@@ -5345,7 +5345,7 @@ useEffect(() => {
     xrSessionRef.current = null; xrRendererRef.current = null; xrSceneRef.current = null;
     xrCameraRef.current = null; xrGroupRef.current = null; xrReticleRef.current = null;
     xrHitTestSourceRef.current = null;
-    setWebxrActive(false); setWebxrPlaced(false); setAppMode('surface');
+setWebxrActive(false); setWebxrPlaced(false); setAppMode('surface');
   }, []);
 
   const stopWebXR = useCallback(() => {
